@@ -33,7 +33,7 @@ process_valid_shp <- function(shp_path, out_dir){
     }
     csv <- csv %>% dplyr::mutate(id = id_col) %>%
         dplyr::select(-starts_with("tmp_id")) %>%
-        dplyr::select(id, everything())
+        dplyr::select(id, tidyselect::everything())
 
 
 
@@ -168,7 +168,7 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
 #' @return             A length-one character. Path to the result file.
 get_timeseries_modis <- function(cpath){
     wtss_coverage <- sits::sits_coverage(service = "WTSS-INPE", name = "MOD13Q1")
-    samples.tb <- sits::sits_getdata(coverage = wtss_coverage, file = cpath)
+    samples.tb <- sits::sits_get_data(coverage = wtss_coverage, file = cpath)
     rd_file <- file.path(paste0(substr(cpath, 1, nchar(cpath) - 4), '_mod13q1.Rdata'))
     save(samples.tb, file = rd_file)
     return(rd_file)

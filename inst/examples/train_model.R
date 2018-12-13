@@ -11,8 +11,8 @@ log_file <- file(paste0(prefix, ".R.log"), open = "wt")
 sink(file = log_file, append = TRUE, type = 'message')
 message(Sys.time(), ' Initializing...')
 
-suppressMessages(library(sits))
-suppressMessages(library(dplyr))
+#suppressMessages(library(sits))
+#suppressMessages(library(dplyr))
 
 setwd("/home/alber/Documents/data/experiments/prodes_reproduction")
 
@@ -22,7 +22,7 @@ load(sample_files)
 stopifnot(exists("subgroups"))
 #unique(subgroups$label2)
 #nrow(subgroups)
-samples.tb <- subgroups %>% dplyr::mutate(label = label2) %>% 
+samples.tb <- subgroups %>% dplyr::mutate(label = label2) %>%
   dplyr::select(-c(id_neuron, neuron_label, id_sample, label2)) %>%
   sits::sits_select_bands(bands = c("nir", "red", "swir2"))
 #sits::sits_bands(samples.tb)
@@ -48,7 +48,7 @@ for(i in n){
     epochs           = sample(seq(200, 300, 100), size = 1),
     batch_size       = sample(c(64, 256, 320), size = 1),
     validation_split = 0.2,
-    model_name       = paste0(prefix, "_model_", i) 
+    model_name       = paste0(prefix, "_model_", i)
   )
 }
 
@@ -63,11 +63,11 @@ for(p in param_lst){
     batch_size       = p$batch_size,
     validation_split = p$validation_split)
   model <- sits::sits_train(samples.tb, method)
-  
+
   sits::sits_save_keras(model,
                         hdffile = paste0('./02_train_model/', prefix, '/', p$model_name, '.h5'),
                         rdsfile = paste0('./02_train_model/', prefix, '/', p$model_name, '.rds'))
-  
+
   met <- environment(model)$history$metrics
   message('EXPERIMENT')
   message(names(p))

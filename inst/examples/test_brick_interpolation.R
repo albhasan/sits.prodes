@@ -1,6 +1,6 @@
 #  Test Interpolated bricks
 
-library(tidyverse)
+#library(tidyverse)
 
 # Use gdallocationinfo to get a time series out of a brick
 get_ts <- function(brick_path, pix_x, pix_y){

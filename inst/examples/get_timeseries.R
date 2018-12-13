@@ -6,8 +6,8 @@ setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.
 library(devtools)
 devtools::load_all()
 
-library(sits)
-library(parallel)
+#library(sits)
+#library(parallel)
 
 cores <- floor(parallel::detectCores() * 3/4)
 

@@ -7,8 +7,8 @@ setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.
 library(devtools)
 devtools::load_all()
 
-library(tidyverse)
-library(sits)
+#library(tidyverse)
+#library(sits)
 
 cores <- floor(parallel::detectCores() * 3/4)
 sample_directory <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/samples"

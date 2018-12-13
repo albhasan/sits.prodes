@@ -20,7 +20,7 @@ collapse = TRUE,
 comment = "#>"
 )
 
-library(tidyverse)
+#library(tidyverse)
 
 ```
 
@@ -84,78 +84,6 @@ Landsat 8 images, including the vegetation indexes. They are stored in
 
 
 
-
-```{r ndvi_old_bricks, echo=FALSE}
-
-# gdallocationinfo /net/150.163.2.38/dados1/Repository/Brick/LC8/LC8SR-MOD13Q1-MYD13Q1/LC8SR-MOD13Q1-MYD13Q1_233067_2016-08-28_red_STACK_BRICK.tif -valonly -wgs84 -65.22349 -10.12548
-red_fst <- c(944, 709, 479, 1136, 788, 614, 2133, 1087, 1179, 2127, 852, 479, 3527, 613, 462, 353, 1081, 405, 441, 469, 715, 984, 1005)
-# gdallocationinfo                                     /home/alber/shared/brick_interp/LC8SR-MOD13Q1-MYD13Q1_233067_2016-08-28_red_STACK_BRICK.tif -valonly -wgs84 -65.22349 -10.12548
-red_snd <- c(944, 709, 479, 1136, 788, 614, 2133, 1087, 1179, 2127, 852, 479, 3527, 613, 462, 353, 1081, 405, 441, 469, 715, 984, 1005)
-# gdallocationinfo                                             /home/alber/shared/brick/LC8SR-MOD13Q1-STARFM_233067_2016-08-10_red_STACK_BRICK.tif -valonly -wgs84 -65.22349 -10.12548
-red_sfm <- c(817, 909, 789, 690, 207, 552, 782, 1663, 2260, 4524, 2128, 1803, 461, 3745, 6294, 3723, 3460, 784, 397, 383, 425, 647, 647)  
-
-# gdallocationinfo /net/150.163.2.38/dados1/Repository/Brick/LC8/LC8SR-MOD13Q1-MYD13Q1/LC8SR-MOD13Q1-MYD13Q1_233067_2016-08-28_nir_STACK_BRICK.tif -valonly -wgs84 -65.22349 -10.12548
-nir_fst <- c(3129, 3439, 3942, 4199, 3748, 4597, 4422, 4080, 4226, 5192, 4887, 3954, 5735, 4474, 3852, 3390, 4311, 4000, 3544, 3920, 3581, 3235, 2851)
-# gdallocationinfo                                     /home/alber/shared/brick_interp/LC8SR-MOD13Q1-MYD13Q1_233067_2016-08-28_nir_STACK_BRICK.tif -valonly -wgs84 -65.22349 -10.12548
-nir_snd <- c(3129, 3439, 3942, 4199, 3748, 4597, 4422, 4080, 4226, 5192, 4887, 3954, 5735, 4474, 3852, 3390, 4311, 4000, 3544, 3920, 3581, 3235, 2851)
-# gdallocationinfo                                             /home/alber/shared/brick/LC8SR-MOD13Q1-STARFM_233067_2016-08-10_nir_STACK_BRICK.tif -valonly -wgs84 -65.22349 -10.12548
-nir_sfm <- c(2627, 2680, 2930, 3455, 2364, 3585, 3727, 4917, 3360, 3438, 3989, 5072, 3951, 4535, 7153, 5746, 4308, 4113, 4002, 4283, 3956, 3564, 3564)
-
-# gdallocationinfo /net/150.163.2.38/dados1/Repository/Brick/LC8/LC8SR-MOD13Q1-MYD13Q1/LC8SR-MOD13Q1-MYD13Q1_233067_2016-08-28_ndvi_STACK_BRICK.tif -valonly -wgs84 -65.22349 -10.12548
-ndvi_fst <- c(5401, 6579, 7870, 7888, 7284, 7955, 4497, 7447, 8937, 7418, 7212, 7837, 3833, 8134, 7845, 8281, 8177, 8238, 7974, 8062, 7340, 5333, 4785)
-# gdallocationinfo                                     /home/alber/shared/brick_interp/LC8SR-MOD13Q1-MYD13Q1_233067_2016-08-28_ndvi_STACK_BRICK.tif -valonly -wgs84 -65.22349 -10.12548
-
-
-All NDVI bricks are empty
-find /home/alber/shared/brick_interp/ -type f  -name "*ndvi*" -exec gdallocationinfo {}  -valonly -wgs84 -65.22349 -10.12548 \;
-
-ndvi_snd <- c(
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0)
-# gdallocationinfo                                             /home/alber/shared/brick/LC8SR-MOD13Q1-STARFM_233067_2016-08-10_ndvi_STACK_BRICK.tif -valonly -wgs84 -65.22349 -10.12548
-ndvi_sfm <- c(5256, 4935, 5757, 6671, 8390, 7331, 6531, 4945, 1957, -1364, 3042, 4755, 7910, 954, 639, 2137, 1092, 6798, 8195, 8358, 8060, 6927, 6927)
-
-
-
-
-vi_tb <- tibble(red      =  c(334, 296, 376, 383), 
-                nir      =  c(3452, 3215, 4290, 4994),
-                ndvi_old = c(8233, 8308, 8799, 8720),
-                ndvi_c   = c(8233, 8308, 8799, 8720)
-                ) %>% 
-    dplyr::mutate(c_ndvi = (nir - red)/(nir + red ) * 10000)
-knitr::kable(vi_tb)
-
-```
-
-```{r ndvi_interpolated_bricks, echo=FALSE}
-
-
-
-
-
-```
 
 
 

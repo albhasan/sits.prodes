@@ -103,10 +103,12 @@ replace_bands_with_random <- function(x){
 
 
 
-# Webinar: Good practices :
-# Accuracy assesment and area estimation
-# https://youtu.be/xAes7ddZ7CQ
-#
+#' Webinar: Good practices :
+#' Accuracy assesment and area estimation
+#' https://youtu.be/xAes7ddZ7CQ
+
+
+
 #' @title Asses accuracy and estimate area according to Olofsson
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description        Compute accuracy normalized by area. Note that, these
@@ -140,7 +142,6 @@ replace_bands_with_random <- function(x){
 #'
 #' #Compute the accuracy metrics and display the results
 #' asses_accuracy(confusion_matrix, class_areas)
-#'
 asses_accuracy <- function(error_matrix, class_areas){
 
     stopifnot(length(colnames(error_matrix)) > 0)
@@ -244,9 +245,9 @@ compute_sd_raster <- function(img, base_dir, cores = 1L){
                                          full.names = TRUE, recursive = TRUE) %>%
         raster::stack()
     # compute SD in parallel
-    beginCluster(cores, type='SOCK')
-    raster_sd <- raster::calc(raster_st, fun=sd)
-    endCluster()
+    raster::beginCluster(cores, type = 'SOCK')
+    raster_sd <- raster::calc(raster_st, fun = stats::sd)
+    raster::endCluster()
     return(raster_sd)
 }
 
@@ -261,21 +262,21 @@ compute_sd_raster <- function(img, base_dir, cores = 1L){
 #' @param outfile Path to raster output file.
 #' @param quiet   Logical. Should gdal_calc.py output be silenced?
 compute_sd_raster_gdal <- function(infile, outfile, quiet=TRUE) {
-    require(rgdal)
     gdal_calc <- Sys.which('gdal_calc.py')
-    if(gdal_calc=='') stop('gdal_calc.py not found on system.')
-    if(file.exists(outfile)) stop('outfile already exists.')
+    if (gdal_calc == '') stop('gdal_calc.py not found on system.')
+    if (file.exists(outfile)) stop('outfile already exists.')
     nbands <- sapply(infile, function(x) nrow(attr(GDALinfo(x), 'df')))
-    if(length(infile) > 26 || nbands > 26) stop('Maximum number of inputs is 26.')
-    if(length(nbands) > 1 & any(nbands > 1))
+    if (length(infile) > 26 || nbands > 26) stop('Maximum number of inputs is 26.')
+    if (length(nbands) > 1 & any(nbands > 1))
         warning('One or more rasters have multiple bands. First band used.')
-    if(length(infile)==1) {
+    if (length(infile) == 1) {
         inputs <- paste0('-', LETTERS[seq_len(nbands)], ' ', infile, ' --',
-                         LETTERS[seq_len(nbands)], '_band ', seq_len(nbands), collapse=' ')
+                         LETTERS[seq_len(nbands)], '_band ', seq_len(nbands),
+                         collapse = ' ')
         n <- nbands
     } else {
         inputs <- paste0('-', LETTERS[seq_along(nbands)], ' ', infile, ' --',
-                         LETTERS[seq_along(nbands)], '_band 1', collapse=' ')
+                         LETTERS[seq_along(nbands)], '_band 1', collapse = ' ')
         n <- length(infile)
     }
 
@@ -410,52 +411,52 @@ listname2data.frame <- function(df.list, colname){
 }
 
 
-# taken from https://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
-# Multiple plot function
+# # taken from https://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
+# # Multiple plot function
+# #
+# # ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# # - cols:   Number of columns in layout
+# # - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+# #
+# # If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# # then plot 1 will go in the upper left, 2 will go in the upper right, and
+# # 3 will go all the way across the bottom.
+# #
+# multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+#     library(grid)
 #
-# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
-# - cols:   Number of columns in layout
-# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#     # Make a list from the ... arguments and plotlist
+#     plots <- c(list(...), plotlist)
 #
-# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
-# then plot 1 will go in the upper left, 2 will go in the upper right, and
-# 3 will go all the way across the bottom.
+#     numPlots = length(plots)
 #
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-    library(grid)
-
-    # Make a list from the ... arguments and plotlist
-    plots <- c(list(...), plotlist)
-
-    numPlots = length(plots)
-
-    # If layout is NULL, then use 'cols' to determine layout
-    if (is.null(layout)) {
-        # Make the panel
-        # ncol: Number of columns of plots
-        # nrow: Number of rows needed, calculated from # of cols
-        layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                         ncol = cols, nrow = ceiling(numPlots/cols))
-    }
-
-    if (numPlots==1) {
-        print(plots[[1]])
-
-    } else {
-        # Set up the page
-        grid.newpage()
-        pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-
-        # Make each plot, in the correct location
-        for (i in 1:numPlots) {
-            # Get the i,j matrix positions of the regions that contain this subplot
-            matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-
-            print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                            layout.pos.col = matchidx$col))
-        }
-    }
-}
+#     # If layout is NULL, then use 'cols' to determine layout
+#     if (is.null(layout)) {
+#         # Make the panel
+#         # ncol: Number of columns of plots
+#         # nrow: Number of rows needed, calculated from # of cols
+#         layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+#                          ncol = cols, nrow = ceiling(numPlots/cols))
+#     }
+#
+#     if (numPlots==1) {
+#         print(plots[[1]])
+#
+#     } else {
+#         # Set up the page
+#         grid.newpage()
+#         pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+#
+#         # Make each plot, in the correct location
+#         for (i in 1:numPlots) {
+#             # Get the i,j matrix positions of the regions that contain this subplot
+#             matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+#
+#             print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+#                                             layout.pos.col = matchidx$col))
+#         }
+#     }
+# }
 
 
 #' @title Obtain random samples from polygons

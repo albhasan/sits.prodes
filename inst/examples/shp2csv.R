@@ -1,10 +1,10 @@
 # export sample-point shps to CSV for later use in sits::sits_get_data(./get_timeseries.R)
 
-library(devtools)
+#library(devtools)
 devtools::load_all()
 
-library(sf)
-library(tidyverse)
+#library(sf)
+#library(tidyverse)
 
 val_shps <- list.files("/home/alber/Documents/data/experiments/prodes_reproduction/data/samples/shp",
                        pattern = 'validated_prodes_[0-9][0-9][0-9]_[0-9][0-9][0-9].shp',

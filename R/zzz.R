@@ -2,12 +2,37 @@ sits.env <- new.env()
 utils::globalVariables(c(
     ".",
     "%>%",
+    "area",
+    "band",
     "blue",
+    "count",
+    "cov",
+    "cov_r",
+    "dif_time",
+    "end_date",
+    "GDALinfo",
+    "id",
+    "label",
+    "label_id",
+    "label_ref",
+    "label_res",
+    "latitude",
+    "longitude",
     "lm",
     "nir",
     "red",
     "runif",
-    "swir2"
+    "path",
+    "start_date",
+    "swir2",
+    "sum",
+    "time_serie",
+    "time_series",
+    "tmp_area",
+    "tmp_label",
+    "value",
+    "year",
+    "zone"
 ))
 
 
