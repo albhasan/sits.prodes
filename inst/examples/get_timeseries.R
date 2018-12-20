@@ -6,8 +6,10 @@ setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.
 library(devtools)
 devtools::load_all()
 
-#library(sits)
-#library(parallel)
+library(tidyverse)
+library(sits)
+library(parallel)
+
 
 cores <- floor(parallel::detectCores() * 3/4)
 
@@ -22,9 +24,9 @@ if (length(err_msg) > 0) {
 }
 
 # configuration ----
-brick_type = "oldinterpolation"
-# brick_type = "intepolated"
-# brick_type = "starfm"
+# brick_type = "oldinterpolation"
+# brick_type = "interpolated"
+brick_type = "starfm"
 # class_bands <- c("blue", "ndvi", "nir", "red", "savi", "swir2")
 class_bands <- c("ndvi", "nir", "red", "swir2")
 
@@ -32,7 +34,7 @@ class_bands <- c("ndvi", "nir", "red", "swir2")
 if (brick_type == "starfm") {
     path_bricks  <- "/home/alber/shared/brick"
     brick_prefix <- "LC8SR-MOD13Q1-STARFM_"
-}else if (brick_type == "intepolated") {
+}else if (brick_type == "interpolated") {
     # Bricks created by interpolating bands, then computing vegetation indexes
     path_bricks <- "/home/alber/shared/brick_interp"
     brick_prefix <- "LC8SR-MOD13Q1-MYD13Q1_"
