@@ -26,7 +26,7 @@ cov_get_areas <- function(cov, label){
     colnames(lab_area) <- c("label", "area") # TODO: dplyr-ize!
   }else if(cov_type(cov) == "raster"){
     if(raster::isLonLat(cov)){
-      lab_area <- cov %>% raster::area() %>% zonal(cov, 'sum') %>% 
+      lab_area <- cov %>% raster::area() %>% raster::zonal(cov, 'sum') %>% 
         dplyr::as_tibble() %>% dplyr::select(label = zone, area = sum)
     }else{
       cov_r <- raster::res(cov)
@@ -58,7 +58,7 @@ cov_get_values <- function(cov, sample_points){
     cov_points <- sample_points %>% sf::st_join(cov)
   }else if(cov_type(cov) == "raster"){
     cov_points <- cov %>% 
-      raster::extract(as(sample_points, "Spatial"), sp = TRUE, method='simple') %>%
+      raster::extract(methods::as(sample_points, "Spatial"), sp = TRUE, method='simple') %>%
       sf::st_as_sf()
   }else{
     stop("Unknown coverage!")

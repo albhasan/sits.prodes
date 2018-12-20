@@ -5,6 +5,48 @@
 # NOTES:
 
 
+
+
+
+#' @title Load sample time series from Rdata files
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description Load (and filter) sample time series from Rdata files.
+#'
+#' @param x       A character. A path to a file of samples time series.
+#' @return        A tibble or a list of tibbles.
+load_samples <- function(x, sat){
+    stopifnot(is.character(x))
+    is_ts_valid <- function(ts_tb){
+        if (!dplyr::is.tbl(ts_tb)) return(FALSE)
+        if (nrow(ts_tb) != 23 || ncol(ts_tb) < 1) return(FALSE)
+        # is there any NA?
+        if (any(vapply(ts_tb, function(x) any(is.na(unlist(ts_tb))), logical(1))))
+            return(FALSE)
+        return(TRUE)
+    }
+
+    if (is.na(x) || length(x) == 0) {
+        return(NA)
+    }else if (length(x) == 1) {
+        samples.tb <- NULL
+        load(x)
+        if (is.null(samples.tb)) return(NA)
+        res <- samples.tb %>%
+            dplyr::arrange(longitude, latitude, start_date, end_date, label) %>%
+            dplyr::mutate(valid = purrr::map_lgl(time_series, is_ts_valid)) %>%
+            dplyr::filter(valid == TRUE) %>%
+            dplyr::select(-valid)
+        if (!is.null(sat))
+            res <- res %>%
+            dplyr::mutate(time_series = purrr::map(time_series, compute_indexes,
+                                                   sat = sat))
+        return(res)
+    } else {
+        return(lapply(x, load_samples, sat))
+    }
+}
+
+
 #' @title Process a shapefile of validated samples.
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description Get validated PRODES samples and split them by label in year
@@ -23,7 +65,7 @@ process_valid_shp <- function(shp_path, out_dir){
         sf::st_set_geometry(NULL) %>% dplyr::as_tibble()
 
     # check for a valid id field
-    id_col <- csv %>% dplyr::select(starts_with('tmp_id'))
+    id_col <- csv %>% dplyr::select(tidyselect::starts_with('tmp_id'))
     if (nrow(id_col) > 0 && ncol(id_col) > 0) {
         id_col <- as.integer(as.vector(unlist(id_col[, ncol(id_col)]))) # take the last tmp_id used
         if (length(id_col) != length(unique(id_col)))
@@ -32,7 +74,7 @@ process_valid_shp <- function(shp_path, out_dir){
         id_col <- 1:nrow(csv)
     }
     csv <- csv %>% dplyr::mutate(id = id_col) %>%
-        dplyr::select(-starts_with("tmp_id")) %>%
+        dplyr::select(-tidyselect::starts_with("tmp_id")) %>%
         dplyr::select(id, tidyselect::everything())
 
 
@@ -81,7 +123,7 @@ process_valid_shp <- function(shp_path, out_dir){
         csv_files <- append(csv_files, fname)
         print(paste0("Writing ", nrow(csv_d), " samples to file ", fname))
         print(table(csv_d$label))
-        write.csv(csv_d, file = fname, quote = FALSE, row.names = FALSE)
+        utils::write.csv(csv_d, file = fname, quote = FALSE, row.names = FALSE)
     }
     return(csv_files)
 }
@@ -189,7 +231,7 @@ validate_csv <- function(csv_paths){
             warning(paste0("File ", x, " does not exist"))
             return(paste0("File ", x, " does not exist"))
         }
-        csv <- read.csv(x)
+        csv <- utils::read.csv(x)
         valid_cn <- c("id", "longitude", "latitude", "start_date", "end_date", "label")
         miss_f <- setdiff(valid_cn, colnames(csv))
         if (length(miss_f) > 0) {

@@ -345,7 +345,7 @@ get_confusion_matrix <- function(cov_res, cov_ref, n, cores = 1L){
         sf::st_set_geometry(NULL) %>% unique()
     if( length(label_vec) < 2) warning("length(label_vec) < 2")
     pts_ref <- cov_ref %>% sample_stratified(n * nrow(label_vec), "label_ref", cores)
-    pts_res <- cov_res %>% raster::extract(as(pts_ref, "Spatial"), sp = TRUE) %>%
+    pts_res <- cov_res %>% raster::extract(methods::as(pts_ref, "Spatial"), sp = TRUE) %>%
         sf::st_as_sf() %>%
         dplyr::select(label_id = dplyr::contains("mixl8")) %>%
         dplyr::mutate(label_res = dplyr::recode(label_id,
@@ -370,29 +370,6 @@ get_confusion_matrix <- function(cov_res, cov_ref, n, cores = 1L){
 }
 
 
-#' @title Load sample time series from Rdata files
-#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description   Load sample time series from Rdata files.
-#'
-#' @param x       A character. A path to a file of samples time series.
-#' @return        A tibble or a list of tibbles.
-load_samples <- function(x, sat){
-    stopifnot(is.character(x))
-    if (is.na(x) || length(x) == 0) {
-        return(NA)
-    }else if (length(x) == 1) {
-        samples.tb <- NULL
-        load(x)
-        if (is.null(samples.tb)) return(NA)
-        samples.tb %>%
-            dplyr::arrange(longitude, latitude, start_date, end_date, label) %>%
-            dplyr::mutate(time_series = purrr::map(time_series, compute_indexes,
-                                                   sat = sat)) %>%
-            return()
-    } else {
-        return(lapply(x, load_samples, sat))
-    }
-}
 
 
 # Given a list of data.frames, this function adds the list names as columns on each of the data.frames
@@ -666,8 +643,8 @@ sim_sits_tibble <- function(n_samples, label = "label_A", lon_mean = -65,
                                 label       = rep(label, each = n_samples),
                                 coverage    = rep("random_coverage", times = n),
                                 time_series = ts.lst)
-    class(random_st) <- class(sits_tibble())
-    .sits_test_tibble(random_st)
+    class(random_st) <- class(sits::sits_tibble())
+    sits:::.sits_test_tibble(random_st)
     return(random_st)
 }
 
