@@ -1,0 +1,85 @@
+---
+title: "Landsat bricks for SITS"
+author: "Alber Sánchez"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+bibliography: references.bib
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Data bricks for sits
+
+(Text composed for the World Bank report)
+
+Analysing massive datasets of satellite imagery is hard. Even when using a 
+single data source, handling thousand of images is a time consuming task. In 
+order to ease data management and increase computing performance, we use a data 
+cube. A data cube is a set of large computer files of homogeneous spatial, 
+temporal, and spectral properties. 
+
+Our data cube is organized into chunks of spatio-temporal data that we call 
+bricks. Each brick stores one year of data of a single band (or remote sensing 
+index) of the same region using any image format. The data sources for our 
+bricks are the Landsat and MODIS satellite programs. 
+
+The Landsat program has continually provided imagery of the Earth surface for 45 
+years and it is a long-term program for studying changes in Earth's global 
+environment. The most recent mission (Landsat-8) provides visible and thermal 
+images of the landmasses on Earth each two weeks at 30m resolution [@Roy:2014; 
+@Irons:2012]. 
+
+On the other hand, the MODIS are satellite sensors which record 36 spectral 
+bands and produce images every two days. For our bricks, we used two derived 
+products of MODIS, known as MOD13Q1[@MOD13Q1] and MYD13Q1[@MYD13Q1], two 
+collections used in applications on vegetation researches. These products have 
+spatial resolution of 250m and their images are composite of the best pixel of 
+two weeks. The imagery dates from 2000 [@Friedl:2002]. Both Landsat-8 and MODIS 
+enable scientists to compare and monitor global vegetation parameters such as 
+photosynthetic activity and phenological change.
+
+TODO: Bricks are built using pre-processed data (surface reflectance data)
+
+
+### Landsat brick
+
+The construction of a brick starts with the raw images taken by the Landsat 
+program. Specifically, we use Landsat-8 images which undergo radiometric and 
+geometric corrections to compensate for topographic (e.g. relief) and 
+atmospheric phenomena (e.g. aerosols). The results are known as surface 
+reflectance images, which relate image pixels to precise locations on Earth 
+[@Barsi:2014]. This calibration process also identifies clouds and it allows us 
+to remove the corresponding pixels. This process is made on demand by the 
+Geological Service of the United States of America.
+
+
+To fill in the cloud gaps, we tested two approachs. First we filled in the 
+Landsat gaps by interpolating MODIS images (MOD13Q1, MYD13Q1). Alternatively, 
+we 
+
+
+Then we fill the cloud/shadows gaps in the Landsat-8 images using 
+MOD13Q1/MYD13Q1 data products. To compensate for the differences in resolution 
+and to keep the Landsat-8 structure of the data, we apply a bilinear 
+interpolation. Finally, split the images and stack each band or vegetation index 
+into a independent raster file. All procedures is summarized in the Figure below.
+
+![Workflow of bricks](./img/workflow_brick_l8mod.png)
+
+
+## Brick issues
+
+- The first bricks were billienarly interpolation to fill in the clouds in 
+Landsat 8 images, including the vegetation indexes. They are stored in 
+[chronos](/net/150.163.2.38/dados1/Repository/Brick/LC8/LC8SR-MOD13Q1-MYD13Q1)
+
+# References
