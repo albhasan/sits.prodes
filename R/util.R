@@ -25,7 +25,7 @@ compare_ts <- function(x, band, sam_l8m_mod){
 #' @description   Compute vegetation indexes
 #'
 #' @param x       A tibble.
-#' @param sat     A Length-one character. The satellite or sensor name.
+#' @param sat     A Length-one character. The satellite or sensor name in c("Landsat8", "MOD13").
 #' @return        A tibble with additional variables (prefixed with "c_").
 #' @export
 compute_indexes <- function(x, sat){
@@ -60,6 +60,11 @@ compute_indexes <- function(x, sat){
 }
 
 
+
+
+
+
+
 #' @title Replace column values with random numbers
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description   Replace the values of the columns (from the second one on) of a tibble uniform random numbers between 0 and 1
@@ -78,70 +83,18 @@ replace_bands_with_random <- function(x){
 
 
 
-
-
-################################################################################
-# UTIL FUNCTIONS FOR REPRODUCING PROCES USING DEEP iEARNING
-# alber sanchez alber.ipia@inpe.br
-#-------------------------------------------------------------------------------
-# Last update 2018-06-19
-#-------------------------------------------------------------------------------
-# TODO:
-# - Investigate why pts_res <- cov_res %>% raster::extract returns some NAs
-# - Link asses_accuracy to SITS
-#-------------------------------------------------------------------------------
-# NOTES:
-################################################################################
-#setwd("/home/alber/Documents/data/experiments/prodes_reproduction")
-# source_files <- c("./scripts/coverage.R", "./scripts/prodes.R")
-# for(sf in source_files){
-#   if(file.exists(sf))
-#     source(sf)
-#   else
-#     warning(paste0("Couldn't find the file ", sf))
-# }
-
-
-
-#' Webinar: Good practices :
-#' Accuracy assesment and area estimation
-#' https://youtu.be/xAes7ddZ7CQ
+# TODO: Review functions -----
 
 
 
 #' @title Asses accuracy and estimate area according to Olofsson
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description        Compute accuracy normalized by area. Note that, these
-#' computations don't work for clustered sampling becaus the equations are
-#' different
+#' @description   Compute accuracy normalized by area. Note that, these computations don't work for clustered sampling becaus the equations are different.
+#'
 #' @param error_matrix A matrix given in sample counts. Columns represent the reference data and rows the results of the classification
 #' @param class_areas  A vector of the total area of each class on the map
 #' @return             A list of two lists: The confidence interval (confint95) and the accuracy
-#'
-#' @references
-#' [1] Olofsson, P., Foody, G.M., Stehman, S.V., Woodcock, C.E. (2013).
-#' Making better use of accuracy data in land change studies: Estimating
-#' accuracy and area and quantifying uncertainty using stratified estimation.
-#' Remote Sensing of Environment, 129, pp.122-131.
-#'
-#' @references
-#' [2] Olofsson, P., Foody G.M., Herold M., Stehman, S.V., Woodcock, C.E., Wulder, M.A. (2014)
-#' Good practices for estimating area and assessing accuracy of land change. Remote Sensing of
-#' Environment, 148, pp. 42-57.
-#'
-#' @examples
-#'
-#' # Get a confusion matrix and a vector
-#' classnames <-  c("deforested", "forested", "no forested")
-#' confusion_matrix <- matrix(c(97, 0, 3, 3, 279, 18, 2, 1, 97), ncol = 3, byrow = TRUE)
-#' class_areas <- c(22353, 1122543, 610228)
-#'
-#' # Name the rows and columns accordingly
-#' colnames(confusion_matrix) <- rownames(confusion_matrix) <- classnames
-#' names(class_areas) <- classnames
-#'
-#' #Compute the accuracy metrics and display the results
-#' asses_accuracy(confusion_matrix, class_areas)
+#' @export
 asses_accuracy <- function(error_matrix, class_areas){
 
     stopifnot(length(colnames(error_matrix)) > 0)
@@ -190,44 +143,6 @@ asses_accuracy <- function(error_matrix, class_areas){
 
 
 
-#' @title Compute indexes
-#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description   Compute vegetation indexes
-#'
-#' @param x       A tibble.
-#' @param sat     A Length-one character. The satellite or sensor name.
-#' @return        A tibble with additional variables (prefixed with "c_").
-compute_indexes <- function(x, sat){
-    stopifnot(sat %in% c("Landsat8", "MOD13"))
-    a <- 0.0001 # avoid division by 0
-    if (sat == "Landsat8") {
-        res <- x %>% dplyr::mutate(
-            # USGS. (2017). LANDSAT surface reflectance-derived spectral indices. Retrieved from https://landsat.usgs.gov/sites/default/files/documents/si_product_guide.pdf (page 14)
-            #c_evi   = 2.5 * ((nir - red)/(nir + 6.0 * red - 7.5 * blue + 1.0 + a)),
-            c_msavi = (2 * nir + 1.0 - sqrt((2.0 * nir + 1.0)^2.0 - 8.0 * (nir - red))) / 2.0,
-            c_nbr   = (nir - swir2) / (nir + swir2 + a),
-            #c_nbr2   = (swir1 - swir2) / (swir1 + swir2 + a),
-            #c_ndmi  = (swir - swir2) / (swir + swir2 + a),
-
-            c_ndvi  = (nir - red)/(nir + red + a),
-            # geraVI.py rasterndvi = (10000 * (nir - red) / (nir + red + 0.0001)).astype(numpy.int16)
-
-            c_savi  = ((nir - red) / (nir + red + 0.5 + a)) * (1.5),
-
-            # evi2 is NOT documented for Landsat!!!
-            c_evi2 = 2.5 * (nir - red)/(nir + 2.4 * red + 1.0 + a)
-        )
-    } else if (sat == "MOD13") {
-        # Didan, K., Barreto Munoz, A., Solano, R., & Huete, A. (2015). MODIS Vegetation Index User’s Guide (MOD13 Series), 2015(June). Retrieved from http://vip.arizona.edu (page 3)
-        res <- x %>% dplyr::mutate(
-            c_evi  = 2.5 * (nir - red)/(nir + 6.0 * red - 7.5 * blue + 1.0 + a),
-            # geraVI.py rasterevi = (10000 * 2.5 * (nir - red)/(nir + 6. * red - 7.5 * blue + 1)).astype(numpy.int16)
-            c_evi2 = 2.5 * (nir - red)/(nir + 2.4 * red + 1.0 + a),
-            c_ndvi = (nir - red)/(nir + red + a)
-        )
-    }
-    return(res)
-}
 
 
 
@@ -558,6 +473,8 @@ sample_random <- function(coverage, n){
 #'
 #' @param coverage Either a vector or raster coverage.
 #' @param n        Number of samples.
+#' @param label    A length-one character. A label for the samples.
+#' @param cores    A length-one numeric. Number of cores for parallel processing.
 #' @return         A simple feature object of type point.
 sample_stratified <- function(coverage, n, label, cores = 2L){
     stop("Deprecated. Use cov_sample_stratified instead") # Use cov_sample_stratified in coverage.R
@@ -610,11 +527,14 @@ sample_stratified <- function(coverage, n, label, cores = 2L){
 #' @param obs_freq      A length-one numeric. The number of observations in the period. The default are 23.
 #' @param n_vi          A length-one numeric. The number of vegetation indexes on each sample. The default is 1.
 #' @return random_st    A sits_tibble
-#' @export
 #'
 #' @examples
-#' my_st <- sits_random_tibble(10, label = c("A", "B"))
+#' library(sits.prodes)
+#' library(sits)
+#' my_st <- sim_sits_tibble(10, label = c("A", "B"))
 #' sits_plot(my_st)
+#'
+#' @export
 sim_sits_tibble <- function(n_samples, label = "label_A", lon_mean = -65,
                             lon_sd = 1, lat_mean = -5, lat_sd = 1,
                             date_start = "2000/01/01",
@@ -644,7 +564,7 @@ sim_sits_tibble <- function(n_samples, label = "label_A", lon_mean = -65,
                                 coverage    = rep("random_coverage", times = n),
                                 time_series = ts.lst)
     class(random_st) <- class(sits::sits_tibble())
-    sits:::.sits_test_tibble(random_st)
+    #sits:::.sits_test_tibble(random_st)
     return(random_st)
 }
 
@@ -700,7 +620,10 @@ splitAt2 <- function(x, pos) {
 #' @param cov_ref A coverage.
 #' @param lab_res A character. The name of the label field in the results coverage.
 #' @param lab_ref A character. The name of the label field in the referece coverage.
-validate_sampling <- function(cov_res, cov_ref, lab_res, lab_ref, n_samples = 10000, cores = 1){
+#' @param n_samples A length-one integer. The number of samples to use during validation. The default is 1000.
+#' @param cores     A length-one integer. The number cores to use. The default is 1
+validate_sampling <- function(cov_res, cov_ref, lab_res, lab_ref,
+                              n_samples = 10000, cores = 1){
     # get sample points
     s_points <- cov_ref %>%
         cov_sample_stratified(n = n_samples,
@@ -721,14 +644,14 @@ validate_sampling <- function(cov_res, cov_ref, lab_res, lab_ref, n_samples = 10
                                               "4" = "Water")) %>%
         dplyr::select(sample_id, lab_res)
     # control
-    if(nrow(ref_points) != nrow(res_points))
+    if (nrow(ref_points) != nrow(res_points))
         warning("nrow(ref_points) != nrow(res_points)")
     # Join the data, select and rename label fields
     val_tb <- ref_points %>% sf::st_set_geometry(NULL) %>%
         dplyr::left_join(res_points, by = "sample_id") %>%
         dplyr::select("lab_ref" = lab_ref, "lab_res" = lab_res)
     # validate
-    if(sum(stats::complete.cases(val_tb)) != nrow(val_tb)){
+    if (sum(stats::complete.cases(val_tb)) != nrow(val_tb)) {
         warning(paste0("Some samples are labeled as NAs: ",
                        sum(stats::complete.cases(val_tb)), "/", nrow(val_tb)))
         val_tb <- stats::na.omit(val_tb)

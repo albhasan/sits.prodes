@@ -38,7 +38,8 @@ samples_tb <- samples_path %>%
     list.files(pattern = samples_pattern[classification_type],
                full.names = TRUE) %>% load_samples(sat = NULL) %>%
     dplyr::bind_rows() %>% sits::sits_prune() %>%
-    dplyr::filter(label %in% test_labels) %>% ensurer::ensure_that(nrow(.) > 0)
+    dplyr::filter(label %in% test_labels) %>% ensurer::ensure_that(nrow(.) > 0) %>%
+    dplyr::mutate(coverage = stringr::str_c("prodes_amazon_", classification_type))
 # samples_tb <- samples_tb %>% sits::sits_linear_interp(n = 23) %>% # fill in the NAs
 # samples_tb <- samples_tb %>% sits::sits_sample(n = 1000/length(test_labels))
 
@@ -81,11 +82,18 @@ if (!exists("samples_koh") && !exists("koh_evaluate_samples")) {
     load(file_samples_koh)
     load(file_koh_evaluate_samples)
 
-    #load("/home/alber/Documents/data/experiments/prodes_reproduction/tempdir/file_samples_koh_interpolated_esensing-007.Rdata")
-    #load("/home/alber/Documents/data/experiments/prodes_reproduction/tempdir/file_koh_evaluate_samples_interpolated_esensing-007.Rdata")
+    # load("/home/alber/Documents/data/experiments/prodes_reproduction/tempdir/file_samples_koh_interpolated_esensing-007.Rdata")
+    # samples_koh$info_samples <- samples_koh$info_samples %>% dplyr::mutate(coverage = "prodes_amazon_interpolated")
+    # load("/home/alber/Documents/data/experiments/prodes_reproduction/tempdir/file_koh_evaluate_samples_interpolated_esensing-007.Rdata")
+    # koh_evaluate_samples$samples.tb <- koh_evaluate_samples$samples.tb %>% dplyr::mutate(coverage = "prodes_amazon_interpolated")
     #
-    #load("/home/alber/Documents/data/experiments/prodes_reproduction/tempdir/file_samples_koh_starfm_esensing-007.Rdata")
-    #load("/home/alber/Documents/data/experiments/prodes_reproduction/tempdir/file_koh_evaluate_samples_starfm_esensing-007.Rdata")
+    # load("/home/alber/Documents/data/experiments/prodes_reproduction/tempdir/file_samples_koh_starfm_esensing-007.Rdata")
+    # samples_koh$info_samples <- samples_koh$info_samples %>% dplyr::mutate(coverage = "prodes_amazon_starfm")
+    # load("/home/alber/Documents/data/experiments/prodes_reproduction/tempdir/file_koh_evaluate_samples_starfm_esensing-007.Rdata")
+    # koh_evaluate_samples$samples.tb <- koh_evaluate_samples$samples.tb %>% dplyr::mutate(coverage = "prodes_amazon_starfm")
+    #
+    #rm(samples_koh)
+    #rm(koh_evaluate_samples)
 }
 
 # check the distribution of the smaples
@@ -139,9 +147,9 @@ prodes_samples %>% sits::sits_kfold_validate(ml_method = sits::sits_svm()) %>%
 # save the samples to the package
 if (classification_type == "interpolated") {
     prodes_samples_interpolated <- prodes_samples
-    devtools::use_data(prodes_samples_interpolated)
+    devtools::use_data(prodes_samples_interpolated, overwrite = TRUE)
 }else if (classification_type == "starfm") {
     prodes_samples_starfm <- prodes_samples
-    devtools::use_data(prodes_samples_starfm)
+    devtools::use_data(prodes_samples_starfm, overwrite = TRUE)
 }
 

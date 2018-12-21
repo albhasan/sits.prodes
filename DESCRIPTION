@@ -1,12 +1,13 @@
 Package: sits.prodes
 Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9001
+Version: 0.0.0.9003
 Authors@R: 
     person(given = "First",
            family = "Last",
            role = c("aut", "cre"),
            email = "first.last@example.com")
 Description: What the package does (one paragraph).
+Depends: R (>= 3.5.0)
 License: GPL-2 | file LICENSE
 Encoding: UTF-8
 LazyData: true
@@ -16,6 +17,7 @@ Imports:
  dtw,
  ensurer,
  gdalUtils,
+ magrittr,
  methods,
  proxy,
  purrr,
@@ -30,3 +32,4 @@ Suggests:
     knitr,
     rmarkdown
 VignetteBuilder: knitr
+RoxygenNote: 6.1.1

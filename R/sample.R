@@ -13,6 +13,7 @@
 #' @description Load (and filter) sample time series from Rdata files.
 #'
 #' @param x       A character. A path to a file of samples time series.
+#' @param sat     A Length-one character. The satellite or sensor name in c("Landsat8", "MOD13").
 #' @return        A tibble or a list of tibbles.
 load_samples <- function(x, sat){
     stopifnot(is.character(x))
