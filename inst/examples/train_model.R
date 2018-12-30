@@ -1,56 +1,99 @@
 #!/usr/bin/Rscript
-###############################################################################
+
 # FIND THE BEST HYPERPARAMETERS FOR DEEP LEARNING MODEL
-#------------------------------------------------------------------------------
-# Last update 2018-12-02
-###############################################################################
+
 library(tidyverse)
 library(sits)
+library(keras)
 
 setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
 devtools::load_all()
 
+# util ----
+get_train_name <- function(train_path){
+    train_path %>% list.dirs(recursive = FALSE) %>%
+        stringr::str_match(pattern = "train_[0-9]{2}") %>% .[!is.na(.)] %>%
+        stringr::str_extract(pattern = "[0-9]{2}") %>% dplyr::last() %>%
+        as.integer() %>% (function(x) x + 1)
+}
+
+# setup ----
+brick_type <- "starfm"
+#brick_type <- "interpolated"
+
+experiment_bands <- c("ndvi", "nir", "red", "swir2")
+experiment_labels <- c("forest", "deforestation", "flood")
+#experiment_scenes <- c("225063", "226064", "233067")
+#experiment_scenes <- "225063"
+#experiment_scenes <- "226064"
+experiment_scenes <- "233067"
 
 
-prefix = 'train_14'
-log_file <- file(paste0(prefix, ".R.log"), open = "wt")
+train_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/02_train_model"
+samples_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/samples"
+scene_shp <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/vector/wrs2_asc_desc/wrs2_asc_desc.shp"
+
+prefix <- stringr::str_c("train_", get_train_name(train_path))
+train_path <- file.path(train_path, prefix)
+
+if (dir.exists(train_path)) {
+    stop("Directory already exits!")
+}else{
+    dir.create(train_path)
+}
+
+log_file <- file(file.path(train_path, paste0(prefix, '_',
+                                              R.utils::System$getHostname(), '_',
+                                              ".R.log")), open = "wt")
 sink(file = log_file, append = TRUE, type = 'message')
 message(Sys.time(), ' Initializing...')
-
-
-classification_type <- "interpolated"
-classification_type <- "starfm"
-
-samples_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/samples"
-
-if (classification_type == "starfm") {
-    samples_pattern <- "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_starfm_cluster.Rdata"
-}else if (classification_type == "interpolated") {
-    samples_pattern <- "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_intepolated_cluster.Rdata"
-}
+message(Sys.time(), ' SITS version ', paste(unlist(packageVersion("sits")), collapse = "."))
+message(Sys.time(), ' Clasification type: ', brick_type)
+message(Sys.time(), ' Bands  (experiment): ', paste0(experiment_bands, collapse = ", "))
+message(Sys.time(), ' Labels (experiment): ', paste0(experiment_labels, collapse = ", "))
+message(Sys.time(), ' Scenes (experiment): ', paste0(experiment_scenes, collapse = ", "))
 
 # load samples
-samples.tb <- NULL
-sample_files <- samples_path %>% list.files(pattern = samples_pattern, full.names = TRUE)
-for (spath in sample_files) {
-    load(spath)
-    samples.tb <- dplyr::bind_rows(point_raster.tb, samples.tb)
+if (brick_type == "interpolated") {
+    data(list = "prodes_samples_interpolated", package = "sits.prodes")
+    prodes_samples <- prodes_samples_interpolated
+}else if (brick_type == "starfm") {
+    data(list = "prodes_samples_starfm", package = "sits.prodes")
+    prodes_samples <- prodes_samples_starfm
+}else{
+    stop("Unknown type iof brick")
+}
+message(Sys.time(), ' Bands (samples): ', paste0(sits::sits_bands(prodes_samples), collapse = ", "))
+
+# load scenes
+scenes <- scene_shp %>%
+    sf::read_sf(quiet = TRUE, stringsAsFactors = TRUE) %>%
+    dplyr::filter(PR %in% experiment_scenes) %>%
+    dplyr::select(PR) %>%
+    sf::st_transform(crs = 4326)
+
+
+
+
+
+# TODO: use the clustered labels if available
+if (all(c("id_neuron", "neuron_label", "id_sample", "label2") %in% colnames(prodes_samples))) {
+    prodes_samples <- prodes_samples %>% dplyr::mutate(label = label2) %>%
+        dplyr::select(-c(id_neuron, neuron_label, id_sample, label2))
 }
 
 
 
-
-
-
-
-
-
-time_series.ts <- samples.tb %>% sits::sits_values(format = "bands_cases_dates")
-res <- sits::sits_kohonen(samples.tb, time_series = time_series.ts,
-                          bands = sits::sits_bands(samples.tb), grid_xdim = 25,
-                          grid_ydim = 25, rlen = 100, dist.fcts = "euclidean",
-                          alpha = 1, neighbourhood.fct = "bubble")
-
+# restrain samples to certain bands, labels, and scenes
+prodes_samples <- prodes_samples %>%
+    sits::sits_select_bands_(bands = experiment_bands) %>%
+    dplyr::filter(label %in% experiment_labels) %>%
+    sf::st_as_sf(coords = c("longitude", "latitude"), crs = 4326,
+                 remove = FALSE) %>%
+    sf::st_intersection(scenes) %>%
+    sf::st_set_geometry(NULL) %>%
+    dplyr::select(longitude, latitude, start_date, end_date, label, coverage,
+                  time_series)
 
 
 
@@ -58,31 +101,12 @@ res <- sits::sits_kohonen(samples.tb, time_series = time_series.ts,
 
 
 
-
-
-load(sample_files)
-stopifnot(exists("subgroups"))
-#unique(subgroups$label2)
-#nrow(subgroup)
-samples.tb <- subgroups %>% dplyr::mutate(label = label2) %>%
-    dplyr::select(-c(id_neuron, neuron_label, id_sample, label2)) %>%
-    sits::sits_select_bands(bands = c("nir", "red", "swir2"))
-#sits::sits_bands(samples.tb)
-# sample_files <- list.files('./data/samples', full.names = TRUE,
-#                            pattern = 'validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}.Rdata')
-# samples.tb <- NULL
-# for(spath in sample_files){
-#   load(spath)
-#   samples.tb <- dplyr::bind_rows(samples.tb, samples.tb)
-# }
-stopifnot(exists("samples.tb"))
-#samples.tb <- samples.tb %>% dplyr::filter(label %in% c("forest", "deforestation", "flood")) # ---------------------------------
-
-param_lst <- list()
+# build a random hyper-parameter list
+param_ls <- list()
 n <- 1:20
-for(i in n){
+for (i in seq_along(n)) {
     n_layers <- sample(2:6, size = 1)
-    param_lst[[i]] = list(
+    param_ls[[i]] <- list(
         units            = rep(sample(seq(600, 1000, 100), size = 1), n_layers),
         activation       = sample(c('selu', 'sigmoid'), size = 1),
         dropout_rates    = rep(sample(seq(0.3, 0.5, 0.1), size = 1), n_layers),
@@ -94,7 +118,10 @@ for(i in n){
     )
 }
 
-for(p in param_lst){
+
+counter <- 0
+for (p in param_ls) {
+    (counter <- counter + 1)
     #options(keras.fit_verbose = 0)
     method <- sits_deeplearning(
         units            = p$units,
@@ -104,11 +131,11 @@ for(p in param_lst){
         epochs           = p$epochs,
         batch_size       = p$batch_size,
         validation_split = p$validation_split)
-    model <- sits::sits_train(samples.tb, method)
+    model <- sits::sits_train(prodes_samples, method)
 
     sits::sits_save_keras(model,
-                          hdffile = paste0('./02_train_model/', prefix, '/', p$model_name, '.h5'),
-                          rdsfile = paste0('./02_train_model/', prefix, '/', p$model_name, '.rds'))
+                          hdffile = file.path(train_path, paste0(p$model_name, '.h5')),
+                          rdsfile = file.path(train_path, paste0(p$model_name, '.rds')))
 
     met <- environment(model)$history$metrics
     message('EXPERIMENT')
@@ -116,7 +143,7 @@ for(p in param_lst){
     message('optimizer = ', attributes(p$optimizer)$class[1])
     message(paste0(names(p), " = ", p, '\n'))
     msgs <- paste0(names(met), ' = ', met)
-    for(m in msgs){
+    for (m in msgs) {
         message(m)
     }
     message('---')

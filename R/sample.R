@@ -5,9 +5,6 @@
 # NOTES:
 
 
-
-
-
 #' @title Load sample time series from Rdata files
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description Load (and filter) sample time series from Rdata files.

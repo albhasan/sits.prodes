@@ -1,6 +1,5 @@
+# cluster samples using Kohonen
 # Lorena' script
-
-# cluster samples
 
 library(tidyverse)
 library(kohonen)

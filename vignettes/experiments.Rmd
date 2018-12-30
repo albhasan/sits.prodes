@@ -1,0 +1,111 @@
+---
+title: "Experiment record"
+author: "Alber Sánchez"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\usepackage[utf8]{inputenc}
+---
+  
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+collapse = TRUE,
+comment = "#>"
+)
+
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(kableExtra))
+library(sits.prodes)
+
+# TODO: remove
+library(devtools)
+devtools::load_all()
+#devtools::build(vignettes = FALSE, manual = TRUE)
+#devtools::install()
+# - - - 
+
+
+```
+
+# Training
+
+## Experiment summary
+
+```{r echo=FALSE}
+warning("Run get_training_logs.R and devtools::build() to update the logs in this package!")
+# parse log files
+load(system.file("extdata/log_files.Rdata", package = "sits.prodes"))
+stopifnot(exists("log_files"))
+
+# parse logs
+logs_ls <- system.file(file.path("extdata", log_files), package = "sits.prodes") %>%
+    dplyr::as_tibble() %>% dplyr::rename(path = value) %>% 
+    dplyr::mutate(experiment = basename(path)) %>% 
+    dplyr::select(experiment, path) %>%
+    dplyr::mutate(parsed_log = purrr::map(.$path, sits.prodes::parse_training_log)) %>% 
+    dplyr::mutate(setup = purrr::map(.$parsed_log, 
+                              function(x){
+                                  x[["header"]] %>%
+                                      dplyr::mutate(key = stringr::str_replace_all(key, 
+                                          c("\\(" = "", "\\)" = "", " " = "_"))) %>% 
+                                      tidyr::spread(key, value) %>%
+                                  return()}),
+                  trains = purrr::map(.$parsed_log, 
+                              function(x){
+                                  x[["experiments"]] %>%
+                                  lapply(function(y){
+                                             y %>% 
+                                             dplyr::filter(value != "<environment>") %>%
+                                             tidyr::spread(key, value) %>%
+                                             return() 
+                                         }) %>%
+                                  dplyr::bind_rows() %>%
+                                  return()
+                              })) %>%
+    dplyr::select(-parsed_log)
+
+logs_ls %>% tidyr::unnest(setup) %>% 
+    dplyr::mutate(bands = paste(Bands_experiment, Bands__experiment)) %>%
+    dplyr::mutate(labels = paste(Labels, Labels_experiment)) %>%
+    dplyr::select(experiment, Clasification_type, labels, bands, Scenes_experiment) %>%
+    knitr::kable() %>% 
+    kableExtra::kable_styling(full_width = F) 
+```
+
+## Training results
+
+
+```{r fig.width=9, fig.height=7, echo=FALSE}
+plot_tb <- logs_ls %>% tidyr::unnest(trains) %>% dplyr::select(experiment, model_name, acc, loss, val_acc, val_loss) %>%
+              dplyr::mutate(acc  = purrr::map(acc,  function(x) eval(parse(text = x))),
+                            loss = purrr::map(loss, function(x) eval(parse(text = x))),
+                            val_acc  = purrr::map(val_acc, function(x) eval(parse(text = x))),
+                            val_loss = purrr::map(val_loss, function(x) eval(parse(text = x))), 
+                            val_acc_mean = purrr::map_dbl(val_acc, mean)) 
+
+#plot_tb %>% dplyr::select(experiment, model_name, val_acc_mean) %>%
+#    knitr::kable() %>% kableExtra::kable_styling(full_width = F)
+
+
+plot_ls <- lapply(unique(plot_tb$experiment), function(exp){
+  plot_tb %>% dplyr::filter(experiment %in% exp) %>% tidyr::unnest() %>%
+    dplyr::group_by(model_name) %>% dplyr::mutate(epoch = row_number()) %>% 
+    ggplot2::ggplot() +
+    geom_path(aes(y = acc, x = epoch), colour = "blue") +
+    geom_path(aes(y = val_acc, x = epoch)) +
+    ggtitle(exp) +
+    ylim(0.9, 1.0) +
+    #theme(plot.title = element_text(size = 8)) +
+    labs(x = "Epochs", y = "Accuracy") + 
+    ggplot2::facet_wrap(~ model_name, nrow = 5) %>%
+    return()
+})
+
+for(p in plot_ls)
+    suppressWarnings(print(p))
+
+```
+
+

@@ -82,6 +82,21 @@ replace_bands_with_random <- function(x){
 }
 
 
+#' @title Split a vector at the given positions. 
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description Split a vector at the given positions. 
+#'
+#' @param x   An atomic vector.
+#' @param pos A vector os positions 
+#' @return   A list. 
+#' @export
+splitAt <- function(x, pos){
+    stopifnot(is.atomic(x))
+    f <- cut(1:length(x), pos)
+    split(x, f)
+}
+
+
 
 # TODO: Review functions -----
 
