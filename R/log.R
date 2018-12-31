@@ -1,5 +1,3 @@
-# parse log files
-
 #' @title Parse the log file of a training.
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description  Parse the log file of a training.

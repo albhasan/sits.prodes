@@ -1,6 +1,6 @@
 Package: sits.prodes
 Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9004
+Version: 0.0.0.9006
 Authors@R: 
     person(given = "First",
            family = "Last",
@@ -26,9 +26,12 @@ Imports:
  sits,
  stringr,
  tibble,
+ tidyr,
  tidyselect,
  units
 Suggests: 
+    ggplot2,
+    kableExtra,
     knitr,
     rmarkdown
 VignetteBuilder: knitr

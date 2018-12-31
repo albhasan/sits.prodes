@@ -15,13 +15,17 @@ collapse = TRUE,
 comment = "#>"
 )
 
-suppressPackageStartupMessages(library(tidyverse))
-suppressPackageStartupMessages(library(kableExtra))
+library(dplyr)
+library(ggplot2)
+library(kableExtra)
+library(knitr)
+library(purrr)
+library(tidyr)
 library(sits.prodes)
 
 # TODO: remove
-library(devtools)
-devtools::load_all()
+#library(devtools)
+#devtools::load_all()
 #devtools::build(vignettes = FALSE, manual = TRUE)
 #devtools::install()
 # - - - 
@@ -44,7 +48,7 @@ logs_ls <- system.file(file.path("extdata", log_files), package = "sits.prodes")
     dplyr::as_tibble() %>% dplyr::rename(path = value) %>% 
     dplyr::mutate(experiment = basename(path)) %>% 
     dplyr::select(experiment, path) %>%
-    dplyr::mutate(parsed_log = purrr::map(.$path, sits.prodes::parse_training_log)) %>% 
+    dplyr::mutate(parsed_log = purrr::map(.$path, parse_training_log)) %>% 
     dplyr::mutate(setup = purrr::map(.$parsed_log, 
                               function(x){
                                   x[["header"]] %>%
@@ -93,12 +97,12 @@ plot_ls <- lapply(unique(plot_tb$experiment), function(exp){
   plot_tb %>% dplyr::filter(experiment %in% exp) %>% tidyr::unnest() %>%
     dplyr::group_by(model_name) %>% dplyr::mutate(epoch = row_number()) %>% 
     ggplot2::ggplot() +
-    geom_path(aes(y = acc, x = epoch), colour = "blue") +
-    geom_path(aes(y = val_acc, x = epoch)) +
-    ggtitle(exp) +
-    ylim(0.9, 1.0) +
-    #theme(plot.title = element_text(size = 8)) +
-    labs(x = "Epochs", y = "Accuracy") + 
+    ggplot2::geom_path(aes(y = acc, x = epoch), colour = "blue") +
+    ggplot2::geom_path(ggplot2::aes(y = val_acc, x = epoch)) +
+    ggplot2::ggtitle(exp) +
+    ggplot2::ylim(0.9, 1.0) +
+    #ggplot2::theme(plot.title = element_text(size = 8)) +
+    ggplot2::labs(x = "Epochs", y = "Accuracy") + 
     ggplot2::facet_wrap(~ model_name, nrow = 5) %>%
     return()
 })
