@@ -112,4 +112,15 @@ for(p in plot_ls)
 
 ```
 
+## selected trainings
+- train_20_model_1
+- train_21_model_12
+- train_30_model_18
+- train_31_model_5
+- train_32_model_10
+- train_33_model_19
+- train_34_model_6
+- train35_model_8
+
+
 
