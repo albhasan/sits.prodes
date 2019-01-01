@@ -60,9 +60,43 @@ compute_indexes <- function(x, sat){
 }
 
 
-
-
-
+#' @title Get metadata from a Brick filename
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description   Get metadata from a Brick filename
+#'
+#' @param brick_paths A character. Path to dbrick files
+#' @return            A character of path, pathrow, start_date, band, year (NA for MODIS)
+#' export
+get_brick_md <- function(brick_paths){
+    brick_df <- lapply(brick_paths, function(x){
+        # x <- "LC8SR-MOD13Q1-MYD13Q1_221069_2015-08-29_swir2_STACK_BRICK.tif"
+        # x <- "MOD13Q1_h12v08_006_250m_16_days_NIR_reflectance.tif"
+        fn <- substr(basename(x), 1, nchar(basename(x)) - 4)
+        fn_md <- strsplit(fn, split = '_')[[1]]
+        res <- NULL
+        if(fn_md[[1]] == "LC8SR-MOD13Q1-MYD13Q1"){
+            res <- c(
+                path = x,
+                pathrow = fn_md[2],
+                start_date = fn_md[3],
+                band = fn_md[4],
+                year = format(as.Date(fn_md[[3]]), '%Y')
+            )
+        }else if(fn_md[[1]] == "MOD13Q1"){
+            res <- c(
+                path = x,
+                pathrow = tolower(fn_md[2]),
+                start_date = "2000-01-01",
+                band = tolower(fn_md[7]),
+                year = 2000
+            )
+        }else{
+            stop("Cannot identify the bricks' type!")
+        }
+        return(res)
+    })
+    return(as.data.frame(do.call(rbind, brick_df), stringsAsFactors = FALSE))
+}
 
 
 #' @title Replace column values with random numbers
@@ -222,42 +256,6 @@ compute_sd_raster_gdal <- function(infile, outfile, quiet=TRUE) {
 
 
 
-#' @title Get metadata from a Brick filename
-#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description   Get metadata from a Brick filename
-#'
-#' @param brick_paths A character. Path to dbrick files
-#' @return            A character of path, pathrow, start_date, band, year (NA for MODIS)
-get_brick_md <- function(brick_paths){
-    brick_df <- lapply(brick_paths, function(x){
-        # x <- "LC8SR-MOD13Q1-MYD13Q1_221069_2015-08-29_swir2_STACK_BRICK.tif"
-        # x <- "MOD13Q1_h12v08_006_250m_16_days_NIR_reflectance.tif"
-        fn <- substr(basename(x), 1, nchar(basename(x)) - 4)
-        fn_md <- strsplit(fn, split = '_')[[1]]
-        res <- NULL
-        if(fn_md[[1]] == "LC8SR-MOD13Q1-MYD13Q1"){
-            res <- c(
-                path = x,
-                pathrow = fn_md[2],
-                start_date = fn_md[3],
-                band = fn_md[4],
-                year = format(as.Date(fn_md[[3]]), '%Y')
-            )
-        }else if(fn_md[[1]] == "MOD13Q1"){
-            res <- c(
-                path = x,
-                pathrow = tolower(fn_md[2]),
-                start_date = "2000-01-01",
-                band = tolower(fn_md[7]),
-                year = 2000
-            )
-        }else{
-            stop("Cannot identify the bricks' type!")
-        }
-        return(res)
-    })
-    return(as.data.frame(do.call(rbind, brick_df), stringsAsFactors = FALSE))
-}
 
 
 #' @title Compute a confusion matrix

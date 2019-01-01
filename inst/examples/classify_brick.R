@@ -1,0 +1,158 @@
+#!/usr/bin/Rscript
+################################################################################
+# REPRODUCE PRODES USING DEEP LEARNING
+# alber sanchez alber.ipia@inpe.br
+# Last update 2018-10-02
+#-------------------------------------------------------------------------------
+# TODO: 
+# - get parameters from command line
+# - print parameters to log
+#-------------------------------------------------------------------------------
+# Example:
+# ./rep_prodes.R --train train_13 --model train_13_model_8 --tiles '225063' --btype 'l8mod' --bands 'nir mir red blue swir2' --years '2012 2013 2014 2015 2016 2017' --log '/home/alber/Documents/data/experiments/prodes_reproduction/03_classify/rep_prodes_13/rep_prodes_train_13_225063.log'
+# ./rep_prodes.R --train train_13 --model train_13_model_8 --tiles '226064' --btype 'l8mod' --bands 'nir mir red blue swir2' --years '2012 2013 2014 2015 2016 2017' --log '/home/alber/Documents/data/experiments/prodes_reproduction/03_classify/rep_prodes_13/rep_prodes_train_13_226064.log'
+# ./rep_prodes.R --train train_13 --model train_13_model_8 --tiles '233067' --btype 'l8mod' --bands 'nir mir red blue swir2' --years '2012 2013 2014 2015 2016 2017' --log '/home/alber/Documents/data/experiments/prodes_reproduction/03_classify/rep_prodes_13/rep_prodes_train_13_233067.log'
+################################################################################
+suppressMessages(suppressPackageStartupMessages(library(sits, quietly = TRUE, verbose = FALSE)))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(log4r))
+suppressPackageStartupMessages(library(optparse))
+library(sits.prodes)
+
+# TODO: remove
+#setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
+#library(devtools)
+#devtools::load_all()
+# - - - 
+
+# script setup ----
+base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
+stopifnot(dir.exists(base_path))
+
+path_to_bricks <- c(
+   mod13        = file.path(base_path, "data", "raster", "bricks_modis_cropped"),
+   l8mod_interp = file.path(base_path, "data", "raster", "brick_interp"),
+   l8mod_starfm = file.path(base_path, "data", "raster", "brick_starfm")
+)
+
+# get arguments ----
+option_list = list(
+  make_option("--train", type = "character", default = NULL,    help = "Name of a train e.g. 'train_13'", metavar="character"), 
+  make_option("--model", type = "character", default = NULL,    help = "Name of a trained model e.g. 'train_13_model_8'", metavar="character"), 
+  make_option("--tiles", type = "character", default = NULL,    help = "ID of the tiles to classify e.g. '225063 226064 233067'", metavar="character"), 
+  make_option("--btype", type = "character", default = NULL,    help = "Type to brick to use. The alternatives are 'mod13', 'l8mod_interp', and 'l8mod_starfm'", metavar="character"), 
+  make_option("--bands", type = "character", default = NULL,    help = "Name of the bands to classify e.g. 'ndvi evi nir mir red blue swir2'", metavar="character"), 
+  make_option("--years", type = "character", default = NULL,    help = "Years to classify e.g. '2012 2013 2014 2015 2016 2017'", metavar="character"), 
+  make_option("--cores", type = "integer",   default = 24,      help = "Number of cores. The default is %default.", metavar = "number"), 
+  make_option("--ram",   type = "integer",   default = 96,      help = "Amount of memory to use. The default is %default.", metavar = "number"), 
+  make_option("--debug", type = "character", default = "DEBUG", help = "Debug level. The default is %default", metavar="character"), 
+  make_option("--log",   type = "character", default = "rep_prodes.log", help = "Path to log file. The default is %default", metavar="character")
+) 
+opt_parser <- OptionParser(option_list = option_list);
+opt <- parse_args(opt_parser);
+
+# validate arguments ----
+if (length(opt) != 11 || sum(sapply(opt, is.null)) != 0){
+  print_help(opt_parser)
+  stop("Wrong arguments!", call.=FALSE)
+}
+if (!all(opt$btype %in% names(path_to_bricks)){
+  print_help(opt_parser)
+  stop("Invalid type of brick!", call.=FALSE)
+}
+if(parallel::detectCores() < opt$cores){
+  print_help(opt_parser)
+  stop(sprintf("Not enough cores (The system has %s).", parallel::detectCores()))
+}
+
+# parse arguments ----
+train      <- opt$train                                # "train_20"
+sits_model <- opt$model                                # "train_20_model_1"
+brick_type <- opt$btype                                # "l8mod_interp"
+tiles      <- unlist(strsplit(opt$tiles, split = " ")) # c("225063", "226064", "233067")
+bands      <- unlist(strsplit(opt$bands, split = " ")) # c("ndvi", "evi", "nir", "mir", "red", "blue", "swir2")
+years      <- unlist(strsplit(opt$years, split = " ")) # 2012:2017
+multicores <- opt$cores                                # 24
+mem        <- opt$ram                                  # 96
+cov_timeline <- NULL
+
+# log setup ----
+logger                 <- log4r::create.logger()
+log4r::logfile(logger) <- file.path(opt$log)
+log4r::level(logger)   <- opt$debug
+log4r::info(logger, "Initializing...")
+log4r::info(logger, "Logging parameters... ")
+log4r::info(logger, paste(names(opt), opt, sep = " = "))
+
+# script ----
+log4r::info(logger, "Cheking results' directory...")
+result_path <- file.path(base_path, "03_classify", stringr::str_replace(train, "train", "rep_prodes"), "results")
+if(!dir.exists(result_path))
+  log4r::info(logger, "Making result's directory...")
+  dir.create(result_path, recursive = TRUE)
+log4r::debug(logger, result_path)
+
+log4r::info(logger, "Loading keras model...")
+smodel_files <- c("h5", "rds")
+model_fpaths <- file.path(base_path, "02_train_model", train, paste0(sits_model, ".", smodel_files))
+names(model_fpaths) <- smodel_files
+if(!all(file.exists(model_fpaths))){
+  log4r::error(logger, "Model files not found!")
+  stop()
+}
+dl_model <- sits::sits_load_keras(hdffile = model_fpaths["h5"],
+                                  rdsfile = model_fpaths["rds"])
+log4r::debug(logger, paste(names(model_fpaths), model_fpaths, sep = " = "))
+
+log4r::info(logger, "Saving vector of labels...")
+int_labels <- dl_model %>% environment() %>% .[["int_labels"]]
+write.csv(
+  matrix(c(names(int_labels), int_labels), ncol = 2, 
+         dimnames = list(NULL, c("Label", "Code"))), 
+  file = file.path(result_path, "int_labels.csv"), 
+  quote = FALSE, row.names = FALSE)
+log4r::info(logger, sprintf("Label codes saved to %s", file.path(result_path, "int_labels.csv")))
+
+log4r::info(logger, "Gathering bricks' metadata...")
+brick_path <- path_to_bricks[brick_type]
+if (brick_type == "mod13") {
+  data("timeline_2000_2017", package = "sits")
+  cov_timeline <- timeline_2000_2017
+  rm(timeline_2000_2017)
+}
+
+# brick_tb is the intersection of the bricks available and the user's request
+brick_tb <- brick_path %>% list.files(full.names = TRUE, pattern = '*tif') %>% 
+  get_brick_md() %>% dplyr::as_tibble() %>% 
+  dplyr::filter(pathrow %in% tiles, year %in% years, band %in% bands)
+log4r::debug(logger, brick_tb)
+
+for(path_row in sort(unique(brick_tb$pathrow))){
+  for(y in sort(unique(brick_tb$year))){
+    bricks <- brick_tb %>% dplyr::filter(pathrow == path_row, year == y)
+    log4r::info(logger, 
+                sprintf("Processing path-row %s for year %s for bands %s ...", 
+                        path_row, y, paste0(sort(unique(bricks$band)), 
+                                            collapse = " ")))
+    log4r::debug(logger, bricks)
+
+    log4r::info(logger, "Getting coverage metadata...")
+    if (stringr::str_detect(brick_type, "^l8mod.+")) {
+      cov_timeline <- seq(from = as.Date(unique(bricks$start_date)[1]), by = 16, length.out = 23)
+    }
+    coverage_name <- paste(brick_type, path_row, y, sep = '_')
+    scoverage <- sits::sits_coverage(files = bricks$path, name = coverage_name,
+                                     timeline = cov_timeline, bands = bricks$band)
+    result_filepath <- file.path(result_path, paste(coverage_name, "dl.tif", sep = "_"))
+    param_ls <- list(coverage_name = coverage_name, result_filepath = result_filepath)
+    log4r::debug(logger, paste(names(param_ls), param_ls, sep = " = "))
+    rm(param_ls)
+    sits::sits_classify_raster(file = result_filepath,
+                               coverage = scoverage,
+                               ml_model = dl_model,
+                               memsize = mem,
+                               multicores = multicores)
+    log4r::info(logger, paste0("Completed partial bricks classification. The results are stored in ", result_filepath))
+  }
+}
+log4r::info(logger, "Finished!")

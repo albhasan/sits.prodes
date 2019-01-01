@@ -9,7 +9,7 @@ library(keras)
 setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
 devtools::load_all()
 
-# util ----
+ util ----
 get_train_name <- function(train_path){
     train_path %>% list.dirs(recursive = FALSE) %>%
         stringr::str_match(pattern = "train_[0-9]{2}") %>% .[!is.na(.)] %>%
@@ -23,10 +23,10 @@ brick_type <- "starfm"
 
 experiment_bands <- c("ndvi", "nir", "red", "swir2")
 experiment_labels <- c("forest", "deforestation", "flood")
-#experiment_scenes <- c("225063", "226064", "233067")
+experiment_scenes <- c("225063", "226064", "233067")
 #experiment_scenes <- "225063"
 #experiment_scenes <- "226064"
-experiment_scenes <- "233067"
+#experiment_scenes <- "233067"
 
 
 train_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/02_train_model"
