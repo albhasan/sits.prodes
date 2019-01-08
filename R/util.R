@@ -69,12 +69,10 @@ compute_indexes <- function(x, sat){
 #' export
 get_brick_md <- function(brick_paths){
     brick_df <- lapply(brick_paths, function(x){
-        # x <- "LC8SR-MOD13Q1-MYD13Q1_221069_2015-08-29_swir2_STACK_BRICK.tif"
-        # x <- "MOD13Q1_h12v08_006_250m_16_days_NIR_reflectance.tif"
         fn <- substr(basename(x), 1, nchar(basename(x)) - 4)
         fn_md <- strsplit(fn, split = '_')[[1]]
         res <- NULL
-        if(fn_md[[1]] == "LC8SR-MOD13Q1-MYD13Q1"){
+        if(fn_md[[1]] == "LC8SR-MOD13Q1-MYD13Q1" || fn_md[[1]] == "LC8SR-MOD13Q1-STARFM"){
             res <- c(
                 path = x,
                 pathrow = fn_md[2],
@@ -138,7 +136,7 @@ splitAt <- function(x, pos){
 
 #' @title Asses accuracy and estimate area according to Olofsson
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description   Compute accuracy normalized by area. Note that, these computations don't work for clustered sampling becaus the equations are different.
+#' @description   Compute accuracy normalized by area. Note that, these computations don_t work for clustered sampling becaus the equations are different.
 #'
 #' @param error_matrix A matrix given in sample counts. Columns represent the reference data and rows the results of the classification
 #' @param class_areas  A vector of the total area of each class on the map
@@ -316,52 +314,6 @@ listname2data.frame <- function(df.list, colname){
 }
 
 
-# # taken from https://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
-# # Multiple plot function
-# #
-# # ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
-# # - cols:   Number of columns in layout
-# # - layout: A matrix specifying the layout. If present, 'cols' is ignored.
-# #
-# # If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
-# # then plot 1 will go in the upper left, 2 will go in the upper right, and
-# # 3 will go all the way across the bottom.
-# #
-# multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-#     library(grid)
-#
-#     # Make a list from the ... arguments and plotlist
-#     plots <- c(list(...), plotlist)
-#
-#     numPlots = length(plots)
-#
-#     # If layout is NULL, then use 'cols' to determine layout
-#     if (is.null(layout)) {
-#         # Make the panel
-#         # ncol: Number of columns of plots
-#         # nrow: Number of rows needed, calculated from # of cols
-#         layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-#                          ncol = cols, nrow = ceiling(numPlots/cols))
-#     }
-#
-#     if (numPlots==1) {
-#         print(plots[[1]])
-#
-#     } else {
-#         # Set up the page
-#         grid.newpage()
-#         pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-#
-#         # Make each plot, in the correct location
-#         for (i in 1:numPlots) {
-#             # Get the i,j matrix positions of the regions that contain this subplot
-#             matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-#
-#             print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-#                                             layout.pos.col = matchidx$col))
-#         }
-#     }
-# }
 
 
 #' @title Obtain random samples from polygons
@@ -375,7 +327,7 @@ listname2data.frame <- function(df.list, colname){
 #' @param n_samples     A length-one numeric. The number of samples requested. If is_density = TRUE, n_samples is the number of samples per unit of area.
 #' @param min_area      A length-one numeric. The minimum area of a sampled polygon.
 #' @param min_dist      A length-one numeric. The minimum disatnces between samples.
-#' @param border_offset A length-one numeric. The minimum distance from the samples to the polygon's borders.
+#' @param border_offset A length-one numeric. The minimum distance from the samples to the polygon_s borders.
 #' @param is_density    A length-one logical. Is this a density sampling? The dafault is FALSE
 #' @return sf_samples   A point sf object with the structure of sf_shape, plues the X and Y coordinates. The number of rows is approximately n_samples.
 sample_polygons <- function(sf_shape, label, n_samples, min_area,
@@ -384,7 +336,7 @@ sample_polygons <- function(sf_shape, label, n_samples, min_area,
     stop("Deprecated. Use cov_sample_random or cov_sample_stratified instead") # Use functions in coverage.R
     # filter out invalid geometries
     # sf_shape <- sf_shape[sf::st_is_valid(sf_shape),]
-    # buffer to ensure no samples near the polygons' borders
+    # buffer to ensure no samples near the polygons_ borders
     if(border_offset != 0){
         suppressMessages(suppressWarnings(
             sf_shape <- sf::st_buffer(sf_shape, dist = base::sqrt(border_offset^2) * (-1))
