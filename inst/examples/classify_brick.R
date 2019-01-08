@@ -1,28 +1,17 @@
 #!/usr/bin/Rscript
-################################################################################
-# REPRODUCE PRODES USING DEEP LEARNING
-# alber sanchez alber.ipia@inpe.br
-# Last update 2018-10-02
-#-------------------------------------------------------------------------------
-# TODO: 
-# - get parameters from command line
-# - print parameters to log
-#-------------------------------------------------------------------------------
-# Example:
-# ./rep_prodes.R --train train_13 --model train_13_model_8 --tiles '225063' --btype 'l8mod' --bands 'nir mir red blue swir2' --years '2012 2013 2014 2015 2016 2017' --log '/home/alber/Documents/data/experiments/prodes_reproduction/03_classify/rep_prodes_13/rep_prodes_train_13_225063.log'
-# ./rep_prodes.R --train train_13 --model train_13_model_8 --tiles '226064' --btype 'l8mod' --bands 'nir mir red blue swir2' --years '2012 2013 2014 2015 2016 2017' --log '/home/alber/Documents/data/experiments/prodes_reproduction/03_classify/rep_prodes_13/rep_prodes_train_13_226064.log'
-# ./rep_prodes.R --train train_13 --model train_13_model_8 --tiles '233067' --btype 'l8mod' --bands 'nir mir red blue swir2' --years '2012 2013 2014 2015 2016 2017' --log '/home/alber/Documents/data/experiments/prodes_reproduction/03_classify/rep_prodes_13/rep_prodes_train_13_233067.log'
-################################################################################
+
+# Classify sits bricks 
+
 suppressMessages(suppressPackageStartupMessages(library(sits, quietly = TRUE, verbose = FALSE)))
 suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(log4r))
 suppressPackageStartupMessages(library(optparse))
-library(sits.prodes)
+#library(sits.prodes)
 
 # TODO: remove
-#setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
-#library(devtools)
-#devtools::load_all()
+setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
+library(devtools)
+devtools::load_all()
 # - - - 
 
 # script setup ----
@@ -48,17 +37,18 @@ option_list = list(
   make_option("--debug", type = "character", default = "DEBUG", help = "Debug level. The default is %default", metavar="character"), 
   make_option("--log",   type = "character", default = "rep_prodes.log", help = "Path to log file. The default is %default", metavar="character")
 ) 
-opt_parser <- OptionParser(option_list = option_list);
-opt <- parse_args(opt_parser);
+opt_parser <- OptionParser(option_list = option_list)
+opt <- parse_args(opt_parser)
+
 
 # validate arguments ----
 if (length(opt) != 11 || sum(sapply(opt, is.null)) != 0){
   print_help(opt_parser)
-  stop("Wrong arguments!", call.=FALSE)
+  stop("Wrong arguments!")
 }
-if (!all(opt$btype %in% names(path_to_bricks)){
+if (!all(opt$btype %in% names(path_to_bricks))){
   print_help(opt_parser)
-  stop("Invalid type of brick!", call.=FALSE)
+  stop("Invalid type of brick!")
 }
 if(parallel::detectCores() < opt$cores){
   print_help(opt_parser)
@@ -87,9 +77,10 @@ log4r::info(logger, paste(names(opt), opt, sep = " = "))
 # script ----
 log4r::info(logger, "Cheking results' directory...")
 result_path <- file.path(base_path, "03_classify", stringr::str_replace(train, "train", "rep_prodes"), "results")
-if(!dir.exists(result_path))
+if (!dir.exists(result_path)) {
   log4r::info(logger, "Making result's directory...")
   dir.create(result_path, recursive = TRUE)
+}
 log4r::debug(logger, result_path)
 
 log4r::info(logger, "Loading keras model...")
@@ -104,14 +95,15 @@ dl_model <- sits::sits_load_keras(hdffile = model_fpaths["h5"],
                                   rdsfile = model_fpaths["rds"])
 log4r::debug(logger, paste(names(model_fpaths), model_fpaths, sep = " = "))
 
-log4r::info(logger, "Saving vector of labels...")
-int_labels <- dl_model %>% environment() %>% .[["int_labels"]]
+log4r::info(logger, "Saving vector of labels used during training...")
+training_labels <- dl_model %>% environment() %>% .[["int_labels"]]
+training_bands <- dl_model %>% environment() %>% .[["data.tb"]] %>% sits::sits_bands()
 write.csv(
-  matrix(c(names(int_labels), int_labels), ncol = 2, 
+  matrix(c(names(training_labels), training_labels), ncol = 2, 
          dimnames = list(NULL, c("Label", "Code"))), 
   file = file.path(result_path, "int_labels.csv"), 
   quote = FALSE, row.names = FALSE)
-log4r::info(logger, sprintf("Label codes saved to %s", file.path(result_path, "int_labels.csv")))
+log4r::info(logger, sprintf("Training label codes saved to %s", file.path(result_path, "int_labels.csv")))
 
 log4r::info(logger, "Gathering bricks' metadata...")
 brick_path <- path_to_bricks[brick_type]
@@ -124,18 +116,35 @@ if (brick_type == "mod13") {
 # brick_tb is the intersection of the bricks available and the user's request
 brick_tb <- brick_path %>% list.files(full.names = TRUE, pattern = '*tif') %>% 
   get_brick_md() %>% dplyr::as_tibble() %>% 
-  dplyr::filter(pathrow %in% tiles, year %in% years, band %in% bands)
-log4r::debug(logger, brick_tb)
+  dplyr::filter(pathrow %in% tiles, year %in% years, band %in% training_bands)
 
+# validate bands
+log4r::debug(logger, paste("Bands requested:", paste(bands, collapse = ", ")))
+log4r::debug(logger, paste("Bands available:", paste(unique(brick_tb$band), collapse = ", ")))
+log4r::debug(logger, paste("Bands training:", paste(training_bands, collapse = ", ")))
+if (!identical(sort(unique(brick_tb$band)), sort(training_bands))) {
+    msg <- sprintf("Band missmatch between training (%s) and brick (%s)", 
+               paste(training_bands, collapse = ", "),
+               paste(sort(unique(brick_tb$band)), collapse = ", "))
+    log4r::error(logger, msg)
+    stop(msg)
+}
+if (!identical(sort(bands), sort(training_bands))) {
+    msg <- sprintf("Band missmatch between request (%s) and brick (%s). Ignoring requested bands for Deep Learning classification... ",
+               paste(bands, collapse = ", "),
+               paste(sort(unique(brick_tb$band)), collapse = ", "))
+    log4r::warn(logger, msg)
+    warning(msg)
+}
+
+# classify bricks
 for(path_row in sort(unique(brick_tb$pathrow))){
   for(y in sort(unique(brick_tb$year))){
     bricks <- brick_tb %>% dplyr::filter(pathrow == path_row, year == y)
     log4r::info(logger, 
                 sprintf("Processing path-row %s for year %s for bands %s ...", 
-                        path_row, y, paste0(sort(unique(bricks$band)), 
-                                            collapse = " ")))
+                        path_row, y, paste0(training_bands, collapse = " ")))
     log4r::debug(logger, bricks)
-
     log4r::info(logger, "Getting coverage metadata...")
     if (stringr::str_detect(brick_type, "^l8mod.+")) {
       cov_timeline <- seq(from = as.Date(unique(bricks$start_date)[1]), by = 16, length.out = 23)
