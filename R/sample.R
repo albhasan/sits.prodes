@@ -139,9 +139,14 @@ process_valid_shp <- function(shp_path, out_dir){
 #' @param class_bands  A character. The name of the bands to process.
 #' @param suffix       A length-one character. A suffix to append to the filename of the results
 #' @param max_time_diff A length-one numeric. The maximum difference (in days) between the fist day of the bricks and the first day of the CSV sample file.
+#' @param cov_name     A length-one character. Name for the sits coverage to create.
+#' @param time_len     A length-one integer. The lenght of the brick's time line.
+#' @param time_by      A length-one inetger. The number of days between observations in the time line.
 #' @return             A vector of paths to Rdata files
 get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
-                           suffix = "", max_time_diff = 30){
+                           suffix = "", max_time_diff = 30, 
+                           cov_name = "SITS coverage", time_len = 23,
+                           time_by = 16){
 
     # get time series from bricks
     pathrow <- cpath %>% basename() %>% stringr::str_extract("_[0-9]{3}_[0-9]{3}_") %>%
@@ -174,12 +179,12 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
     # A brick should contain one year (23 images) of a single path/row of a single band
     time_line <- brick_tb %>% dplyr::pull(year) %>% unique() %>%
         ensurer::ensure_that(length(.) == 1) %>% as.Date() %>%
-        seq(by = 16, length.out = 23)
+        seq(by = time_by, length.out = time_len)
 
     # get a sits coverage
     raster_cov <- sits::sits_coverage(
         service = "RASTER",
-        name = "Sinop-crop",
+        name = cov_name,
         timeline = time_line,
         bands = brick_tb$band,
         files = brick_tb$path
