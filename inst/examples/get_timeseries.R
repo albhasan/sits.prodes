@@ -26,7 +26,9 @@ if (length(err_msg) > 0) {
 # configuration ----
 # brick_type = "oldinterpolation"
 # brick_type = "interpolated"
-brick_type = "starfm"
+# brick_type = "starfm"
+brick_type = "interpolated_few_clouds"
+# brick_type = "starfm_few_clouds"
 # class_bands <- c("blue", "ndvi", "nir", "red", "savi", "swir2")
 class_bands <- c("ndvi", "nir", "red", "swir2")
 
@@ -34,22 +36,58 @@ class_bands <- c("ndvi", "nir", "red", "swir2")
 if (brick_type == "starfm") {
     path_bricks  <- "/home/alber/shared/brick"
     brick_prefix <- "LC8SR-MOD13Q1-STARFM_"
-}else if (brick_type == "interpolated") {
-    # Bricks created by interpolating bands, then computing vegetation indexes
-    path_bricks <- "/home/alber/shared/brick_interp"
-    brick_prefix <- "LC8SR-MOD13Q1-MYD13Q1_"
-}else if (brick_type == "oldinterpolation") {
-    # Bricks created by interpolating bands AND interpolating vegetation indexes
-    path_bricks <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/raster/bricks"
-    brick_prefix <- "LC8SR-MOD13Q1-MYD13Q1_"
-}
-
-fpaths <- parallel::mclapply(csv_files, get_timeseries,
+    fpaths <- parallel::mclapply(csv_files, get_timeseries,
                              path_bricks = path_bricks,
                              brick_prefix = brick_prefix,
                              class_bands = class_bands,
                              suffix = paste0("_", brick_type),
                              mc.cores = cores)
+}else if (brick_type == "starfm_few_clouds") {
+    path_bricks  <- "/home/alber/shared/brick_few_clouds"
+    brick_prefix <- "LC8SR-MOD13Q1-STARFM_"
+    fpaths <- parallel::mclapply(csv_files, get_timeseries,
+                             path_bricks = path_bricks,
+                             brick_prefix = brick_prefix,
+                             class_bands = class_bands,
+                             cov_name = brick_type,
+                             time_len = 4,
+                             time_by = 92, # TODO: this value is wrong
+                             suffix = paste0("_", brick_type),
+                             mc.cores = cores)
+}else if (brick_type == "interpolated") {
+    # Bricks created by interpolating bands, then computing vegetation indexes
+    path_bricks <- "/home/alber/shared/brick_interp"
+    brick_prefix <- "LC8SR-MOD13Q1-MYD13Q1_"
+    fpaths <- parallel::mclapply(csv_files, get_timeseries,
+                             path_bricks = path_bricks,
+                             brick_prefix = brick_prefix,
+                             class_bands = class_bands,
+                             suffix = paste0("_", brick_type),
+                             mc.cores = cores)
+}else if (brick_type == "interpolated_few_clouds") {
+    print("run!")
+    path_bricks <- "/home/alber/shared/brick_interp_few_clouds"
+    brick_prefix <- "LC8SR-MOD13Q1-MYD13Q1_"
+    fpaths <- parallel::mclapply(csv_files, get_timeseries,
+                             path_bricks = path_bricks,
+                             brick_prefix = brick_prefix,
+                             class_bands = class_bands,
+                             cov_name = brick_type,
+                             time_len = 4,
+                             time_by = 92, # TODO: this value is wrong
+                             suffix = paste0("_", brick_type),
+                             mc.cores = cores)
+}else if (brick_type == "oldinterpolation") {
+    # Bricks created by interpolating bands AND interpolating vegetation indexes
+    path_bricks <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/raster/bricks"
+    brick_prefix <- "LC8SR-MOD13Q1-MYD13Q1_"
+    fpaths <- parallel::mclapply(csv_files, get_timeseries,
+                             path_bricks = path_bricks,
+                             brick_prefix = brick_prefix,
+                             class_bands = class_bands,
+                             suffix = paste0("_", brick_type),
+                             mc.cores = cores)
+}
 
 print("Files created (samples & time series): ")
 print(fpaths)
