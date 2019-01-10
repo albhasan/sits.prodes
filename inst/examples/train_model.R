@@ -9,8 +9,10 @@ library(keras)
 setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
 devtools::load_all()
 
- util ----
-get_train_name <- function(train_path){
+# util ----
+
+# build a path to new taining
+get_new_train_name <- function(train_path){
     train_path %>% list.dirs(recursive = FALSE) %>%
         stringr::str_match(pattern = "train_[0-9]{2}") %>% .[!is.na(.)] %>%
         stringr::str_extract(pattern = "[0-9]{2}") %>% dplyr::last() %>%
@@ -18,8 +20,8 @@ get_train_name <- function(train_path){
 }
 
 # setup ----
-brick_type <- "starfm"
-#brick_type <- "interpolated"
+#brick_type <- "starfm"
+brick_type <- "interpolated"
 
 experiment_bands <- c("ndvi", "nir", "red", "swir2")
 experiment_labels <- c("forest", "deforestation", "flood")
@@ -33,7 +35,7 @@ train_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/02_tra
 samples_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/samples"
 scene_shp <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/vector/wrs2_asc_desc/wrs2_asc_desc.shp"
 
-prefix <- stringr::str_c("train_", get_train_name(train_path))
+prefix <- stringr::str_c("train_", get_new_train_name(train_path))
 train_path <- file.path(train_path, prefix)
 
 if (dir.exists(train_path)) {
@@ -61,7 +63,7 @@ if (brick_type == "interpolated") {
     data(list = "prodes_samples_starfm", package = "sits.prodes")
     prodes_samples <- prodes_samples_starfm
 }else{
-    stop("Unknown type iof brick")
+    stop("Unknown type of brick")
 }
 message(Sys.time(), ' Bands (samples): ', paste0(sits::sits_bands(prodes_samples), collapse = ", "))
 
