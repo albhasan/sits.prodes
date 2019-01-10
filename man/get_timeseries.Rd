@@ -5,7 +5,8 @@
 \title{Get time series for validates sample points.}
 \usage{
 get_timeseries(cpath, path_bricks, brick_prefix, class_bands,
-  suffix = "", max_time_diff = 30)
+  suffix = "", max_time_diff = 30, cov_name = "SITS coverage",
+  time_len = 23, time_by = 16)
 }
 \arguments{
 \item{cpath}{A length-one character. Path to a CSV file.}
@@ -19,6 +20,12 @@ get_timeseries(cpath, path_bricks, brick_prefix, class_bands,
 \item{suffix}{A length-one character. A suffix to append to the filename of the results}
 
 \item{max_time_diff}{A length-one numeric. The maximum difference (in days) between the fist day of the bricks and the first day of the CSV sample file.}
+
+\item{cov_name}{A length-one character. Name for the sits coverage to create.}
+
+\item{time_len}{A length-one integer. The lenght of the brick's time line.}
+
+\item{time_by}{A length-one inetger. The number of days between observations in the time line.}
 }
 \value{
 A vector of paths to Rdata files

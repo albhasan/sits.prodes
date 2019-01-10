@@ -4,12 +4,14 @@
 \alias{load_samples}
 \title{Load sample time series from Rdata files}
 \usage{
-load_samples(x, sat)
+load_samples(x, sat, expected_nrow)
 }
 \arguments{
 \item{x}{A character. A path to a file of samples time series.}
 
 \item{sat}{A Length-one character. The satellite or sensor name in c("Landsat8", "MOD13").}
+
+\item{expected_nrow}{A lengh-one inetger. Keep the samples with this number of time steps.}
 }
 \value{
 A tibble or a list of tibbles.
