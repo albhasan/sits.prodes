@@ -9,14 +9,15 @@
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description Load (and filter) sample time series from Rdata files.
 #'
-#' @param x       A character. A path to a file of samples time series.
-#' @param sat     A Length-one character. The satellite or sensor name in c("Landsat8", "MOD13").
-#' @return        A tibble or a list of tibbles.
-load_samples <- function(x, sat){
+#' @param x             A character. A path to a file of samples time series.
+#' @param sat           A Length-one character. The satellite or sensor name in c("Landsat8", "MOD13").
+#' @param expected_nrow A lengh-one inetger. Keep the samples with this number of time steps.
+#' @return              A tibble or a list of tibbles.
+load_samples <- function(x, sat, expected_nrow){
     stopifnot(is.character(x))
-    is_ts_valid <- function(ts_tb){
+    is_ts_valid <- function(ts_tb, expected_nrow){
         if (!dplyr::is.tbl(ts_tb)) return(FALSE)
-        if (nrow(ts_tb) != 23 || ncol(ts_tb) < 1) return(FALSE)
+        if (nrow(ts_tb) != expected_nrow || ncol(ts_tb) < 1) return(FALSE)
         # is there any NA?
         if (any(vapply(ts_tb, function(x) any(is.na(unlist(ts_tb))), logical(1))))
             return(FALSE)
@@ -31,7 +32,7 @@ load_samples <- function(x, sat){
         if (is.null(samples.tb)) return(NA)
         res <- samples.tb %>%
             dplyr::arrange(longitude, latitude, start_date, end_date, label) %>%
-            dplyr::mutate(valid = purrr::map_lgl(time_series, is_ts_valid)) %>%
+            dplyr::mutate(valid = purrr::map_lgl(time_series, is_ts_valid, expected_nrow)) %>%
             dplyr::filter(valid == TRUE) %>%
             dplyr::select(-valid)
         if (!is.null(sat))
@@ -40,7 +41,7 @@ load_samples <- function(x, sat){
                                                    sat = sat))
         return(res)
     } else {
-        return(lapply(x, load_samples, sat))
+        return(lapply(x, load_samples, sat, expected_nrow))
     }
 }
 
