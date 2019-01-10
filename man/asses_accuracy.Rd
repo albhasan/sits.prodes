@@ -15,7 +15,7 @@ asses_accuracy(error_matrix, class_areas)
 A list of two lists: The confidence interval (confint95) and the accuracy
 }
 \description{
-Compute accuracy normalized by area. Note that, these computations don't work for clustered sampling becaus the equations are different.
+Compute accuracy normalized by area. Note that, these computations don_t work for clustered sampling becaus the equations are different.
 }
 \author{
 Alber Sanchez, \email{alber.ipia@inpe.br}

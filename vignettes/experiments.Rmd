@@ -3,11 +3,15 @@ title: "Experiment record"
 author: "Alber Sánchez"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
+bibliography: references.bib
 vignette: >
   %\VignetteIndexEntry{Vignette Title}
   %\VignetteEngine{knitr::rmarkdown}
   %\usepackage[utf8]{inputenc}
 ---
+
+
+  
   
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
@@ -32,6 +36,14 @@ library(sits.prodes)
 
 
 ```
+
+
+# Bias and variance
+
+![Bias and variance](./img/bias_variance.png)
+
+**One way to understand overfitting is by decomposing generalization error into bias and variance. Bias is a learner’s tendency to consistently learn the same wrong thing. Variance is the tendency to learn random things irrespective of irrespective of the real signal** - [@Domingos:2012]
+
 
 # Training
 
@@ -123,4 +135,12 @@ for(p in plot_ls)
 - train35_model_8
 
 
+##Results 
 
+### All the samples, interpolated bricks
+![rep_prodes_08_225063_2016](./img/rep_prodes_08_225063_2016.png)
+
+### Konehen samples, re-calculated bricks
+![rep_prodes_20_225063_2016](./img/rep_prodes_20_225063_2016.png)
+
+# References

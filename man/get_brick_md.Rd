@@ -11,6 +11,7 @@ get_brick_md(brick_paths)
 }
 \value{
 A character of path, pathrow, start_date, band, year (NA for MODIS)
+export
 }
 \description{
 Get metadata from a Brick filename

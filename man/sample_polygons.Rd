@@ -18,7 +18,7 @@ sample_polygons(sf_shape, label, n_samples, min_area, min_dist,
 
 \item{min_dist}{A length-one numeric. The minimum disatnces between samples.}
 
-\item{border_offset}{A length-one numeric. The minimum distance from the samples to the polygon's borders.}
+\item{border_offset}{A length-one numeric. The minimum distance from the samples to the polygon_s borders.}
 
 \item{is_density}{A length-one logical. Is this a density sampling? The dafault is FALSE}
 }
