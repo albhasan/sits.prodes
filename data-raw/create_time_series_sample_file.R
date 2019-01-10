@@ -18,11 +18,19 @@ devtools::load_all()
 
 # setup ----
 classification_type <- "interpolated"
-classification_type <- "starfm"
+#classification_type <- "starfm"
+#classification_type <- "interpolated_few_clouds"
+#classification_type <- "starfm_few_clouds"
 
 samples_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/samples"
-samples_pattern <- c(interpolated = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_starfm.Rdata",
-                     starfm       = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_interpolated.Rdata")
+samples_pattern <- c(interpolated            = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_interpolated.Rdata",
+                     interpolated_few_clouds = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_interpolated_few_clouds.Rdata",
+                     starfm            = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_starfm.Rdata",
+                     starfm_few_clouds = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_starfm_few_clouds.Rdata")
+expected_rows <- c(interpolated            = 23,
+                   interpolated_few_clouds = 4,
+                   starfm            = 23,
+                   starfm_few_clouds = 4)
 
 # where to store partial results
 fp_suffix <- paste0(classification_type, "_", R.utils::System$getHostname(), ".Rdata")
@@ -35,8 +43,8 @@ set.seed(666)
 # load & filter samples
 test_labels <- c("deforestation", "forest")
 samples_tb <- samples_path %>%
-    list.files(pattern = samples_pattern[classification_type],
-               full.names = TRUE) %>% load_samples(sat = NULL) %>%
+    list.files(pattern = samples_pattern[classification_type], full.names = TRUE) %>%
+    load_samples(sat = NULL, expected_nrow = expected_rows[classification_type]) %>%
     dplyr::bind_rows() %>% sits::sits_prune() %>%
     dplyr::filter(label %in% test_labels) %>% ensurer::ensure_that(nrow(.) > 0) %>%
     dplyr::mutate(coverage = stringr::str_c("prodes_amazon_", classification_type))
@@ -73,12 +81,22 @@ save(koh_evaluate_samples, file = file_koh_evaluate_samples)
 
 
 
+
 stop("Run on desktop!")
+
+
+
 
 
 
 # load partial results
 if (!exists("samples_koh") && !exists("koh_evaluate_samples")) {
+
+    # 206
+    # file_samples_koh <- "/home/alber/Documents/data/experiments/prodes_reproduction/tempdir/file_samples_koh_interpolated_esensing-006.Rdata"
+    # file_koh_evaluate_samples <- "/home/alber/Documents/data/experiments/prodes_reproduction/tempdir/file_koh_evaluate_samples_interpolated_esensing-006.Rdata"
+
+
     load(file_samples_koh)
     load(file_koh_evaluate_samples)
 
@@ -148,8 +166,14 @@ prodes_samples %>% sits::sits_kfold_validate(ml_method = sits::sits_svm()) %>%
 if (classification_type == "interpolated") {
     prodes_samples_interpolated <- prodes_samples
     devtools::use_data(prodes_samples_interpolated, overwrite = TRUE)
+}else if (classification_type == "interpolated_few_clouds") {
+    prodes_samples_interpolated_few_clouds <- prodes_samples
+    devtools::use_data(prodes_samples_interpolated_few_clouds, overwrite = TRUE)
 }else if (classification_type == "starfm") {
     prodes_samples_starfm <- prodes_samples
     devtools::use_data(prodes_samples_starfm, overwrite = TRUE)
+}else if (classification_type == "starfm_few_clouds") {
+    prodes_samples_starfm_few_clouds <- prodes_samples
+    devtools::use_data(prodes_samples_starfm_few_clouds, overwrite = TRUE)
 }
 
