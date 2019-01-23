@@ -1,6 +1,6 @@
 Package: sits.prodes
 Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9009
+Version: 0.0.0.9010
 Authors@R: 
     person(given = "First",
            family = "Last",
@@ -28,7 +28,8 @@ Imports:
  tibble,
  tidyr,
  tidyselect,
- units
+ units,
+ XML 
 Suggests: 
     ggplot2,
     kableExtra,

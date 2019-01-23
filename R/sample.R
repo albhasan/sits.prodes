@@ -145,9 +145,23 @@ process_valid_shp <- function(shp_path, out_dir){
 #' @param time_by      A length-one inetger. The number of days between observations in the time line.
 #' @return             A vector of paths to Rdata files
 get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
+                           scale_factor = NULL, missing_values = NULL, 
+                           minimum_values = NULL, maximum_values = NULL,
                            suffix = "", max_time_diff = 30, 
                            cov_name = "SITS coverage", time_len = 23,
                            time_by = 16){
+    stopifnot(length(cpath) == 1)
+
+    # SITS deault parameteres
+    sits_conf <- config::get(file = system.file("extdata", "config.yml", package = "sits"))
+    if (is.null(scale_factor))
+        scale_factor   <- sits_conf$RASTER_scale_factor$LANDSAT
+    if (is.null(missing_values))
+        missing_values <- sits_conf$RASTER_missing_value$LANDSAT
+    if (is.null(minimum_values))
+        minimum_values <- sits_conf$RASTER_minimum_value
+    if (is.null(maximum_values))
+        maximum_values <- sits_conf$RASTER_maximum_value
 
     # get time series from bricks
     pathrow <- cpath %>% basename() %>% stringr::str_extract("_[0-9]{3}_[0-9]{3}_") %>%
@@ -159,9 +173,10 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
         stop("Invalid start_date in file name ", cpath)
 
     # build a data.frame of bricks' metadata
-    brick_tb <- path_bricks %>% list.files(
-        pattern = paste0(brick_prefix, pathrow, '_*'),
-        full.names =  TRUE) %>% dplyr::as_tibble() %>%
+    brick_tb <- path_bricks %>% 
+        list.files(pattern = paste0(brick_prefix, pathrow, '_*'), 
+                   full.names = TRUE) %>% 
+        tibble::enframe(name = NULL) %>%
         dplyr::rename(path = value) %>%
         dplyr::mutate(
             pathrow = stringr::str_extract(basename(path), "[0-9]{6}"),
@@ -177,7 +192,7 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
         return(NA)
     }
 
-    # A brick should contain one year (23 images) of a single path/row of a single band
+    # A brick should contain one year worth of images  of a single path/row of a single band
     time_line <- brick_tb %>% dplyr::pull(year) %>% unique() %>%
         ensurer::ensure_that(length(.) == 1) %>% as.Date() %>%
         seq(by = time_by, length.out = time_len)
@@ -186,8 +201,12 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
     raster_cov <- sits::sits_coverage(
         service = "RASTER",
         name = cov_name,
-        timeline = time_line,
         bands = brick_tb$band,
+        scale_factor = scale_factor,
+        missing_values = missing_values,
+        minimum_values = minimum_values,
+        maximum_values = maximum_values,
+        timeline = time_line,
         files = brick_tb$path
     )
 
