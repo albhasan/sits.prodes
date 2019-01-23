@@ -13,6 +13,7 @@ Encoding: UTF-8
 LazyData: true
 Imports:
  caret,
+ config,
  dplyr,
  dtw,
  ensurer,
@@ -28,8 +29,7 @@ Imports:
  tibble,
  tidyr,
  tidyselect,
- units,
- XML 
+ units
 Suggests: 
     ggplot2,
     kableExtra,

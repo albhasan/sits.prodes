@@ -5,8 +5,9 @@
 \title{Get time series for validates sample points.}
 \usage{
 get_timeseries(cpath, path_bricks, brick_prefix, class_bands,
-  suffix = "", max_time_diff = 30, cov_name = "SITS coverage",
-  time_len = 23, time_by = 16)
+  scale_factor = NULL, missing_values = NULL, minimum_values = NULL,
+  maximum_values = NULL, suffix = "", max_time_diff = 30,
+  cov_name = "SITS coverage", time_len = 23, time_by = 16)
 }
 \arguments{
 \item{cpath}{A length-one character. Path to a CSV file.}
@@ -16,6 +17,14 @@ get_timeseries(cpath, path_bricks, brick_prefix, class_bands,
 \item{brick_prefix}{A character. Prefix to the name of the Landsdat8-MODIS bricks.}
 
 \item{class_bands}{A character. The name of the bands to process.}
+
+\item{scale_factor}{A list. Scale factorof the image band files.}
+
+\item{missing_values}{A list. Values representing missing pixels for each band.}
+
+\item{minimum_values}{A list. Minimum values of each band.}
+
+\item{maximum_values}{A list. Maximum values of each band.}
 
 \item{suffix}{A length-one character. A suffix to append to the filename of the results}
 

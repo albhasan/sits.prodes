@@ -138,8 +138,12 @@ process_valid_shp <- function(shp_path, out_dir){
 #' @param path_bricks  A character. Path to a directory with Landsdat8-MODIS bricks.
 #' @param brick_prefix A character. Prefix to the name of the Landsdat8-MODIS bricks.
 #' @param class_bands  A character. The name of the bands to process.
-#' @param suffix       A length-one character. A suffix to append to the filename of the results
-#' @param max_time_diff A length-one numeric. The maximum difference (in days) between the fist day of the bricks and the first day of the CSV sample file.
+#' @param scale_factor   A list. Scale factorof the image band files.
+#' @param missing_values A list. Values representing missing pixels for each band.
+#' @param minimum_values A list. Minimum values of each band.
+#' @param maximum_values A list. Maximum values of each band.
+#' @param suffix         A length-one character. A suffix to append to the filename of the results
+#' @param max_time_diff  A length-one numeric. The maximum difference (in days) between the fist day of the bricks and the first day of the CSV sample file.
 #' @param cov_name     A length-one character. Name for the sits coverage to create.
 #' @param time_len     A length-one integer. The lenght of the brick's time line.
 #' @param time_by      A length-one inetger. The number of days between observations in the time line.
