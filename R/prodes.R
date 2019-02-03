@@ -60,6 +60,7 @@ prodes_compute_area <- function(pd_polygons){
 #' @param cov_res      A results coverage.
 #' @param level_key_pt A list for recoding values for translating portuguesse to english. See named list on help(recode)
 #' @param level_key    A list for recoding values. See named list on help(recode)
+#' @param class_name_filter A character. Constrain rasterization to these classes (labels).
 #' @return A raster object
 prodes_rasterize <- function(ref_path, img_path, pyear, cov_res, level_key_pt, 
                              level_key, class_name_filter = "FLORESTA"){

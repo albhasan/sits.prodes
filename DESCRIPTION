@@ -1,13 +1,10 @@
 Package: sits.prodes
 Title: What the Package Does (One Line, Title Case)
 Version: 0.0.0.9011
-Authors@R: 
-    person(given = "First",
-           family = "Last",
-           role = c("aut", "cre"),
-           email = "first.last@example.com")
+Author: c(person('Alber', 'Sanchez', role = c('aut', 'cre'), email = 'alber.sanchez@inpe.br'))
+Maintainer: Alber Sánchez <alber.sanchez@inpe.br>
 Description: What the package does (one paragraph).
-Depends: R (>= 3.5.0)
+Depends: R (>= 3.4.0)
 License: GPL-2 | file LICENSE
 Encoding: UTF-8
 LazyData: true

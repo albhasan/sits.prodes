@@ -12,7 +12,7 @@
 #' @name prodes_samples_starfm
 #' @usage data(prodes_samples_starfm)
 #'
-#' @format A tibble with 1 rows and 7 variables: (a) longitude: East-west coordinate of the time series sample (WGS 84);
+#' @format A tibble with 9269 rows and 7 variables: (a) longitude: East-west coordinate of the time series sample (WGS 84);
 #'   latitude (North-south coordinate of the time series sample in WGS 84), start_date (initial date of the time series),
 #'   end_date (final date of the time series), label (the class label associated to the sample),
 #'   coverage (the name of the coverage associated with the data),
@@ -34,7 +34,7 @@ NULL
 #' @name prodes_samples_starfm_few_clouds 
 #' @usage data(prodes_samples_starfm_few_clouds)
 #'
-#' @format A tibble with 1 rows and 7 variables: (a) longitude: East-west coordinate of the time series sample (WGS 84);
+#' @format A tibble with 15978 rows and 7 variables: (a) longitude: East-west coordinate of the time series sample (WGS 84);
 #'   latitude (North-south coordinate of the time series sample in WGS 84), start_date (initial date of the time series),
 #'   end_date (final date of the time series), label (the class label associated to the sample),
 #'   coverage (the name of the coverage associated with the data),
@@ -53,26 +53,22 @@ NULL
 #' @name prodes_samples_interpolated
 #' @usage data(prodes_samples_interpolated)
 #'
-#' @format A tibble with 1 rows and 7 variables: (a) longitude: East-west coordinate of the time series sample (WGS 84);
+#' @format A tibble with 16305 rows and 7 variables: (a) longitude: East-west coordinate of the time series sample (WGS 84);
 #'   latitude (North-south coordinate of the time series sample in WGS 84), start_date (initial date of the time series),
 #'   end_date (final date of the time series), label (the class label associated to the sample),
 #'   coverage (the name of the coverage associated with the data),
 #'   time_series (list containing a tibble with the values of the time series).
 NULL
 
-#' @title Sample time-series from the PRODES system using interpolation.
+#' @title Sample time-series from the PRODES and LANSAT 8 images.
 #'
 #' @description A dataset containing a tibble with time series sampled on the
-#' brazilian Amazon. The time series come from Landsat 8 Collection images. The
-#' clouds in the images are filled in using billinear resampled MODIS images
-#' (MOD13Q1 and MYD13Q1) of the closest in terms of place and date. These time 
-#' series are the last four time steps of the samples in prodes_samples_interpolated.
-
+#' brazilian Amazon. The time series come from Landsat 8 Collection images.
 #'
 #' @docType data
 #' @keywords datasets
-#' @name prodes_samples_interpolated_few_clouds 
-#' @usage data(prodes_samples_interpolated_few_clouds)
+#' @name prodes_samples_simple
+#' @usage data(prodes_samples_simple)
 #'
 #' @format A tibble with 1 rows and 7 variables: (a) longitude: East-west coordinate of the time series sample (WGS 84);
 #'   latitude (North-south coordinate of the time series sample in WGS 84), start_date (initial date of the time series),
@@ -81,3 +77,43 @@ NULL
 #'   time_series (list containing a tibble with the values of the time series).
 NULL
 
+
+#' @title Sample time-series from the PRODES and cloud-masked LANSAT 8 images.
+#'
+#' @description A dataset containing a tibble with time series sampled on the
+#' brazilian Amazon. The time series come from Landsat 8 Collection images in
+#' which the clouds have been replaced with a no-data value (-9999).
+#'
+#' @docType data
+#' @keywords datasets
+#' @name prodes_samples_mask_cloud 
+#' @usage data(prodes_samples_mask_cloud)
+#'
+#' @format A tibble with 1 rows and 7 variables: (a) longitude: East-west coordinate of the time series sample (WGS 84);
+#'   latitude (North-south coordinate of the time series sample in WGS 84), start_date (initial date of the time series),
+#'   end_date (final date of the time series), label (the class label associated to the sample),
+#'   coverage (the name of the coverage associated with the data),
+#'   time_series (list containing a tibble with the values of the time series).
+NULL
+
+
+#' @title Sample time-series from the PRODES system using interpolation and 
+#' LANDSAT 8 images with fewest clouds.
+#'
+#' @description A dataset containing a tibble with time series sampled on the
+#' brazilian Amazon. The time series come from Landsat 8 Collection images 
+#' with the fewest cluods on each PRODES year.
+#' The clouds in the images are filled in using billinear resampled MODIS images
+#' (MOD13Q1 and MYD13Q1) of the closest in terms of place and date.
+#'
+#' @docType data
+#' @keywords datasets
+#' @name prodes_samples_interpolated_few_clouds
+#' @usage data(prodes_samples_interpolated_few_clouds)
+#'
+#' @format A tibble with 16305 rows and 7 variables: (a) longitude: East-west coordinate of the time series sample (WGS 84);
+#'   latitude (North-south coordinate of the time series sample in WGS 84), start_date (initial date of the time series),
+#'   end_date (final date of the time series), label (the class label associated to the sample),
+#'   coverage (the name of the coverage associated with the data),
+#'   time_series (list containing a tibble with the values of the time series).
+NULL
