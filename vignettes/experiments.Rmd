@@ -112,7 +112,7 @@ plot_ls <- lapply(unique(plot_tb$experiment), function(exp){
     ggplot2::geom_path(aes(y = acc, x = epoch), colour = "blue") +
     ggplot2::geom_path(ggplot2::aes(y = val_acc, x = epoch)) +
     ggplot2::ggtitle(exp) +
-    ggplot2::ylim(0.9, 1.0) +
+    ggplot2::ylim(0.95, 1.0) +
     #ggplot2::theme(plot.title = element_text(size = 8)) +
     ggplot2::labs(x = "Epochs", y = "Accuracy") + 
     ggplot2::facet_wrap(~ model_name, nrow = 5) %>%
@@ -132,8 +132,10 @@ for(p in plot_ls)
 - train_32_model_10
 - train_33_model_19
 - train_34_model_6
-- train35_model_8
-
+- train_35_model_8
+- trai_n40_model_17
+- train_41_model_2
+- train_42_model_2
 
 ##Results 
 

@@ -1,42 +1,43 @@
-# create binary files of sample time series from PRODES. The time series are
-# taken from interpolated and StarFM bricks
+# create binary files of sample time series from PRODES
 
 library(tidyverse)
 library(kohonen)
 library(sits)
 library(ensurer)
 
-
-
-stop("Run on server!")
-
-
+# stop("Run on server!")
 
 setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
 devtools::load_all()
 
-
 # setup ----
-classification_type <- "interpolated"
+#classification_type <- "interpolated"
 #classification_type <- "starfm"
 #classification_type <- "interpolated_few_clouds"
 #classification_type <- "starfm_few_clouds"
+#classification_type <- "simple"
+classification_type <- "mask_cloud"
 
 samples_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/samples"
 samples_pattern <- c(interpolated            = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_interpolated.Rdata",
                      interpolated_few_clouds = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_interpolated_few_clouds.Rdata",
-                     starfm            = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_starfm.Rdata",
-                     starfm_few_clouds = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_starfm_few_clouds.Rdata")
+                     starfm                  = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_starfm.Rdata",
+                     starfm_few_clouds       = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_starfm_few_clouds.Rdata",
+                     simple                  = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_simple.Rdata",
+                     mask_cloud              = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_mask_cloud.Rdata"
+)
 expected_rows <- c(interpolated            = 23,
                    interpolated_few_clouds = 4,
-                   starfm            = 23,
-                   starfm_few_clouds = 4)
+                   starfm                  = 23,
+                   starfm_few_clouds       = 4,
+                   simple                  = 4,
+                   mask_cloud              = 4)
 
 # where to store partial results
 fp_suffix <- paste0(classification_type, "_", R.utils::System$getHostname(), ".Rdata")
 file_samples_koh          <- file.path("/home/alber/Documents/data/experiments/prodes_reproduction/tempdir", paste0("file_samples_koh_", fp_suffix))
 file_koh_evaluate_samples <- file.path("/home/alber/Documents/data/experiments/prodes_reproduction/tempdir", paste0("file_koh_evaluate_samples_", fp_suffix))
-set.seed(666)
+#set.seed(666)
 # - - - -
 
 
@@ -82,7 +83,7 @@ save(koh_evaluate_samples, file = file_koh_evaluate_samples)
 
 
 
-stop("Run on desktop!")
+# stop("Run on desktop!")
 
 
 
@@ -95,6 +96,10 @@ if (!exists("samples_koh") && !exists("koh_evaluate_samples")) {
     # 206
     # file_samples_koh <- "/home/alber/Documents/data/experiments/prodes_reproduction/tempdir/file_samples_koh_interpolated_esensing-006.Rdata"
     # file_koh_evaluate_samples <- "/home/alber/Documents/data/experiments/prodes_reproduction/tempdir/file_koh_evaluate_samples_interpolated_esensing-006.Rdata"
+
+
+    # file_samples_koh <- "/home/alber/Documents/data/experiments/prodes_reproduction/tempdir/file_samples_koh_simple_esensing-006.Rdata"
+    # file_koh_evaluate_samples <- "/home/alber/Documents/data/experiments/prodes_reproduction/tempdir/file_koh_evaluate_samples_simple_esensing-006.Rdata"
 
 
     load(file_samples_koh)
@@ -117,17 +122,12 @@ if (!exists("samples_koh") && !exists("koh_evaluate_samples")) {
 # check the distribution of the smaples
 # sits::sits_plot_kohonen(samples_koh)
 
-
+#stop("Run on server")
 
 # remove confused samples
 prodes_samples <- dplyr::left_join(samples_koh$info_samples, koh_evaluate_samples$metrics_by_samples, by = "id_sample") %>%
     dplyr::filter(label == neuron_label.x, percentage > 80) %>%
     dplyr::select(longitude:time_series)
-
-
-stop("Run on server")
-
-
 
 # futher validation of samples through k-folds (see confusion matrix)
 prodes_samples %>% sits::sits_kfold_validate(ml_method = sits::sits_svm()) %>%
@@ -175,5 +175,12 @@ if (classification_type == "interpolated") {
 }else if (classification_type == "starfm_few_clouds") {
     prodes_samples_starfm_few_clouds <- prodes_samples
     devtools::use_data(prodes_samples_starfm_few_clouds, overwrite = TRUE)
+}else if (classification_type == "simple") {
+    prodes_samples_simple <- prodes_samples
+    devtools::use_data(prodes_samples_simple, overwrite = TRUE)
+}else if (classification_type == "mask_cloud") {
+    prodes_samples_mask_cloud <- prodes_samples
+    devtools::use_data(prodes_samples_mask_cloud, overwrite = TRUE)
 }
+
 

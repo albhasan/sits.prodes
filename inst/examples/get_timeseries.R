@@ -1,11 +1,11 @@
 #!/usr/bin/Rscript
 # GET TIME SERIES FOR SAMPLE POINTS
 
-library(tidyverse)
+library(dplyr)
 library(sits)
 library(parallel)
-library(devtools)
 library(config)
+library(devtools)
 setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
 devtools::load_all()
 
@@ -28,9 +28,17 @@ if (length(err_msg) > 0) {
 # brick_type = "interpolated_few_clouds"
 # brick_type = "interpolated_simple"
 # brick_type = "starfm_few_clouds"
-brick_type = "simple"
+# brick_type = "simple"
+brick_type = "mask_cloud"
+
 # class_bands <- c("blue", "ndvi", "nir", "red", "savi", "swir2")
-class_bands <- c("ndvi", "nir", "red", "swir2", "dark", "substrate", "vegetation")
+# class_bands <- c("ndvi", "nir", "red", "swir2", "dark", "substrate", "vegetation")
+class_bands <- c("ndvi", "nir", "red", "blue", "green", "swir1", "swir2", "dark", "substrate", "vegetation")
+
+no_data <- -9999 # Landsat no data value
+
+print(sprintf("Brick type: %s", brick_type))
+
 
 if (brick_type == "starfm") {
     path_bricks  <- "/home/alber/shared/brick"
@@ -86,16 +94,17 @@ if (brick_type == "starfm") {
                              suffix = paste0("_", brick_type),
                              mc.cores = cores)
 }else if (brick_type == "simple") {
-    # Bricks created by piling up  bands, olating vegetation indexes, and spectral mistures
+    # Bricks created by piling up  bands, vegetation indexes, and spectral mirxstures
     path_bricks <- "/home/alber/shared/brick_simple"
     brick_prefix <- "LC8SR-SIMPLE_"
 
     band_names <- c("ndvi", "evi", "red", "nir", "mir", "swir1", "swir2", "class", "dark", "substrate", "vegetation")
     scale_factor   <- as.list(rep(1/10000, length(band_names)))
     maximum_values <- as.list(rep(10000,   length(band_names)))
-    minimum_values <- as.list(c(-3000, -3000, 0, 0, 0, 0, 0, 0, 0, 0, 0))
-    missing_values <- rep(-3000, length(band_names)) # TODO: validate each time !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    minimum_values <- as.list(rep(0,       length(band_names)))
+    missing_values <- rep(no_data, length(band_names))
     names(maximum_values) <- names(minimum_values) <- names(missing_values) <- names(scale_factor) <- band_names
+    maximum_values$substrate <- maximum_values$vegetation <- 50000
 
     fpaths <- parallel::mclapply(csv_files, get_timeseries,
                              path_bricks = path_bricks,
@@ -110,8 +119,34 @@ if (brick_type == "starfm") {
                              time_len = 4,
                              time_by = ceiling(365/4),
                              mc.cores = cores)
+}else if (brick_type == "mask_cloud") {
+    # Bricks created by masking clouds and piling up bands, vegetation indexes, and spectral mixtures
+    path_bricks <- "/home/alber/shared/brick_maskcloud"
+    brick_prefix <- "LC8SR-MASKCLOUD_"
+    
+    band_names <- c("ndvi", "evi", "blue", "green", "red", "nir", "mir", "swir1", "swir2", "class", "dark", "substrate", "vegetation")
+    scale_factor   <- as.list(rep(1/10000, length(band_names)))
+    maximum_values <- as.list(rep(10000,   length(band_names)))
+    minimum_values <- as.list(rep(0,       length(band_names)))
+    missing_values <- rep(no_data, length(band_names))
+    names(maximum_values) <- names(minimum_values) <- names(missing_values) <- names(scale_factor) <- band_names
+    maximum_values$substrate <- maximum_values$vegetation <- 50000
+
+    fpaths <- parallel::mclapply(csv_files, get_timeseries,
+                             path_bricks = path_bricks,
+                             brick_prefix = brick_prefix,
+                             class_bands = class_bands,
+                             scale_factor = scale_factor,
+                             missing_values  = missing_values,
+                             minimum_values  = minimum_values,
+                             maximum_values  = maximum_values,
+                             suffix = paste0("_", brick_type),
+                             cov_name = "Brick masked clouds",
+                             time_len = 4,
+                             time_by = ceiling(365/4),
+                             mc.cores = cores)
 }else{
-    stop("Unknown kind ofd brick")
+    stop("Unknown kind of brick")
 }
 
 print("Files created (samples & time series): ")

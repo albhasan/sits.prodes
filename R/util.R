@@ -68,17 +68,27 @@ compute_indexes <- function(x, sat){
 #' @return            A character of path, pathrow, start_date, band, year (NA for MODIS)
 #' export
 get_brick_md <- function(brick_paths){
+    # Get the number of bands in a file
+    # @param filepath A length-one character. A path to a file
+    # @return A length-one numeric. The number of bands
+    get_number_of_bands <- function(filepath) {
+        system2("gdalinfo", filepath, stdout = TRUE) %>%
+        stringr::str_subset("Band") %>% dplyr::last() %>%
+        stringr::str_split(" ") %>% unlist() %>% dplyr::nth(2) %>%
+        as.numeric() %>% return()
+    }
     brick_df <- lapply(brick_paths, function(x){
         fn <- substr(basename(x), 1, nchar(basename(x)) - 4)
         fn_md <- strsplit(fn, split = '_')[[1]]
         res <- NULL
-        if(fn_md[[1]] == "LC8SR-MOD13Q1-MYD13Q1" || fn_md[[1]] == "LC8SR-MOD13Q1-STARFM"){
+        if(fn_md[[1]] == "LC8SR-MOD13Q1-MYD13Q1" || fn_md[[1]] == "LC8SR-MOD13Q1-STARFM" || fn_md[[1]] == "LC8SR-SIMPLE"){
             res <- c(
                 path = x,
                 pathrow = fn_md[2],
                 start_date = fn_md[3],
                 band = fn_md[4],
-                year = format(as.Date(fn_md[[3]]), '%Y')
+                year = format(as.Date(fn_md[[3]]), '%Y'),
+                time_steps = get_number_of_bands(x)
             )
         }else if(fn_md[[1]] == "MOD13Q1"){
             res <- c(
@@ -86,7 +96,8 @@ get_brick_md <- function(brick_paths){
                 pathrow = tolower(fn_md[2]),
                 start_date = "2000-01-01",
                 band = tolower(fn_md[7]),
-                year = 2000
+                year = 2000,
+                time_steps = get_number_of_bands(x)
             )
         }else{
             stop("Cannot identify the bricks' type!")

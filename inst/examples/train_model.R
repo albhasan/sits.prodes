@@ -20,20 +20,24 @@ get_new_train_name <- function(train_path){
 }
 
 # setup ----
-#brick_type <- "starfm"
-brick_type <- "interpolated"
 
-experiment_bands <- c("ndvi", "nir", "red", "swir2")
-experiment_labels <- c("forest", "deforestation", "flood")
-experiment_scenes <- c("225063", "226064", "233067")
+#brick_type <- "starfm"
+#brick_type <- "interpolated"
+brick_type <- "simple"
+# experiment_bands <- c("ndvi", "nir", "red", "swir2") # train_40
+# experiment_bands <- c("ndvi", "nir", "red", "swir2", "vegetation", "substrate", "dark") # train_41
+experiment_bands <- c("vegetation", "substrate", "dark") # train_42
+# experiment_labels <- c("forest", "deforestation", "flood") # train_40
+experiment_labels <- c("forest", "deforestation") # train_41 train_42
+
+experiment_scenes <- sort(c("225063", "226064", "233067"))
 #experiment_scenes <- "225063"
 #experiment_scenes <- "226064"
 #experiment_scenes <- "233067"
 
-
-train_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/02_train_model"
+train_path   <- "/home/alber/Documents/data/experiments/prodes_reproduction/02_train_model"
 samples_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/samples"
-scene_shp <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/vector/wrs2_asc_desc/wrs2_asc_desc.shp"
+scene_shp    <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/vector/wrs2_asc_desc/wrs2_asc_desc.shp"
 
 prefix <- stringr::str_c("train_", get_new_train_name(train_path))
 train_path <- file.path(train_path, prefix)
@@ -62,6 +66,9 @@ if (brick_type == "interpolated") {
 }else if (brick_type == "starfm") {
     data(list = "prodes_samples_starfm", package = "sits.prodes")
     prodes_samples <- prodes_samples_starfm
+}else if (brick_type == "simple") {
+    data(list = "prodes_samples_simple", package = "sits.prodes")
+    prodes_samples <- prodes_samples_simple
 }else{
     stop("Unknown type of brick")
 }
@@ -74,17 +81,11 @@ scenes <- scene_shp %>%
     dplyr::select(PR) %>%
     sf::st_transform(crs = 4326)
 
-
-
-
-
 # TODO: use the clustered labels if available
 if (all(c("id_neuron", "neuron_label", "id_sample", "label2") %in% colnames(prodes_samples))) {
     prodes_samples <- prodes_samples %>% dplyr::mutate(label = label2) %>%
         dplyr::select(-c(id_neuron, neuron_label, id_sample, label2))
 }
-
-
 
 # restrain samples to certain bands, labels, and scenes
 prodes_samples <- prodes_samples %>%
@@ -96,12 +97,6 @@ prodes_samples <- prodes_samples %>%
     sf::st_set_geometry(NULL) %>%
     dplyr::select(longitude, latitude, start_date, end_date, label, coverage,
                   time_series)
-
-
-
-
-
-
 
 # build a random hyper-parameter list
 param_ls <- list()
@@ -120,7 +115,7 @@ for (i in seq_along(n)) {
     )
 }
 
-
+# train using the hyper-parameters list
 counter <- 0
 for (p in param_ls) {
     (counter <- counter + 1)
@@ -133,6 +128,7 @@ for (p in param_ls) {
         epochs           = p$epochs,
         batch_size       = p$batch_size,
         validation_split = p$validation_split)
+
     model <- sits::sits_train(prodes_samples, method)
 
     sits::sits_save_keras(model,

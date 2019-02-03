@@ -15,15 +15,27 @@
 #' @return              A tibble or a list of tibbles.
 load_samples <- function(x, sat, expected_nrow){
     stopifnot(is.character(x))
+
+    # util functions
+    # test if a vector elements are the same. Take from https://stackoverflow.com/questions/4752275/test-for-equality-among-all-elements-of-a-single-vector
+    zero_range <- function(x, tol = .Machine$double.eps ^ 0.5) {
+        if (length(x) == 1) return(TRUE)
+        x <- range(x) / mean(x)
+        isTRUE(all.equal(x[1], x[2], tolerance = tol))
+    }
+    # validate the tme sereis of a SITS sample
     is_ts_valid <- function(ts_tb, expected_nrow){
         if (!dplyr::is.tbl(ts_tb)) return(FALSE)
-        if (nrow(ts_tb) != expected_nrow || ncol(ts_tb) < 1) return(FALSE)
+        if (nrow(ts_tb) != expected_nrow || ncol(ts_tb) < 2) return(FALSE)
+        if (!any(vapply(dplyr::select(ts_tb, -1), is.numeric, logical(1)))) return(FALSE)
         # is there any NA?
         if (any(vapply(ts_tb, function(x) any(is.na(unlist(ts_tb))), logical(1))))
             return(FALSE)
+        # are all the observations the same? This could be NAs, etc
+        if (any(vapply(dplyr::select(ts_tb, -1), zero_range, logical(1)))) return(FALSE)
         return(TRUE)
     }
-
+    # body
     if (is.na(x) || length(x) == 0) {
         return(NA)
     }else if (length(x) == 1) {
@@ -156,7 +168,7 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
                            time_by = 16){
     stopifnot(length(cpath) == 1)
 
-    # SITS deault parameteres
+    # SITS default parameteres
     sits_conf <- config::get(file = system.file("extdata", "config.yml", package = "sits"))
     if (is.null(scale_factor))
         scale_factor   <- sits_conf$RASTER_scale_factor$LANDSAT
@@ -167,11 +179,10 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
     if (is.null(maximum_values))
         maximum_values <- sits_conf$RASTER_maximum_value
 
-    # get time series from bricks
+    # get metadata from brick's name
     pathrow <- cpath %>% basename() %>% stringr::str_extract("_[0-9]{3}_[0-9]{3}_") %>%
         strsplit(split = '_', fixed = TRUE) %>% unlist() %>%
         paste(collapse = '')
-
     start_date <- cpath %>% basename() %>% stringr::str_extract("[0-9]{4}-[0-9]{2}-[0-9]{2}")
     if (class(try(as.Date(start_date))) == "try-error" || is.na(try(as.Date(start_date))))
         stop("Invalid start_date in file name ", cpath)

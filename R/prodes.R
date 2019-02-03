@@ -62,42 +62,47 @@ prodes_compute_area <- function(pd_polygons){
 #' @param level_key    A list for recoding values. See named list on help(recode)
 #' @return A raster object
 prodes_rasterize <- function(ref_path, img_path, pyear, cov_res, level_key_pt, 
-                             level_key){
-  tmp_raster_path <- file.path(img_path, 
-                               stringr::str_replace(basename(ref_path), ".shp", 
-                                                    stringr::str_c("_", pyear, ".tif")))
-  tmp_vector_path <- file.path(img_path, 
-                               stringr::str_replace(basename(ref_path), ".shp", 
-                                                    stringr::str_c("_", pyear, ".shp")))
+                             level_key, class_name_filter = "FLORESTA"){
+    tmp_raster_path <- file.path(img_path, 
+        stringr::str_replace(basename(ref_path), ".shp", 
+                             stringr::str_c("_", pyear, ".tif")))
+    tmp_vector_path <- file.path(img_path, 
+        stringr::str_replace(basename(ref_path), ".shp", 
+                             stringr::str_c("_", pyear, ".shp")))
 
-  # prepare the vector to rasterize
-  tmp_vector <- cov_read(ref_path) %>%
-    dplyr::filter(class_name %in% c(class_name_filter, paste0('d', pyear))) %>%
-    dplyr::mutate(lab_ref_pt = dplyr::recode(mainclass, !!!level_key_pt)) %>%
-    dplyr::mutate(lab_ref = dplyr::recode(lab_ref_pt, !!!level_key)) %>%
-    cov_proj(proj4string = cov_srs(cov_res)) %>%
-    dplyr::select(lab_ref)
+    # prepare the vector to rasterize
+    tmp_vector <- ref_path %>% cov_read() %>%
+        dplyr::filter(class_name %in% c(class_name_filter, paste0('d', pyear))) %>%
+        dplyr::mutate(lab_ref_pt = dplyr::recode(mainclass, !!!level_key_pt)) %>%
+        dplyr::mutate(lab_ref = dplyr::recode(lab_ref_pt, !!!level_key)) %>%
+        cov_proj(proj4string = cov_srs(cov_res)) %>%
+        dplyr::select(lab_ref) %>%
+        dplyr::mutate(lab_ref = as.integer(lab_ref))
 
-  # rasterize
-  # store # raster::dataType(cov_res) <- "FLT8S"
-  raster::writeRaster(raster::setValues(cov_res, NA), 
-                      filename = tmp_raster_path, overwrite=TRUE)
-  suppressWarnings(sf::st_write(tmp_vector, dsn = tmp_vector_path, 
-                                delete_dsn = TRUE, quiet = TRUE))
-  cov_ref <- gdalUtils::gdal_rasterize(src_datasource = tmp_vector_path,
-                                       dst_filename = tmp_raster_path,
-                                       a = "lab_ref",
-                                       l = stringr::str_replace(basename(tmp_vector_path), ".shp", ""),
-                                       output_Raster = TRUE)
-  cov_ref <- cov_ref[[1]] # Cast to raster layer
+    # rasterize
+    # store # raster::dataType(cov_res) <- "FLT8S"
+    raster::writeRaster(raster::setValues(cov_res, NA), 
+                        filename = tmp_raster_path, overwrite = TRUE)
+    # https://lists.osgeo.org/pipermail/gdal-dev/2006-March/008130.html
+    suppressWarnings(
+        sf::st_write(tmp_vector, dsn = tmp_vector_path, 
+                     delete_dsn = TRUE, quiet = TRUE, delete_layer = TRUE)
+    )
+    cov_ref <- gdalUtils::gdal_rasterize(src_datasource = tmp_vector_path,
+                                         dst_filename = tmp_raster_path,
+                                         a = "lab_ref",
+                                         l = stringr::str_replace(basename(tmp_vector_path), ".shp", ""),
+                                         output_Raster = TRUE) %>%
+        .[[1]] # Cast to raster layer
 
-  # clean tmp files
-  fdbf <- paste0(substring(tmp_vector_path, 1, nchar(tmp_vector_path)-3), "dbf")
-  fprj <- paste0(substring(tmp_vector_path, 1, nchar(tmp_vector_path)-3), "prj")
-  fshx <- paste0(substring(tmp_vector_path, 1, nchar(tmp_vector_path)-3), "shx")
-  if (file.exists(tmp_vector_path)) file.remove(tmp_vector_path)
-  if (file.exists(fdbf)) file.remove(fdbf)
-  if (file.exists(fprj)) file.remove(fprj)
-  if (file.exists(fshx)) file.remove(fshx)
-  return(cov_ref)
+    # clean tmp files
+    if (file.exists(tmp_vector_path)) 
+        res <- file.remove(tmp_vector_path)
+    res <- lapply(c("dbf", "prj", "shx"), function(ext){
+        f <- paste0(substring(tmp_vector_path, 1, nchar(tmp_vector_path)-3), ext)
+        if(file.exists(f))
+            file.remove(f)
+    })
+
+    return(cov_ref)
 }

@@ -17,11 +17,12 @@ devtools::load_all()
 # script setup ----
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 stopifnot(dir.exists(base_path))
-
+no_data <- -9999 # Landsat no value
 path_to_bricks <- c(
    mod13        = file.path(base_path, "data", "raster", "bricks_modis_cropped"),
    l8mod_interp = file.path(base_path, "data", "raster", "brick_interp"),
-   l8mod_starfm = file.path(base_path, "data", "raster", "brick_starfm")
+   l8mod_starfm = file.path(base_path, "data", "raster", "brick_starfm"),
+   l8mod_simple = file.path(base_path, "data", "raster", "brick_simple")
 )
 
 # get arguments ----
@@ -56,9 +57,9 @@ if(parallel::detectCores() < opt$cores){
 }
 
 # parse arguments ----
-train      <- opt$train                                # "train_20"
-sits_model <- opt$model                                # "train_20_model_1"
-brick_type <- opt$btype                                # "l8mod_interp"
+train      <- opt$train                                # "train_40"
+sits_model <- opt$model                                # "train_40_model_17"
+brick_type <- opt$btype                                # "l8mod_simple"
 tiles      <- unlist(strsplit(opt$tiles, split = " ")) # c("225063", "226064", "233067")
 bands      <- unlist(strsplit(opt$bands, split = " ")) # c("ndvi", "evi", "nir", "mir", "red", "blue", "swir2")
 years      <- unlist(strsplit(opt$years, split = " ")) # 2012:2017
@@ -114,9 +115,11 @@ if (brick_type == "mod13") {
 }
 
 # brick_tb is the intersection of the bricks available and the user's request
-brick_tb <- brick_path %>% list.files(full.names = TRUE, pattern = '*tif') %>% 
+brick_tb <- brick_path %>% list.files(full.names = TRUE, pattern = '*tif$') %>% 
   get_brick_md() %>% dplyr::as_tibble() %>% 
-  dplyr::filter(pathrow %in% tiles, year %in% years, band %in% training_bands)
+  dplyr::filter(pathrow %in% tiles, year %in% years, band %in% training_bands) %>%
+  ensurer::ensure_that(all(.$time_steps == .$time_steps[1]), 
+                       err_desc = "Inconsistent number of time-steps among bricks!")
 
 # validate bands
 log4r::debug(logger, paste("Bands requested:", paste(bands, collapse = ", ")))
@@ -137,7 +140,11 @@ if (!identical(sort(bands), sort(training_bands))) {
     warning(msg)
 }
 
+# get SITS configuration parameters
+sits_conf <- config::get(file = system.file("extdata", "config.yml", package = "sits"))
+
 # classify bricks
+img_res <- list()
 for(path_row in sort(unique(brick_tb$pathrow))){
   for(y in sort(unique(brick_tb$year))){
     bricks <- brick_tb %>% dplyr::filter(pathrow == path_row, year == y)
@@ -146,12 +153,35 @@ for(path_row in sort(unique(brick_tb$pathrow))){
                         path_row, y, paste0(training_bands, collapse = " ")))
     log4r::debug(logger, bricks)
     log4r::info(logger, "Getting coverage metadata...")
+
+    # get MODIS defaults
+    scale_factor   <- sits_conf$RASTER_scale_factor$MODIS
+    missing_values <- sits_conf$RASTER_missing_value$MODIS
+    minimum_values <- sits_conf$RASTER_minimum_value
+    maximum_values <- sits_conf$RASTER_maximum_value
+    # buid a time line of the same lenght of the brick
+    # NOTE: it approximates the dates of the images in the bricks!
     if (stringr::str_detect(brick_type, "^l8mod.+")) {
-      cov_timeline <- seq(from = as.Date(unique(bricks$start_date)[1]), by = 16, length.out = 23)
+        band_names <- c("ndvi", "evi", "blue", "green", "red", "nir", "mir", "swir1", "swir2", "class", "dark", "substrate", "vegetation")
+        scale_factor   <- as.list(rep(1/10000, length(band_names)))
+        maximum_values <- as.list(rep(10000,   length(band_names)))
+        minimum_values <- as.list(rep(0,       length(band_names)))
+        missing_values <- rep(no_data, length(band_names))
+        names(maximum_values) <- names(minimum_values) <- names(missing_values) <- names(scale_factor) <- band_names
+        maximum_values$substrate <- maximum_values$vegetation <- 50000
+        t_steps <- as.numeric(unique(bricks$time_steps)[1])
+        cov_timeline <- seq(from = as.Date(unique(bricks$start_date)[1]), 
+                            by = ceiling(365/t_steps), length.out = t_steps)
     }
+
     coverage_name <- paste(brick_type, path_row, y, sep = '_')
     scoverage <- sits::sits_coverage(files = bricks$path, name = coverage_name,
-                                     timeline = cov_timeline, bands = bricks$band)
+                                     bands = bricks$band,
+                                     scale_factor = scale_factor, 
+                                     maximum_values = maximum_values, 
+                                     minimum_values = minimum_values, 
+                                     missing_values = missing_values, 
+                                     timeline = cov_timeline)
     result_filepath <- file.path(result_path, paste(coverage_name, "dl.tif", sep = "_"))
     param_ls <- list(coverage_name = coverage_name, result_filepath = result_filepath)
     log4r::debug(logger, paste(names(param_ls), param_ls, sep = " = "))
@@ -161,7 +191,16 @@ for(path_row in sort(unique(brick_tb$pathrow))){
                                ml_model = dl_model,
                                memsize = mem,
                                multicores = multicores)
+    img_res[[len(img_res) + 1]] <- result_filepat <- result_filepath
     log4r::info(logger, paste0("Completed partial bricks classification. The results are stored in ", result_filepath))
   }
 }
+
+log4r::info(logger, "Post-processing")
+for(f in unlist(mg_res)){
+    
+}
+
+
+
 log4r::info(logger, "Finished!")
