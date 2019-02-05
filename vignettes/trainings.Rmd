@@ -28,10 +28,10 @@ library(tidyr)
 library(sits.prodes)
 
 # TODO: remove
-#library(devtools)
-#devtools::load_all()
-#devtools::build(vignettes = FALSE, manual = TRUE)
-#devtools::install()
+library(devtools)
+devtools::load_all()
+devtools::build(vignettes = FALSE, manual = TRUE)
+devtools::install()
 # - - - 
 
 
@@ -133,16 +133,11 @@ for(p in plot_ls)
 - train_33_model_19
 - train_34_model_6
 - train_35_model_8
-- trai_n40_model_17
+- train_40_model_17
 - train_41_model_2
 - train_42_model_2
-
-##Results 
-
-### All the samples, interpolated bricks
-![rep_prodes_08_225063_2016](./img/rep_prodes_08_225063_2016.png)
-
-### Konehen samples, re-calculated bricks
-![rep_prodes_20_225063_2016](./img/rep_prodes_20_225063_2016.png)
+- train_50_model_2
+- train_51_model_14
+- train_52_model_13
 
 # References
