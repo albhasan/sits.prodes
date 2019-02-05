@@ -81,7 +81,7 @@ get_brick_md <- function(brick_paths){
         fn <- substr(basename(x), 1, nchar(basename(x)) - 4)
         fn_md <- strsplit(fn, split = '_')[[1]]
         res <- NULL
-        if(fn_md[[1]] == "LC8SR-MOD13Q1-MYD13Q1" || fn_md[[1]] == "LC8SR-MOD13Q1-STARFM" || fn_md[[1]] == "LC8SR-SIMPLE"){
+        if (stringr::str_detect(fn_md[[1]], "^LC8SR.+")) {
             res <- c(
                 path = x,
                 pathrow = fn_md[2],
