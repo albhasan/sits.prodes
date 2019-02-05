@@ -19,10 +19,11 @@ base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 stopifnot(dir.exists(base_path))
 no_data <- -9999 # Landsat no value
 path_to_bricks <- c(
-   mod13        = file.path(base_path, "data", "raster", "bricks_modis_cropped"),
-   l8mod_interp = file.path(base_path, "data", "raster", "brick_interp"),
-   l8mod_starfm = file.path(base_path, "data", "raster", "brick_starfm"),
-   l8mod_simple = file.path(base_path, "data", "raster", "brick_simple")
+   mod13           = file.path(base_path, "data", "raster", "bricks_modis_cropped"),
+   l8mod_interp    = file.path(base_path, "data", "raster", "brick_interp"),
+   l8mod_starfm    = file.path(base_path, "data", "raster", "brick_starfm"),
+   l8mod_simple    = file.path(base_path, "data", "raster", "brick_simple"),
+   l8mod_maskcloud = file.path(base_path, "data", "raster", "brick_mask_cloud")
 )
 
 # get arguments ----
@@ -41,7 +42,6 @@ option_list = list(
 opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser)
 
-
 # validate arguments ----
 if (length(opt) != 11 || sum(sapply(opt, is.null)) != 0){
   print_help(opt_parser)
@@ -57,9 +57,9 @@ if(parallel::detectCores() < opt$cores){
 }
 
 # parse arguments ----
-train      <- opt$train                                # "train_40"
-sits_model <- opt$model                                # "train_40_model_17"
-brick_type <- opt$btype                                # "l8mod_simple"
+train      <- opt$train                                # "train_50"
+sits_model <- opt$model                                # "train_50_model_2"
+brick_type <- opt$btype                                # "brick_mask_cloud"
 tiles      <- unlist(strsplit(opt$tiles, split = " ")) # c("225063", "226064", "233067")
 bands      <- unlist(strsplit(opt$bands, split = " ")) # c("ndvi", "evi", "nir", "mir", "red", "blue", "swir2")
 years      <- unlist(strsplit(opt$years, split = " ")) # 2012:2017
@@ -191,7 +191,7 @@ for(path_row in sort(unique(brick_tb$pathrow))){
                                ml_model = dl_model,
                                memsize = mem,
                                multicores = multicores)
-    img_res[[len(img_res) + 1]] <- result_filepat <- result_filepath
+    img_res[[length(img_res) + 1]] <- result_filepat <- result_filepath
     log4r::info(logger, paste0("Completed partial bricks classification. The results are stored in ", result_filepath))
   }
 }
