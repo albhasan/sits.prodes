@@ -23,12 +23,14 @@ get_new_train_name <- function(train_path){
 
 #brick_type <- "starfm"
 #brick_type <- "interpolated"
-brick_type <- "simple"
-# experiment_bands <- c("ndvi", "nir", "red", "swir2") # train_40
-# experiment_bands <- c("ndvi", "nir", "red", "swir2", "vegetation", "substrate", "dark") # train_41
-experiment_bands <- c("vegetation", "substrate", "dark") # train_42
+#brick_type <- "simple"
+brick_type <- "mask_cloud"
+#experiment_bands <- c("ndvi", "nir", "red", "swir2") # train_40 train_50
+#experiment_bands <- c("ndvi", "nir", "red", "swir2", "vegetation", "substrate", "dark") # train_41 train_51
+experiment_bands <- c("vegetation", "substrate", "dark") # train_42 train_52
+
 # experiment_labels <- c("forest", "deforestation", "flood") # train_40
-experiment_labels <- c("forest", "deforestation") # train_41 train_42
+experiment_labels <- c("forest", "deforestation") # train_41 train_42 train_50 train_51 train_52
 
 experiment_scenes <- sort(c("225063", "226064", "233067"))
 #experiment_scenes <- "225063"
@@ -69,6 +71,9 @@ if (brick_type == "interpolated") {
 }else if (brick_type == "simple") {
     data(list = "prodes_samples_simple", package = "sits.prodes")
     prodes_samples <- prodes_samples_simple
+}else if (brick_type == "mask_cloud") {
+    data(list = "prodes_samples_mask_cloud", package = "sits.prodes")
+    prodes_samples <- prodes_samples_mask_cloud 
 }else{
     stop("Unknown type of brick")
 }
