@@ -19,12 +19,13 @@ base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 stopifnot(dir.exists(base_path))
 no_data <- -9999 # Landsat no value
 path_to_bricks <- c(
-   mod13           = file.path(base_path, "data", "raster", "bricks_modis_cropped"),
-   l8mod_interp    = file.path(base_path, "data", "raster", "brick_interp"),
-   l8mod_starfm    = file.path(base_path, "data", "raster", "brick_starfm"),
-   l8mod_simple    = file.path(base_path, "data", "raster", "brick_simple"),
-   l8mod_maskcloud = file.path(base_path, "data", "raster", "brick_mask_cloud")
+   mod13            = file.path(base_path, "data", "raster", "bricks_modis_cropped"),
+   l8mod_interp     = file.path(base_path, "data", "raster", "brick_interp"),
+   l8mod_starfm     = file.path(base_path, "data", "raster", "brick_starfm"),
+   l8mod_simple     = file.path(base_path, "data", "raster", "brick_simple"),
+   l8mod_mask_cloud = file.path(base_path, "data", "raster", "brick_mask_cloud")
 )
+stopifnot(all(vapply(path_to_bricks, dir.exists, logical(1))))
 
 # get arguments ----
 option_list = list(
@@ -107,7 +108,6 @@ write.csv(
 log4r::info(logger, sprintf("Training label codes saved to %s", file.path(result_path, "int_labels.csv")))
 
 log4r::info(logger, "Gathering bricks' metadata...")
-brick_path <- path_to_bricks[brick_type]
 if (brick_type == "mod13") {
   data("timeline_2000_2017", package = "sits")
   cov_timeline <- timeline_2000_2017
@@ -115,11 +115,13 @@ if (brick_type == "mod13") {
 }
 
 # brick_tb is the intersection of the bricks available and the user's request
-brick_tb <- brick_path %>% list.files(full.names = TRUE, pattern = '*tif$') %>% 
-  get_brick_md() %>% dplyr::as_tibble() %>% 
-  dplyr::filter(pathrow %in% tiles, year %in% years, band %in% training_bands) %>%
-  ensurer::ensure_that(all(.$time_steps == .$time_steps[1]), 
-                       err_desc = "Inconsistent number of time-steps among bricks!")
+brick_tb <- path_to_bricks[brick_type] %>% 
+    ensurer::ensure_that(!is.na(.), err_desc = sprintf("Invalid type of brick: %s", brick_type)) %>%
+    list.files(full.names = TRUE, pattern = '*tif$') %>% 
+    get_brick_md() %>% dplyr::as_tibble() %>% 
+    dplyr::filter(pathrow %in% tiles, year %in% years, band %in% training_bands) %>%
+    ensurer::ensure_that(all(.$time_steps == .$time_steps[1]), 
+                         err_desc = "Inconsistent number of time-steps among bricks!")
 
 # validate bands
 log4r::debug(logger, paste("Bands requested:", paste(bands, collapse = ", ")))
@@ -191,16 +193,14 @@ for(path_row in sort(unique(brick_tb$pathrow))){
                                ml_model = dl_model,
                                memsize = mem,
                                multicores = multicores)
-    img_res[[length(img_res) + 1]] <- result_filepat <- result_filepath
+    img_res[[length(img_res) + 1]] <- result_filepath
     log4r::info(logger, paste0("Completed partial bricks classification. The results are stored in ", result_filepath))
   }
 }
 
 log4r::info(logger, "Post-processing")
-for(f in unlist(mg_res)){
-    
+for(f in unlist(img_res)){
+    print ("do the bayesian filtering")
 }
-
-
 
 log4r::info(logger, "Finished!")
