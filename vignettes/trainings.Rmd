@@ -57,7 +57,7 @@ stopifnot(exists("log_files"))
 
 # parse logs
 logs_ls <- system.file(file.path("extdata", log_files), package = "sits.prodes") %>%
-    dplyr::as_tibble() %>% dplyr::rename(path = value) %>% 
+    tibble::enframe(name = NULL) %>% dplyr::rename(path = value) %>% 
     dplyr::mutate(experiment = basename(path)) %>% 
     dplyr::select(experiment, path) %>%
     dplyr::mutate(parsed_log = purrr::map(.$path, parse_training_log)) %>% 
@@ -82,9 +82,11 @@ logs_ls <- system.file(file.path("extdata", log_files), package = "sits.prodes")
                               })) %>%
     dplyr::select(-parsed_log)
 
+na_remover <- function(x){return(trimws(gsub("NA", "", x[!is.na(x)])))}
+
 logs_ls %>% tidyr::unnest(setup) %>% 
-    dplyr::mutate(bands = paste(Bands_experiment, Bands__experiment)) %>%
-    dplyr::mutate(labels = paste(Labels, Labels_experiment)) %>%
+    dplyr::mutate(bands = na_remover(paste(Bands_experiment, Bands__experiment))) %>%
+    dplyr::mutate(labels = na_remover(paste(Labels, Labels_experiment))) %>%
     dplyr::select(experiment, Clasification_type, labels, bands, Scenes_experiment) %>%
     knitr::kable() %>% 
     kableExtra::kable_styling(full_width = F) 
