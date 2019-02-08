@@ -184,7 +184,7 @@ for(path_row in sort(unique(brick_tb$pathrow))){
                                      minimum_values = minimum_values, 
                                      missing_values = missing_values, 
                                      timeline = cov_timeline)
-    result_filepath <- file.path(result_path, paste(coverage_name, "dl.tif", sep = "_"))
+    result_filepath <- file.path(result_path, paste(coverage_name, "dl", sep = "_"))
     param_ls <- list(coverage_name = coverage_name, result_filepath = result_filepath)
     log4r::debug(logger, paste(names(param_ls), param_ls, sep = " = "))
     rm(param_ls)
