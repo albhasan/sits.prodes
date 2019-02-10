@@ -43,10 +43,10 @@ prob_files <- input_dir %>% list.files(pattern = ".*probs.*\\.tif$", full.names 
     dplyr::mutate(
         pathrow = stringr::str_extract(basename(file_path), "[0-9]{6}"),
         year = stringr::str_sub(stringr::str_extract(basename(file_path), "_[0-9]{4}_")[1], 2, 5),
-        file_out = file.path(output_dir, basename(file_path))
+        file_out = file.path(output_dir, stringr::str_replace(basename(file_path), "_probs_", '_'))
     )
 
-# processing ###
+# processing 
 for(pr in unique(prob_files$pathrow)){
     for(y in unique(prob_files$year)){
         print(sprintf("Processing probability maps of scene-year %s %s ...", pr, y))
