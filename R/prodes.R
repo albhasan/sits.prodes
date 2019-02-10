@@ -55,21 +55,18 @@ prodes_compute_area <- function(pd_polygons){
 #' @description Rasterize a PRODES map
 #' 
 #' @param ref_path     A length-one character. Path to a PRODES shp
-#' @param img_path     A length-one character. Path to a directory
 #' @param pyear        A length-one nueric. A PRODES year
 #' @param cov_res      A results coverage.
 #' @param level_key_pt A list for recoding values for translating portuguesse to english. See named list on help(recode)
 #' @param level_key    A list for recoding values. See named list on help(recode)
 #' @param class_name_filter A character. Constrain rasterization to these classes (labels).
 #' @return A raster object
-prodes_rasterize <- function(ref_path, img_path, pyear, cov_res, level_key_pt, 
+prodes_rasterize <- function(ref_path, pyear, cov_res, level_key_pt, 
                              level_key, class_name_filter = "FLORESTA"){
-    tmp_raster_path <- file.path(img_path, 
-        stringr::str_replace(basename(ref_path), ".shp", 
-                             stringr::str_c("_", pyear, ".tif")))
-    tmp_vector_path <- file.path(img_path, 
-        stringr::str_replace(basename(ref_path), ".shp", 
-                             stringr::str_c("_", pyear, ".shp")))
+    stopifnot(length(ref_path) == 1)
+
+    tmp_raster_path <- file.path(paste0(tempfile(pattern = tools::file_path_sans_ext(basename(ref_path))), ".tif"))
+    tmp_vector_path <- file.path(paste0(tempfile(pattern = tools::file_path_sans_ext(basename(ref_path))), ".shp"))
 
     # prepare the vector to rasterize
     tmp_vector <- ref_path %>% cov_read() %>%
