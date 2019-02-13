@@ -60,6 +60,7 @@ message(Sys.time(), ' Clasification type: ', brick_type)
 message(Sys.time(), ' Bands  (experiment): ', paste0(experiment_bands, collapse = ", "))
 message(Sys.time(), ' Labels (experiment): ', paste0(experiment_labels, collapse = ", "))
 message(Sys.time(), ' Scenes (experiment): ', paste0(experiment_scenes, collapse = ", "))
+message(Sys.time(), ' Brick type (experiment): ', brick_type)
 
 # load samples
 if (brick_type == "interpolated") {

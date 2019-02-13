@@ -50,7 +50,7 @@ if (length(opt) != 11 || sum(sapply(opt, is.null)) != 0){
 }
 if (!all(opt$btype %in% names(path_to_bricks))){
   print_help(opt_parser)
-  stop("Invalid type of brick!")
+  stop(sprintf("Invalid brick! The available options are: %s", paste0(names(path_to_bricks), collapse = ", ")))
 }
 if(parallel::detectCores() < opt$cores){
   print_help(opt_parser)
