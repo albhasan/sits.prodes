@@ -6,10 +6,10 @@ setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.
 
 # get arguments ----
 option_list = list(
-  make_option("--experiment", type = "character", default = NULL,  help = "Name of an experiment e.g. 'rep_prodes_40'", metavar="character"),
-  make_option("--win_size",   type = "integer",   default = 3,     help = "Size of the smoothing window in pixels [default %default]", metavar="number"),
-  make_option("--noise",      type = "integer",   default = 10,    help = "Noise to be added to the smoothing [default %default]", metavar="number"),
-  make_option("--overwrite",  type = "logical",   default = FALSE, help = "Overwrite old files? [default %default]", metavar="logical")
+  make_option("--in_dir",    type = "character", default = NULL,  help = "Path to a directory of SITS probability files", metavar = "character"),
+  make_option("--win_size",  type = "integer",   default = 3,     help = "Size of the smoothing window in pixels [default %default]", metavar = "number"),
+  make_option("--noise",     type = "integer",   default = 10,    help = "Noise to be added to the smoothing [default %default]", metavar  ="number"),
+  make_option("--overwrite", type = "logical",   default = FALSE, help = "Overwrite old files? [default %default]", metavar = "logical")
 )
 opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser)
@@ -21,23 +21,21 @@ if (length(opt) != 5 || sum(sapply(opt, is.null)) != 0){
 }
 
 # parse arguments ----
-experiment <- opt$experiment # "rep_prodes_40"
+in_dir     <- opt$in_dir
 win_len    <- opt$win_size   # 3
 noise      <- opt$noise      # 10
 overwrite  <- opt$overwrite  # TRUE
 
 # setup
-base_dir <- "/home/alber/Documents/data/experiments/prodes_reproduction"
-input_dir <- file.path(base_dir, "03_classify", experiment, "results")
-output_dir <- file.path(input_dir, paste("smooth", paste(win_len, win_len, sep = 'x'), paste0('n', noise), sep = '_'))
+out_dir <- file.path(in_dir, paste("smooth", paste(win_len, win_len, sep = 'x'), paste0('n', noise), sep = '_'))
 if (!dir.exists(output_dir)) dir.create(output_dir)
-stopifnot(all(vapply(c(base_dir, input_dir, output_dir), dir.exists, logical(1))))
+stopifnot(all(vapply(c(in_dir, out_dir), dir.exists, logical(1))))
 
 # smooth definition
 window  <- matrix(1, nrow = win_len, ncol = win_len, byrow = TRUE)
 
 # get probability rasters
-prob_files <- input_dir %>% list.files(pattern = ".*probs.*\\.tif$", full.names = TRUE) %>%
+prob_files <- in_dir %>% list.files(pattern = ".*probs.*\\.tif$", full.names = TRUE) %>%
     tibble::enframe(name = NULL) %>%
     dplyr::rename(file_path = value) %>%
     dplyr::mutate(
