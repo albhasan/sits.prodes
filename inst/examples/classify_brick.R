@@ -163,7 +163,7 @@ for(path_row in sort(unique(brick_tb$pathrow))){
     maximum_values <- sits_conf$RASTER_maximum_value
     # buid a time line of the same lenght of the brick
     # NOTE: it approximates the dates of the images in the bricks!
-    if (stringr::str_detect(brick_type, "^l8mod.+")) {
+    if (stringr::str_detect(brick_type, "^l8.+")) {
         band_names <- c("ndvi", "evi", "blue", "green", "red", "nir", "mir", "swir1", "swir2", "class", "dark", "substrate", "vegetation")
         scale_factor   <- as.list(rep(1/10000, length(band_names)))
         maximum_values <- as.list(rep(10000,   length(band_names)))
