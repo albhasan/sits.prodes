@@ -28,7 +28,7 @@ overwrite  <- opt$overwrite  # TRUE
 
 # setup
 out_dir <- file.path(in_dir, paste("smooth", paste(win_len, win_len, sep = 'x'), paste0('n', noise), sep = '_'))
-if (!dir.exists(output_dir)) dir.create(output_dir)
+if (!dir.exists(out_dir)) dir.create(out_dir)
 stopifnot(all(vapply(c(in_dir, out_dir), dir.exists, logical(1))))
 
 # smooth definition
@@ -41,23 +41,23 @@ prob_files <- in_dir %>% list.files(pattern = ".*probs.*\\.tif$", full.names = T
     dplyr::mutate(
         pathrow = stringr::str_extract(basename(file_path), "[0-9]{6}"),
         year = stringr::str_sub(stringr::str_extract(basename(file_path), "_[0-9]{4}_")[1], 2, 5),
-        file_out = file.path(output_dir, stringr::str_replace(basename(file_path), "_probs_", '_'))
+        file_out = file.path(out_dir, stringr::str_replace(basename(file_path), "_probs_", '_'))
     )
 
 # processing 
 for(pr in unique(prob_files$pathrow)){
     for(y in unique(prob_files$year)){
         print(sprintf("Processing probability maps of scene-year %s %s ...", pr, y))
-        files_input  <- prob_files %>% dplyr::filter(pathrow == pr, year == y) %>% dplyr::pull(file_path)
-        files_output <- prob_files %>% dplyr::filter(pathrow == pr, year == y) %>% dplyr::pull(file_out)
+        files_in  <- prob_files %>% dplyr::filter(pathrow == pr, year == y) %>% dplyr::pull(file_path)
+        files_out <- prob_files %>% dplyr::filter(pathrow == pr, year == y) %>% dplyr::pull(file_out)
 
-        cl <- parallel::makeCluster(min(40, length(files_input)))
-        smoothed_list <- parallel::clusterApply(cl, seq_along(files_input), 
-            function(i, files_input, files_output, noise, window, overwrite) {
-                raster_prob <- raster::brick(files_input[[i]])
+        cl <- parallel::makeCluster(min(40, length(files_in)))
+        smoothed_list <- parallel::clusterApply(cl, seq_along(files_in), 
+            function(i, files_in, files_out, noise, window, overwrite) {
+                raster_prob <- raster::brick(files_in[[i]])
                 smooth_raster <- raster::raster(raster_prob[[1]])
                 smooth_raster <- tryCatch({
-                    raster::writeStart(smooth_raster, filename  = files_output[[i]], overwrite = overwrite)
+                    raster::writeStart(smooth_raster, filename  = files_out[[i]], overwrite = overwrite)
                 }, error = function(e) {
                     return(NULL)
                 })
@@ -88,7 +88,7 @@ for(pr in unique(prob_files$pathrow)){
                 }  
                 smooth_raster <- raster::writeStop(smooth_raster)
                 return(smooth_raster)
-            }, files_input, files_output, noise, window, overwrite)
+            }, files_in, files_out, noise, window, overwrite)
         parallel::stopCluster(cl)
     }
 }
