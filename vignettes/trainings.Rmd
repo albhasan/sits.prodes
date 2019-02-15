@@ -30,8 +30,8 @@ library(sits.prodes)
 # TODO: remove
 library(devtools)
 devtools::load_all()
-devtools::build(vignettes = FALSE, manual = TRUE)
-devtools::install()
+#devtools::build(vignettes = FALSE, manual = TRUE)
+#devtools::install()
 # - - - 
 
 
@@ -45,9 +45,47 @@ devtools::install()
 **One way to understand overfitting is by decomposing generalization error into bias and variance. Bias is a learner’s tendency to consistently learn the same wrong thing. Variance is the tendency to learn random things irrespective of irrespective of the real signal** - [@Domingos:2012]
 
 
+* High bias:     High crossvalidation error using a low  degree polynomial
+    +There is a high error but training and validation errors are similar. 
+* High variance: High crossvalidation error using a high degree polynomial
+    + High variance: There is a big difference between training error and crossvalidation error
+    
+* Classification with a HIGH BIAS problem (underfit)
+    + Training set error is high
+    + Crossvalidation error is close to the trainng error
+    + If a leraning algorithm is suffering from high bias, getting more training data will not (by itself) help much
+* Classification with a HIGH VARAINCE problem (overfit)
+    + Training set error is low
+    + Crossvalidation error is much bigger than the training set error
+    + If a leraning algorithm is suffering from high variance getting more training data is likely to help
+
+* Fix HIGH BIAS (underfit)
+    + Try getting additional features (curretn hyppothesis is too simple)
+    + Try adding polynomial features 
+    + Try decreasing regularization (cost function)
+* Fix HIGH VARIANCE (overfit)
+    + Get more training examples
+    + Try smaller set of features (the attributes of each sample)
+    + Try increasing regularization (keep the features but reduce the magnitud/values of the parameters. Works well if there are a lot of features)
+
+Source: Machine Learning — Andrew Ng, Stanford University [FULL COURSE]
+
+
+
 # Training
 
 ## Experiment summary
+
+**The loss function takes the predictions of the network and the true target (what
+you wanted the network to output) and computes a distance score, capturing how well the
+network has done on this specific example.** - [@Chollet:2018]
+
+**Two quantities are displayed during training: the loss of the network over the training
+data, and the accuracy of the network over the training data.** - [@Chollet:2018]
+
+**[The] gap between training accuracy and test accuracy is an example of
+overfitting** - [@Chollet:2018]
+
 
 ```{r echo=FALSE}
 warning("Run get_training_logs.R and devtools::build() to update the logs in this package!")
@@ -94,6 +132,9 @@ logs_ls %>% tidyr::unnest(setup) %>%
 
 ## Training results
 
+- BLUE is accuracy
+- BLACK is validation accuracy
+
 
 ```{r fig.width=9, fig.height=7, echo=FALSE}
 plot_tb <- logs_ls %>% tidyr::unnest(trains) %>% dplyr::select(experiment, model_name, acc, loss, val_acc, val_loss) %>%
@@ -107,19 +148,36 @@ plot_tb <- logs_ls %>% tidyr::unnest(trains) %>% dplyr::select(experiment, model
 #    knitr::kable() %>% kableExtra::kable_styling(full_width = F)
 
 
+# plot_ls <- lapply(unique(plot_tb$experiment), function(exp){
+#   plot_tb %>% dplyr::filter(experiment %in% exp) %>% tidyr::unnest() %>%
+#     dplyr::group_by(model_name) %>% dplyr::mutate(epoch = row_number()) %>% 
+#     ggplot2::ggplot() +
+#     ggplot2::geom_path(aes(y = acc, x = epoch), colour = "blue") +
+#     ggplot2::geom_path(ggplot2::aes(y = val_acc, x = epoch)) +
+#     ggplot2::ggtitle(exp) +
+#     ggplot2::ylim(0.95, 1.0) +
+#     #ggplot2::theme(plot.title = element_text(size = 8)) +
+#     ggplot2::labs(x = "Epochs", y = "Accuracy") + 
+#     ggplot2::facet_wrap(~ model_name, nrow = 5) %>%
+#     return()
+# })
+
+
 plot_ls <- lapply(unique(plot_tb$experiment), function(exp){
   plot_tb %>% dplyr::filter(experiment %in% exp) %>% tidyr::unnest() %>%
-    dplyr::group_by(model_name) %>% dplyr::mutate(epoch = row_number()) %>% 
+    dplyr::group_by(model_name) %>% dplyr::mutate(epoch = row_number()) %>%
     ggplot2::ggplot() +
-    ggplot2::geom_path(aes(y = acc, x = epoch), colour = "blue") +
-    ggplot2::geom_path(ggplot2::aes(y = val_acc, x = epoch)) +
+    ggplot2::geom_path(aes(y = loss, x = epoch), colour = "blue") +
+    ggplot2::geom_path(ggplot2::aes(y = val_loss, x = epoch)) +
     ggplot2::ggtitle(exp) +
-    ggplot2::ylim(0.95, 1.0) +
+    ggplot2::ylim(0.0, 0.25) +
     #ggplot2::theme(plot.title = element_text(size = 8)) +
-    ggplot2::labs(x = "Epochs", y = "Accuracy") + 
+    ggplot2::labs(x = "Epochs", y = "Loss") +
     ggplot2::facet_wrap(~ model_name, nrow = 5) %>%
     return()
 })
+
+
 
 for(p in plot_ls)
     suppressWarnings(print(p))
