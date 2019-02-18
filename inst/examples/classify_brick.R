@@ -22,8 +22,8 @@ path_to_bricks <- c(
    mod13            = file.path(base_path, "data", "raster", "bricks_modis_cropped"),
    l8mod_interp     = file.path(base_path, "data", "raster", "brick_interp"),
    l8mod_starfm     = file.path(base_path, "data", "raster", "brick_starfm"),
-   l8mod_simple     = file.path(base_path, "data", "raster", "brick_simple"),
-   l8mod_mask_cloud = file.path(base_path, "data", "raster", "brick_mask_cloud")
+   l8_simple     = file.path(base_path, "data", "raster", "brick_simple"),
+   l8_mask_cloud = file.path(base_path, "data", "raster", "brick_mask_cloud")
 )
 stopifnot(all(vapply(path_to_bricks, dir.exists, logical(1))))
 
