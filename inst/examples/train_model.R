@@ -63,18 +63,18 @@ message(Sys.time(), ' Scenes (experiment): ', paste0(experiment_scenes, collapse
 message(Sys.time(), ' Brick type (experiment): ', brick_type)
 
 # load samples
-if (brick_type == "interpolated") {
+if (brick_type == "l8mod_interp") {
     data(list = "prodes_samples_interpolated", package = "sits.prodes")
     prodes_samples <- prodes_samples_interpolated
-}else if (brick_type == "starfm") {
+}else if (brick_type == "l8mod_starfm") {
     data(list = "prodes_samples_starfm", package = "sits.prodes")
     prodes_samples <- prodes_samples_starfm
-}else if (brick_type == "simple") {
+}else if (brick_type == "l8_simple") {
     data(list = "prodes_samples_simple", package = "sits.prodes")
     prodes_samples <- prodes_samples_simple
-}else if (brick_type == "mask_cloud") {
+}else if (brick_type == "l8_mask_cloud") {
     data(list = "prodes_samples_mask_cloud", package = "sits.prodes")
-    prodes_samples <- prodes_samples_mask_cloud 
+    prodes_samples <- prodes_samples_mask_cloud
 }else{
     stop("Unknown type of brick")
 }
