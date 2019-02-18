@@ -1,5 +1,5 @@
 ---
-title: "Experiment record"
+title: "Training record"
 author: "Alber Sánchez"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette

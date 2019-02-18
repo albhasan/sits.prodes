@@ -1,0 +1,50 @@
+---
+title: "Result record"
+author: "Alber Sánchez"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+bibliography: references.bib
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\usepackage[utf8]{inputenc}
+---
+
+
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+collapse = TRUE,
+comment = "#>"
+)
+
+base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
+
+```
+
+
+
+
+```{r rep_prodes_40_225063, echo=FALSE}
+
+load(file = file.path(base_path, "03_classify/rep_prodes_40/results/smooth_3x3_n10/validation/accuracy.Rdata"))
+
+
+
+mts <- build_matrices(res_acc)
+# print
+knitr::kable(mts$areas, format.args = list(big.mark = "'"), digits = 2, caption = "Area")
+
+for (i in unique(mts$conf_mat$pYear)){
+  cmat <- mts[["conf_mat"]] %>% dplyr::filter(pYear == i) %>% dplyr::select(-pYear)
+  print(knitr::kable(cmat, format.args = list(big.mark = "'"), digits = 2,
+                     caption = paste0("Confusion matrix ", i)))
+}
+
+amat <- mts[["accu_mat"]]
+knitr::kable(amat, format.args = list(big.mark = "'"), digits = 2, 
+             caption = "Accuracy")
+#
+res_acc_ls[["rep_prodes_40_DL_225-063"]] <- res_acc
+rm(res_acc)
+```
