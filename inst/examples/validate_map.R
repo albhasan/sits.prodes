@@ -1,4 +1,4 @@
-# validate the result map pf a classification
+# validate the result of a classification
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(ensurer))
 suppressPackageStartupMessages(library(optparse))
@@ -25,9 +25,9 @@ if (length(opt) != 4 || sum(sapply(opt, is.null)) != 0){
   print_help(opt_parser)
   stop("Wrong arguments!")
 }
-experiment <- opt$experiment # "rep_prodes_40"
-algorithm <-  opt$algorithm  # "rf"
-smooth_dir <- opt$smooth_dir # "smooth_3x3_n10"
+experiment <- opt$experiment # "rep_prodes_41"
+algorithm <-  opt$algorithm  # "svm"
+smooth_dir <- opt$smooth_dir # "smooth_7x7_n10"
 
 stopifnot(experiment %in% paste0("rep_prodes_", 40:99))
 stopifnot(algorithm %in% c("dl", "svm", "rf"))
@@ -67,7 +67,7 @@ prodes_maps <- c(
 )
 
 # get classification labels
-labels_csv <- file.path(img_path[experiment], "int_labels.csv") %>%
+labels_csv <- file.path(paste0(img_path[experiment], '_dl'), "int_labels.csv") %>%
     ensurer::ensure_that(file.exists, err_desc = "Missing label file!") %>%
     read.csv(stringsAsFactors = FALSE)
 int_labels        <- labels_csv$Code
@@ -182,8 +182,8 @@ res_acc <- purrr::map(path_res_vec, function(res_file, out_dir = NULL){
 names(res_acc) <- path_res_vec
 
 # storing accuracy results
-res_file <- file.path(out_dir, "accuracy.Rdata")
-save(res_acc, file = res_file)
+res_file <- file.path(out_dir, "accuracy.rds")
+saveRDS(res_acc, file = res_file)
 print(sprintf("Saving results to %s", res_file))
 print("Finished!")
 
