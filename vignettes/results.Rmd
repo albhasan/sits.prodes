@@ -10,8 +10,6 @@ vignette: >
   %\usepackage[utf8]{inputenc}
 ---
 
-
-
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
 collapse = TRUE,
@@ -20,31 +18,75 @@ comment = "#>"
 
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 
+library(dplyr)
+#library(lwgeom)
+#library(tidyverse)
+library(knitr)
+library(xtable)
+library(ggplot2)
+
+
+# collect accuracy data
+accuracy_ls <- list()
+accuracy_files <- base_path %>% 
+    list.files(pattern = "accuracy.Rdata", recursive = TRUE, full.names = TRUE)
+for (f in accuracy_files) {
+    load(f)
+    accuracy_ls <- append(accuracy_ls, res_acc)
+    rm(res_acc)
+}
+accuracy_tb <- accuracy_ls %>% names() %>% tibble::enframe(name = NULL) %>% 
+    dplyr::rename("file_path" = "value") %>%    
+    dplyr::mutate(acc_data = accuracy_ls,
+                  experiment = stringr::str_extract(file_path, "rep_prodes_[0-9]+"), 
+                  algorithm = purrr::map_chr(.$file_path, function(x){
+                       unlist(stringr::str_split(stringr::str_extract(x, "results_[a-z]+"), '_'))[2]
+                       }), 
+                  smooth = stringr::str_extract(file_path, "smooth_[0-9]x[0-9]_n[0-9]{2}"), 
+                  scene = stringr::str_extract(basename(file_path), "[0-9]{6}"),
+                  pyear = purrr::map_chr(file_path, function(x){
+                       dplyr::last(unlist(stringr::str_extract_all(basename(x), "[0-9]{4}")))
+                       }),
+                  overall = purrr::map_dbl(accuracy_ls, function(x){x$accuracy$overall})
+                  ) %>%
+    dplyr::select(experiment, algorithm, scene, pyear, smooth, overall, acc_data, file_path)
+
 ```
 
 
 
 
-```{r rep_prodes_40_225063, echo=FALSE}
+# User - producer accuracy
 
-load(file = file.path(base_path, "03_classify/rep_prodes_40/results/smooth_3x3_n10/validation/accuracy.Rdata"))
+user_producer_accuracy_example.png
+
+It is a decomposition of the accuracy, originally proposed by Story and Congalton [@Story:1986].
+* **Producers' accuracy** (omission error) is how well a specific area on the Earth is mapped. It 
+is the probability that a reference sample is correctly classified. 
+* **User's accuracy** (or reliability) is how well the map represents what is really on the ground.
+
+![Exmple of user and producer accuracies](./img/user_producer_accuracy_example.png)
+
+[TODO] Olafson extended this definition by pointig the need of normalizing the results using the area of on class
 
 
 
-mts <- build_matrices(res_acc)
-# print
-knitr::kable(mts$areas, format.args = list(big.mark = "'"), digits = 2, caption = "Area")
 
-for (i in unique(mts$conf_mat$pYear)){
-  cmat <- mts[["conf_mat"]] %>% dplyr::filter(pYear == i) %>% dplyr::select(-pYear)
-  print(knitr::kable(cmat, format.args = list(big.mark = "'"), digits = 2,
-                     caption = paste0("Confusion matrix ", i)))
+
+```{r process_results, echo=FALSE}
+for (sm in unique(accuracy_tb$smooth)) {
+    p <- accuracy_tb %>% 
+        dplyr::filter(smooth == sm) %>% 
+        ggplot2::ggplot() + 
+        ggplot2::geom_line(aes(x = pyear, y = overall, group = experiment, color = experiment)) + 
+        ggplot2::geom_point(aes(x = pyear, y = overall, color = experiment)) + 
+        ggplot2::facet_grid(scene ~ algorithm) +
+        ggplot2::ggtitle(sprintf("Overall accuracy %s", sm)) + 
+        ggplot2::ylim(0.98, 1.0)
+    print(p)
 }
 
-amat <- mts[["accu_mat"]]
-knitr::kable(amat, format.args = list(big.mark = "'"), digits = 2, 
-             caption = "Accuracy")
-#
-res_acc_ls[["rep_prodes_40_DL_225-063"]] <- res_acc
-rm(res_acc)
 ```
+
+
+# References
