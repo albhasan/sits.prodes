@@ -147,7 +147,7 @@ splitAt <- function(x, pos){
 
 #' @title Asses accuracy and estimate area according to Olofsson
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description   Compute accuracy normalized by area. Note that, these computations don_t work for clustered sampling becaus the equations are different.
+#' @description Compute the accuracy normalized by the area. Note that, these computations don't work on clustered sampling because the equations are different.
 #'
 #' @param error_matrix A matrix given in sample counts. Columns represent the reference data and rows the results of the classification
 #' @param class_areas  A vector of the total area of each class on the map
@@ -198,10 +198,6 @@ asses_accuracy <- function(error_matrix, class_areas){
         )
     )
 }
-
-
-
-
 
 
 #' @title Compute the pixel-wise standard deviation.
