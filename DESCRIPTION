@@ -1,6 +1,6 @@
 Package: sits.prodes
 Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9011
+Version: 0.0.0.9013
 Author: c(person('Alber', 'Sanchez', role = c('aut', 'cre'), email = 'alber.sanchez@inpe.br'))
 Maintainer: Alber Sánchez <alber.sanchez@inpe.br>
 Description: What the package does (one paragraph).
@@ -26,11 +26,13 @@ Imports:
  tibble,
  tidyr,
  tidyselect,
- units
+ units,
+ xtable
 Suggests: 
     ggplot2,
     kableExtra,
     knitr,
-    rmarkdown
+    rmarkdown,
+    testthat
 VignetteBuilder: knitr
 RoxygenNote: 6.1.1

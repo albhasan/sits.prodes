@@ -125,13 +125,13 @@ replace_bands_with_random <- function(x){
 }
 
 
-#' @title Split a vector at the given positions. 
+#' @title Split a vector at the given positions.
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description Split a vector at the given positions. 
+#' @description Split a vector at the given positions.
 #'
 #' @param x   An atomic vector.
-#' @param pos A vector os positions 
-#' @return   A list. 
+#' @param pos A vector os positions
+#' @return   A list.
 #' @export
 splitAt <- function(x, pos){
     stopifnot(is.atomic(x))
@@ -145,59 +145,7 @@ splitAt <- function(x, pos){
 
 
 
-#' @title Asses accuracy and estimate area according to Olofsson
-#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description Compute the accuracy normalized by the area. Note that, these computations don't work on clustered sampling because the equations are different.
-#'
-#' @param error_matrix A matrix given in sample counts. Columns represent the reference data and rows the results of the classification
-#' @param class_areas  A vector of the total area of each class on the map
-#' @return             A list of two lists: The confidence interval (confint95) and the accuracy
-#' @export
-asses_accuracy <- function(error_matrix, class_areas){
 
-    stopifnot(length(colnames(error_matrix)) > 0)
-    stopifnot(length(rownames(error_matrix)) > 0)
-    stopifnot(sum(colnames(error_matrix) == rownames(error_matrix)) == length(colnames(error_matrix))) # the order of columns and rows do not match
-    if (sum(colnames(error_matrix) == names(class_areas)) != 2) {
-        class_areas <- rev(class_areas)
-        stopifnot(sum(colnames(error_matrix) == names(class_areas)) == 2) # the variables in the error matrix and the area vector do not match
-    }
-
-    W <- class_areas/sum(class_areas)
-    #W.mat <- matrix(rep(W, times = ncol(error_matrix)), ncol = ncol(error_matrix))
-    n <- rowSums(error_matrix)
-    n.mat <- matrix(rep(n, times = ncol(error_matrix)), ncol = ncol(error_matrix))
-    p <- W * error_matrix / n.mat                                                 # estimated area proportions
-    # rowSums(p) * sum(class_areas)                                               # class areas according to the map, that is, the class_areas vector
-    error_adjusted_area_estimate <- colSums(p) * sum(class_areas)                 # class areas according to the reference data
-    Sphat_1 <- vapply(1:ncol(error_matrix), function(i){                          # S(phat_1) - The standard error of the area estimative is given as a function area proportions and sample counts
-        sqrt(sum(W^2 * error_matrix[, i]/n * (1 - error_matrix[, i]/n)/(n - 1)))
-    }, numeric(1))
-    #
-    SAhat <- sum(class_areas) * Sphat_1                                           # S(Ahat_1) - Standard error of the area estimate
-    Ahat_sup <- error_adjusted_area_estimate + 2 * SAhat                          # Ahat_1 - 95% superior confidence interval
-    Ahat_inf <- error_adjusted_area_estimate - 2 * SAhat                          # Ahat_1 - 95% inferior confidence interval
-    Ohat <- sum(diag(p))                                                          # Ohat - Overall accuracy
-    Uhat <- diag(p) / rowSums(p)                                                  # Uhat_i - User accuracy
-    Phat <- diag(p) / colSums(p)                                                  # Phat_i - Producer accuracy
-    #
-    return(
-        list(
-            # errorArea = SAhat,
-            error_matrix = error_matrix,
-            class_areas = class_areas,
-            confint95 = list(
-                superior = Ahat_sup,
-                inferior = Ahat_inf
-            ),
-            accuracy = list(
-                overall = Ohat,
-                user = Uhat,
-                producer = Phat
-            )
-        )
-    )
-}
 
 
 #' @title Compute the pixel-wise standard deviation.
@@ -273,7 +221,7 @@ compute_sd_raster_gdal <- function(infile, outfile, quiet=TRUE) {
 #' @param cores   A numeric. The number of cores to use for parallel processing.
 #' @return        A matrix
 get_confusion_matrix <- function(cov_res, cov_ref, n, cores = 1L){
-    stop("Deprecated. Use asses_accuracy instead")
+    stop("Deprecated. Use asses_accuracy_area instead")
     label_vec <- cov_ref %>% dplyr::select(label_ref) %>%
         sf::st_set_geometry(NULL) %>% unique()
     if( length(label_vec) < 2) warning("length(label_vec) < 2")
@@ -640,7 +588,7 @@ validate_sampling <- function(cov_res, cov_ref, lab_res, lab_ref,
     # Asses accuracy
     class_areas <- as.vector(cov_areas$area)
     names(class_areas) <- cov_areas$label
-    acc <- asses_accuracy(
+    acc <- asses_accuracy_area(
         error_matrix = as.matrix(as.data.frame.matrix(con_mat$table)),
         class_areas)
     # NOTE:

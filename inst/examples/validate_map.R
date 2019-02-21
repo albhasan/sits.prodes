@@ -26,8 +26,8 @@ if (length(opt) != 4 || sum(sapply(opt, is.null)) != 0){
   stop("Wrong arguments!")
 }
 experiment <- opt$experiment # "rep_prodes_50"
-algorithm <-  opt$algorithm  # "svm"
-smooth_dir <- opt$smooth_dir # "smooth_7x7_n10"
+algorithm <-  opt$algorithm  # "dl"
+smooth_dir <- opt$smooth_dir # "smooth_5x5_n10"
 
 stopifnot(experiment %in% paste0("rep_prodes_", 40:99))
 stopifnot(algorithm %in% c("dl", "svm", "rf"))
@@ -42,7 +42,7 @@ img_path <- c(
     rep_prodes_52 = file.path(base_path, "03_classify", experiment, "results")
 )
 
-img_pattern <- "^l8_(simple|mask_cloud)_[0-9]{6}_[0-9]{4}_(dl|rf|svm)_[0-9]{4}_[0-9]_[0-9]{4}_[0-9].tif" 
+img_pattern <- "^l8_(simple|maskcloud)_[0-9]{6}_[0-9]{4}_(dl|rf|svm)_[0-9]{4}_[0-9]_[0-9]{4}_[0-9].tif"
 
 # key for encoding PRODES's SHP into a TIF
 prodes_labels <- list(
@@ -102,9 +102,9 @@ key_labels_rev <- key_labels %>% names() %>% as.list()
 names(key_labels_rev) <- key_labels %>% unlist() %>% as.vector()
 rm(available_keys, kv_ref_res)
 
-path_res_vec <- img_path[experiment] %>% paste0('_', algorithm) %>% 
+path_res_vec <- img_path[experiment] %>% paste0('_', algorithm) %>%
     file.path(smooth_dir) %>%
-    list.files(pattern = img_pattern, full.names = TRUE, 
+    list.files(pattern = img_pattern, full.names = TRUE,
                include.dirs = FALSE) %>%
     ensurer::ensure_that(length(.) > 0, err_desc = sprintf("No classified images found for %s %s %s", experiment, algorithm, smooth_dir))
 
@@ -112,7 +112,7 @@ path_res_vec <- img_path[experiment] %>% paste0('_', algorithm) %>%
 out_dir <- file.path(dirname(path_res_vec[1]), "validation")
 res_acc <- purrr::map(path_res_vec, function(res_file, out_dir = NULL){
     # handle directories
-    if (is.null(out_dir)) 
+    if (is.null(out_dir))
         out_dir <- file.path(dirname(res_file), "validation")
     if (!dir.exists(out_dir)){
         message(sprintf("The output directory is missing. Creating one at %s", out_dir))
@@ -130,7 +130,7 @@ res_acc <- purrr::map(path_res_vec, function(res_file, out_dir = NULL){
     cov_res <- cov_read(res_file)
 
     # rasterize PRODES
-    cov_ref <- prodes_rasterize(ref_path = prodes_maps[scene], 
+    cov_ref <- prodes_rasterize(ref_path = prodes_maps[scene],
                                 pyear = pyear, cov_res = cov_res,
                                 level_key_pt = prodes_labels,
                                 level_key = key_labels_rev) %>%
@@ -176,7 +176,7 @@ res_acc <- purrr::map(path_res_vec, function(res_file, out_dir = NULL){
     class_areas <- as.vector(cov_areas$area)
     names(class_areas) <- cov_areas$lab_ref
 
-    return(asses_accuracy(error_matrix = as.matrix(as.data.frame.matrix(con_mat$table)),
+    return(asses_accuracy_area(error_matrix = as.matrix(as.data.frame.matrix(con_mat$table)),
                           class_areas))
 }, out_dir = out_dir)
 names(res_acc) <- path_res_vec

@@ -56,11 +56,16 @@ if(parallel::detectCores() < opt$cores){
   print_help(opt_parser)
   stop(sprintf("Not enough cores (The system has %s).", parallel::detectCores()))
 }
+valid_btypes <- c("l8mod_interp", "l8mod_starfm", "l8_simple", "l8_maskcloud")
+if(!(opt$btype %in% valid_btypes)){
+  print_help(opt_parser)
+  stop(sprintf("Invalid type of brick. The valid options are %s", valid_btypes))
+}
 
 # parse arguments ----
 train      <- opt$train                                # "train_50"
 sits_model <- opt$model                                # "train_50_model_2"
-brick_type <- opt$btype                                # "brick_mask_cloud"
+brick_type <- opt$btype                                # "brick_maskcloud"
 tiles      <- unlist(strsplit(opt$tiles, split = " ")) # c("225063", "226064", "233067")
 bands      <- unlist(strsplit(opt$bands, split = " ")) # c("ndvi", "evi", "nir", "mir", "red", "blue", "swir2")
 years      <- unlist(strsplit(opt$years, split = " ")) # 2012:2017

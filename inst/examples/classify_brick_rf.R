@@ -54,6 +54,11 @@ if(parallel::detectCores() < opt$cores){
   print_help(opt_parser)
   stop(sprintf("Not enough cores (The system has %s).", parallel::detectCores()))
 }
+valid_btypes <- c("l8mod_interp", "l8mod_starfm", "l8_simple", "l8_maskcloud")
+if(!(opt$btype %in% valid_btypes)){
+  print_help(opt_parser)
+  stop(sprintf("Invalid type of brick. The valid options are %s", valid_btypes))
+}
 
 # parse arguments ----
 train      <- opt$train                                # "train_40"
@@ -94,7 +99,7 @@ if (brick_type == "l8mod_interp") {
 }else if (brick_type == "l8_simple") {
     data(list = "prodes_samples_simple", package = "sits.prodes")
     prodes_samples <- prodes_samples_simple
-}else if (brick_type == "l8_mask_cloud") {
+}else if (brick_type == "l8_maskcloud") {
     data(list = "prodes_samples_mask_cloud", package = "sits.prodes")
     prodes_samples <- prodes_samples_mask_cloud
 }else{

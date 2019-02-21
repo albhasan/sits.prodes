@@ -23,10 +23,11 @@ library(knitr)
 library(purrr)
 library(tidyr)
 library(sits.prodes)
+library(xtable)
 
 # TODO: remove
-library(devtools)
-devtools::load_all()
+#library(devtools)
+#devtools::load_all()
 #devtools::build(vignettes = FALSE, manual = TRUE)
 #devtools::install()
 # - - - 
