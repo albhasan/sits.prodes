@@ -25,7 +25,7 @@ if (length(opt) != 4 || sum(sapply(opt, is.null)) != 0){
   print_help(opt_parser)
   stop("Wrong arguments!")
 }
-experiment <- opt$experiment # "rep_prodes_41"
+experiment <- opt$experiment # "rep_prodes_50"
 algorithm <-  opt$algorithm  # "svm"
 smooth_dir <- opt$smooth_dir # "smooth_7x7_n10"
 
@@ -42,7 +42,7 @@ img_path <- c(
     rep_prodes_52 = file.path(base_path, "03_classify", experiment, "results")
 )
 
-img_pattern <- "^l8_(simple|maskcloud)_[0-9]{6}_[0-9]{4}_(dl|rf|svm)_[0-9]{4}_[0-9]_[0-9]{4}_[0-9].tif" 
+img_pattern <- "^l8_(simple|mask_cloud)_[0-9]{6}_[0-9]{4}_(dl|rf|svm)_[0-9]{4}_[0-9]_[0-9]{4}_[0-9].tif" 
 
 # key for encoding PRODES's SHP into a TIF
 prodes_labels <- list(
@@ -106,7 +106,7 @@ path_res_vec <- img_path[experiment] %>% paste0('_', algorithm) %>%
     file.path(smooth_dir) %>%
     list.files(pattern = img_pattern, full.names = TRUE, 
                include.dirs = FALSE) %>%
-    ensurer::ensure_that(length(.) > 0, err_desc = sprintf("No classified images found for %s %s", experiment, smooth_dir))
+    ensurer::ensure_that(length(.) > 0, err_desc = sprintf("No classified images found for %s %s %s", experiment, algorithm, smooth_dir))
 
 # loop each file resulting from classification or smoothing
 out_dir <- file.path(dirname(path_res_vec[1]), "validation")
