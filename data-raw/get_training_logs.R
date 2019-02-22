@@ -23,5 +23,5 @@ file.remove("./inst/extdata/log_files.Rdata")
 log_files <- basename(log_files)
 save(log_files, file = "./inst/extdata/log_files.Rdata")
 
-print("Done!")
+print("Finished!")
 

@@ -2,13 +2,13 @@
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(ensurer))
 suppressPackageStartupMessages(library(optparse))
-#suppressMessages(suppressPackageStartupMessages(library(sits)))
+library(sits.prodes)
 
 # TODO: remove
 setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
 library(devtools)
 devtools::load_all()
-# - - -
+# - - - 
 
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 stopifnot(dir.exists(base_path))

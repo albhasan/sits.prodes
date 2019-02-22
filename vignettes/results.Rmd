@@ -22,23 +22,24 @@ experiment_set <- list(few_cloud         = c("rep_prodes_40", "rep_prodes_41", "
                        few_masked_clouds = c("rep_prodes_50", "rep_prodes_51", "rep_prodes_52"))
 
 library(dplyr)
-#library(lwgeom)
-#library(tidyverse)
 library(knitr)
 library(xtable)
 library(ggplot2)
 library(sits.prodes)
 
-# collect accuracy data
 accuracy_ls <- list()
-accuracy_files <- base_path %>% 
-    list.files(pattern = "accuracy.rds", recursive = TRUE, full.names = TRUE)
-for (f in accuracy_files) {
-    accuracy_ls <- append(accuracy_ls, readRDS(f))
-}
+accuracy_tb <- tibble::tibble()
+
+warning("Run get_experiment_accuracy.R and devtools::build() to update the data in this package!")
+stopifnot(file.exists(system.file("extdata/accuracy_ls.Rdata", package = "sits.prodes")))
+load(system.file("extdata/accuracy_ls.Rdata", package = "sits.prodes"))
+stopifnot(exists("accuracy_tb"))
+
+if (length(accuracy_ls) > 0) {
 accuracy_tb <- accuracy_ls %>% names() %>% 
     tibble::enframe(name = NULL) %>% 
     dplyr::rename("file_path" = "value")
+}
 
 if (nrow(accuracy_tb) > 0) {
     accuracy_tb <- accuracy_tb %>% 
