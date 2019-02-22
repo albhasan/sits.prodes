@@ -1,14 +1,35 @@
 
-# emsemble the results of classification
-library(dplyr)
-library(stringr)
-library(parallel)
+# ensemble the results of classification
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(parallel))
+suppressPackageStartupMessages(library(optparse))
+library(sits.prodes)
 
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
-dl_dir  <- file.path(base_path, "03_classify/rep_prodes_40/results_dl/smooth_3x3_n10")
-rf_dir  <- file.path(base_path, "03_classify/rep_prodes_40/results_rf/smooth_3x3_n10")
-svm_dir <- file.path(base_path, "03_classify/rep_prodes_40/results_svm/smooth_3x3_n10")
-stopifnot(all(vapply(c(dl_dir, rf_dir, svm_dir), dir.exists, logical(1))))
+
+# get arguments ----
+option_list = list(
+  make_option("--experiment", type = "character", default = NULL, help = "Name of an experiment e.g. 'rep_prodes_40'", metavar="character"),
+  make_option("--algorithm",  type = "character", default = NULL, help = "Name of an algorithm e.g. 'dl'", metavar="character"),
+  make_option("--smooth_dir", type = "character", default = NULL, help = "Name of a smooth directory e.g. 'smooth_3x3_n10'", metavar="character"),
+  make_option("--cores",      type = "integer",   default = 1,    help = "Number of cores for running in parallel [default %default]", metavar="character")
+)
+opt_parser <- OptionParser(option_list = option_list)
+opt <- parse_args(opt_parser)
+if (length(opt) != 5 || sum(sapply(opt, is.null)) != 0){
+  print_help(opt_parser)
+  stop("Wrong arguments!")
+}
+experiment <- opt$experiment # "rep_prodes_40"
+algorithm  <- opt$algorithm  # "dl"
+smooth_dir <- opt$smooth_dir # "smooth_3x3_n10"
+cores      <- opt$cores      # 8
+
+dl_dir  <- file.path(base_path, "03_classify", experiment, "results_dl",  smooth_dir)
+rf_dir  <- file.path(base_path, "03_classify", experiment, "results_rf",  smooth_dir)
+svm_dir <- file.path(base_path, "03_classify", experiment, "results_svm", smooth_dir)
+stopifnot(all(vapply(c(base_path, dl_dir, rf_dir, svm_dir), dir.exists, logical(1))))
 
 img_pattern <- "^l8_(simple|maskcloud)_[0-9]{6}_[0-9]{4}_(dl|rf|svm)_[0-9]{4}_[0-9]_[0-9]{4}_[0-9].tif"
 
@@ -37,7 +58,7 @@ raster_tb <- dl_dir %>% result_tb() %>%
     dplyr::rename(svm_file = file_path) %>% 
     dplyr::select(-tidyselect::starts_with("algorithm")) %>%
     dplyr::select(experiment, smooth, scene, pyear, dl_file, rf_file, svm_file)
-#raster_tb %>% dplyr::select(dl_file, rf_file, svm_file) %>% purrr::pmap(raster::stack)
+
 stack_ls <- purrr::pmap(
     list(
         as.list(raster_tb$dl_file),
@@ -60,10 +81,10 @@ Mode_count <- function(x) {
   sum(x == mode, na.rm = T)
 }
 
-raster_mode_ls      <- parallel::mclapply(stack_ls, raster::calc, fun = Mode, mc.cores = 8)
-raster_mode_freq_ls <- parallel::mclapply(stack_ls, raster::calc, fun = Mode_count, mc.cores = 8)
+raster_mode_ls      <- parallel::mclapply(stack_ls, raster::calc, fun = Mode, mc.cores = cores)
+raster_mode_freq_ls <- parallel::mclapply(stack_ls, raster::calc, fun = Mode_count, mc.cores = cores)
 
-out_dir <- file.path(dl_dir, "emsemble_vote")
+out_dir <- file.path(dl_dir, "ensemble_vote")
 if(!dir.exists(out_dir)) dir.create(out_dir)
 
 for(i in seq_along(raster_mode_ls)){
