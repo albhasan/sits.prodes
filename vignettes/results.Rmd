@@ -36,7 +36,8 @@ accuracy_files <- base_path %>%
 for (f in accuracy_files) {
     accuracy_ls <- append(accuracy_ls, readRDS(f))
 }
-accuracy_tb <- accuracy_ls %>% names() %>% tibble::enframe(name = NULL) %>% 
+accuracy_tb <- accuracy_ls %>% names() %>% 
+    tibble::enframe(name = NULL) %>% 
     dplyr::rename("file_path" = "value")
 
 if (nrow(accuracy_tb) > 0) {
