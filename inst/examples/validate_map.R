@@ -15,9 +15,9 @@ stopifnot(dir.exists(base_path))
 
 # get arguments ----
 option_list = list(
-  make_option("--experiment", type = "character", default = NULL,    help = "Name of an experiment e.g. 'rep_prodes_40'", metavar="character"),
-  make_option("--algorithm",  type = "character", default = NULL,    help = "Name of an algorithm e.g. 'dl'", metavar="character"),
-  make_option("--smooth_dir", type = "character", default = NULL,    help = "Name of a smooth directory e.g. 'smooth_3x3_n10'", metavar="character")
+  make_option("--in_dir",     type = "character", default = NULL, help = "Path to a directory with classification results.", metavar="character"),
+  make_option("--label_file", type = "character", default = NULL, help = "Path to a csv file detailing the labels in the images.", metavar="character"),
+  make_option("--out_dir",    type = "character", default = NULL, help = "Path to a directory where to store the validation results.", metavar="character")
 )
 opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser)
@@ -25,24 +25,19 @@ if (length(opt) != 4 || sum(sapply(opt, is.null)) != 0){
   print_help(opt_parser)
   stop("Wrong arguments!")
 }
-experiment <- opt$experiment # "rep_prodes_50"
-algorithm <-  opt$algorithm  # "dl"
-smooth_dir <- opt$smooth_dir # "smooth_5x5_n10"
+in_dir     <- opt$in_dir     # "/net/150.163.2.206/disks/d6/shared/alber/prodes_reproduction/03_classify/rep_prodes_40/results_vote/smooth_3x3_n10"
+label_file <- opt$label_file # "/net/150.163.2.206/disks/d6/shared/alber/prodes_reproduction/03_classify/rep_prodes_40/results_dl/int_labels.csv"
+out_dir    <- opt$out_dir    # "/net/150.163.2.206/disks/d6/shared/alber/prodes_reproduction/03_classify/rep_prodes_40/results_vote/smooth_3x3_n10/validation"
+if (!file.exists(label_file)) {
+    print_help(opt_parse)
+    stop("File not found!")
+}
+if (!all(vapply(c(in_dir), dir.exists, logical(1)))) {
+    print_help(opt_parse)
+    stop("Directory not found!")
+}
 
-stopifnot(experiment %in% paste0("rep_prodes_", 40:99))
-stopifnot(algorithm %in% c("dl", "svm", "rf"))
-stopifnot(smooth_dir %in% paste0("smooth_", c("3x3", "5x5", "7x7"), "_n10"))
-
-img_path <- c(
-    rep_prodes_40 = file.path(base_path, "03_classify", experiment, "results"),
-    rep_prodes_41 = file.path(base_path, "03_classify", experiment, "results"),
-    rep_prodes_42 = file.path(base_path, "03_classify", experiment, "results"),
-    rep_prodes_50 = file.path(base_path, "03_classify", experiment, "results"),
-    rep_prodes_51 = file.path(base_path, "03_classify", experiment, "results"),
-    rep_prodes_52 = file.path(base_path, "03_classify", experiment, "results")
-)
-
-img_pattern <- "^l8_(simple|maskcloud)_[0-9]{6}_[0-9]{4}_(dl|rf|svm)_[0-9]{4}_[0-9]_[0-9]{4}_[0-9].tif"
+img_pattern <- "^l8_(simple|maskcloud)_[0-9]{6}_[0-9]{4}_dl-rf-svm_[0-9]{4}_[0-9]_[0-9]{4}_[0-9]_vote.tif"
 
 # key for encoding PRODES's SHP into a TIF
 prodes_labels <- list(
@@ -67,8 +62,7 @@ prodes_maps <- c(
 )
 
 # get classification labels
-labels_csv <- file.path(paste0(img_path[experiment], '_dl'), "int_labels.csv") %>%
-    ensurer::ensure_that(file.exists, err_desc = "Missing label file!") %>%
+labels_csv <- label_file %>%
     read.csv(stringsAsFactors = FALSE)
 int_labels        <- labels_csv$Code
 names(int_labels) <- labels_csv$Label
@@ -102,14 +96,12 @@ key_labels_rev <- key_labels %>% names() %>% as.list()
 names(key_labels_rev) <- key_labels %>% unlist() %>% as.vector()
 rm(available_keys, kv_ref_res)
 
-path_res_vec <- img_path[experiment] %>% paste0('_', algorithm) %>%
-    file.path(smooth_dir) %>%
+path_res_vec <- in_dir %>% 
     list.files(pattern = img_pattern, full.names = TRUE,
                include.dirs = FALSE) %>%
-    ensurer::ensure_that(length(.) > 0, err_desc = sprintf("No classified images found for %s %s %s", experiment, algorithm, smooth_dir))
+    ensurer::ensure_that(length(.) > 0, err_desc = sprintf("No classified images found at %s", in_dir))
 
 # loop each file resulting from classification or smoothing
-out_dir <- file.path(dirname(path_res_vec[1]), "validation")
 res_acc <- purrr::map(path_res_vec, function(res_file, out_dir = NULL){
     # handle directories
     if (is.null(out_dir))
