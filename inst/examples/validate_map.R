@@ -60,6 +60,7 @@ prodes_maps <- c(
     "232066" = file.path(base_path, "data/vector/prodes_tiled/prodes_232_066.shp"),
     "233067" = file.path(base_path, "data/vector/prodes_tiled/prodes_233_067.shp")
 )
+corner_masks <- file.path(base_path, "data/raster/mask_l9_corner")
 
 # get classification labels
 labels_csv <- label_file %>%
