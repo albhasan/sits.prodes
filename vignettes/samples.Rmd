@@ -1,0 +1,29 @@
+---
+title: "Samples"
+author: "Alber Sánchez"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+
+stopifnot(file.exists(system.file("extdata/accuracy_ls.Rdata", package = "sits.prodes")))
+
+```
+
+* Description of the samples used for classification.
+* The samples math the same points, howver, the time series are taken from 
+different bricks.
+
+# Samples
+
+

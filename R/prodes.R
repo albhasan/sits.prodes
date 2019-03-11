@@ -55,7 +55,7 @@ prodes_compute_area <- function(pd_polygons){
 #' @description Rasterize a PRODES map
 #' 
 #' @param ref_path     A length-one character. Path to a PRODES shp
-#' @param pyear        A length-one nueric. A PRODES year
+#' @param pyear        A numeric. A PRODES year
 #' @param cov_res      A results coverage.
 #' @param level_key_pt A list for recoding values for translating portuguesse to english. See named list on help(recode)
 #' @param level_key    A list for recoding values. See named list on help(recode)
