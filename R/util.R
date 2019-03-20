@@ -251,6 +251,17 @@ get_confusion_matrix <- function(cov_res, cov_ref, n, cores = 1L){
 }
 
 
+# Given file paths to images, get the scene to which they belong.
+#
+# @param file_path A charater. Paths to image files.
+# @return          A character. The images' Landsat scenes or NA. 
+get_scene <- function(file_path){
+    file_path %>% basename() %>%
+        stringr::str_extract(pattern = "_[0-9]{6}_") %>%
+        stringr::str_sub(2, 7) %>%
+        unique() %>%
+        return()
+}
 
 
 # Given a list of data.frames, this function adds the list names as columns on each of the data.frames
