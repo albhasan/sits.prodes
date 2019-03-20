@@ -94,4 +94,5 @@ for(res_file in path_res_vec){
         raster::writeRaster(filename = out_file, format = "GTiff", datatype = "INT4S")
 }
 
+print("Finished!")
 

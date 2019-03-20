@@ -1,6 +1,6 @@
 Package: sits.prodes
 Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9014
+Version: 0.0.0.9015
 Author: c(person('Alber', 'Sanchez', role = c('aut', 'cre'), email = 'alber.sanchez@inpe.br'))
 Maintainer: Alber Sánchez <alber.sanchez@inpe.br>
 Description: What the package does (one paragraph).
