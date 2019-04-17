@@ -15,7 +15,7 @@ mkdir "$WD"/mapbiomas_tiled
 tar -xzf $PRODES_TAR --directory "$WD"
 
 # cut TIFs using a shapefile
-parallel -j 6 gdalwarp -r near -dstnodata -9999 -cutline $PRODES_SHP -cwhere \"pathrow=\'{2}\'\" {1} "$WD"/mapbiomas_tiled/{1/.}_{2}.tif ::: $(find $WD -maxdepth 1 -type f -name "*.tif") ::: 22563 23367 22664
+parallel -j 6 gdalwarp -r near -dstnodata -9999 -crop_to_cutline -cutline $PRODES_SHP -cwhere \"pathrow=\'{2}\'\" {1} "$WD"/mapbiomas_tiled/{1/.}_{2}.tif ::: $(find $WD -maxdepth 1 -type f -name "*.tif") ::: 22563 23367 22664
 
 # clean
 rm -rf "$WD"/prodes_2017 
