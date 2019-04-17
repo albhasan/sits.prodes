@@ -2,25 +2,38 @@
 ###############################################################################
 # SPLIT PRODES DATA BY LANDSAT SCENE
 #------------------------------------------------------------------------------
-# Last update 2018-05-23
+# Last update 2019-04-12
 ###############################################################################
-PRODES_SHP='../data/vector/prodes_2017/PDigital2017_AMZ_pol.shp'
-OUT_DIR="../data/vector/prodes_tiled"
-#ogr2ogr -where "pathrow='21975'" $OUT_DIR/prodes_219_075.shp $PRODES_SHP
-ogr2ogr -where "pathrow='22462'" $OUT_DIR/prodes_224_062.shp $PRODES_SHP
-ogr2ogr -where "pathrow='22463'" $OUT_DIR/prodes_224_063.shp $PRODES_SHP
-ogr2ogr -where "pathrow='22563'" $OUT_DIR/prodes_225_063.shp $PRODES_SHP
-ogr2ogr -where "pathrow='23065'" $OUT_DIR/prodes_230_065.shp $PRODES_SHP
-ogr2ogr -where "pathrow='23266'" $OUT_DIR/prodes_232_066.shp $PRODES_SHP
-ogr2ogr -where "pathrow='23267'" $OUT_DIR/prodes_232_067.shp $PRODES_SHP
-ogr2ogr -where "pathrow='23367'" $OUT_DIR/prodes_233_067.shp $PRODES_SHP
-#
-ogr2ogr -where "pathrow='22562'" $OUT_DIR/prodes_225_062.shp $PRODES_SHP
-ogr2ogr -where "pathrow='22564'" $OUT_DIR/prodes_225_064.shp $PRODES_SHP
-ogr2ogr -where "pathrow='22664'" $OUT_DIR/prodes_226_064.shp $PRODES_SHP
-ogr2ogr -where "pathrow='22668'" $OUT_DIR/prodes_226_068.shp $PRODES_SHP
-ogr2ogr -where "pathrow='22761'" $OUT_DIR/prodes_227_061.shp $PRODES_SHP
-ogr2ogr -where "pathrow='22762'" $OUT_DIR/prodes_227_062.shp $PRODES_SHP
-ogr2ogr -where "pathrow='22967'" $OUT_DIR/prodes_229_067.shp $PRODES_SHP
-ogr2ogr -where "pathrow='23166'" $OUT_DIR/prodes_231_066.shp $PRODES_SHP
+BASE_PATH="/home/alber/Documents/data/experiments/prodes_reproduction"
+WD="$BASE_PATH"/data/vector/prodes
+PRODES_TAR="$BASE_PATH"/data/vector/prodes/prodes_2017.tar.gz
+PRODES_SHP="$WD"/prodes_2017/PDigital2017_AMZ_pol.shp
+
+mkdir "$WD"/buffer
+mkdir "$WD"/prodes_tiled
+mkdir "$WD"/tiled
+
+tar -xzf $PRODES_TAR --directory "$WD"
+
+# get the landsat scenes of AOI
+parallel -j6 ogr2ogr -skipfailures -where \"pathrow=\'{1}\'\" "$WD"/tiled/{2/.}_{1}.shp {2} ::: 22563 23367 22664 ::: "$PRODES_SHP"
+
+# fix topological issues
+parallel ogr2ogr -sql '"SELECT ST_Buffer(geometry, 0.0), linkcolumn, uf, pathrow, scene_id, mainclass, class_name, dsfnv, julday, view_date, ano, areameters FROM {1/.}"' -dialect SQLite "$WD"/buffer/{1/} {1} ::: $(find "$WD"/tiled -maxdepth 1 -type f -name "*.shp")
+
+# copy polygons
+parallel ogr2ogr -f \"ESRI Shapefile\" "$WD"/prodes_tiled/{1/} {1} ::: $(find "$WD"/buffer -maxdepth 1 -type f -name "*.shp")
+
+# rename 
+ogr2ogr -f "ESRI Shapefile" "$WD"/prodes_tiled/PDigital2017_AMZ_pol_225_063.shp "$WD"/prodes_tiled/PDigital2017_AMZ_pol_22563.shp 
+ogr2ogr -f "ESRI Shapefile" "$WD"/prodes_tiled/PDigital2017_AMZ_pol_226_064.shp "$WD"/prodes_tiled/PDigital2017_AMZ_pol_22664.shp
+ogr2ogr -f "ESRI Shapefile" "$WD"/prodes_tiled/PDigital2017_AMZ_pol_233_067.shp "$WD"/prodes_tiled/PDigital2017_AMZ_pol_23367.shp
+
+# cleaning
+rm -rf "$WD"/buffer "$WD"/prodes_2017 "$WD"/tiled 
+rm "$WD"/prodes_tiled/PDigital2017_AMZ_pol_22563.*
+rm "$WD"/prodes_tiled/PDigital2017_AMZ_pol_22664.*
+rm "$WD"/prodes_tiled/PDigital2017_AMZ_pol_23367.*
+
+exit 0
  

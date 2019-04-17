@@ -255,6 +255,7 @@ get_confusion_matrix <- function(cov_res, cov_ref, n, cores = 1L){
 #
 # @param file_path A charater. Paths to image files.
 # @return          A character. The images' Landsat scenes or NA. 
+# @export
 get_scene <- function(file_path){
     file_path %>% basename() %>%
         stringr::str_extract(pattern = "_[0-9]{6}_") %>%

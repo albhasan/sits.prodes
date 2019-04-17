@@ -2,7 +2,7 @@
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(ensurer))
 suppressPackageStartupMessages(library(optparse))
-library(sits.prodes)
+suppressPackageStartupMessages(library(sits.prodes))
 
 # TODO: remove
 setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")

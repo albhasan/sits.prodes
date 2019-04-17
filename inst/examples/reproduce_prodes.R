@@ -6,6 +6,10 @@ suppressPackageStartupMessages(library(optparse))
 library(sits.starfm)
 library(sits.prodes)
 
+# TODO: remove
+library(devtools)
+devtools::load_all()
+
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 stopifnot(dir.exists(base_path))
 
@@ -32,7 +36,7 @@ if (!all(vapply(c(in_dir), dir.exists, logical(1)))) {
     print_help(opt_parse)
     stop("Directory not found!")
 }
-img_pattern <- "^l8_(simple|maskcloud)_[0-9]{6}_[0-9]{4}_dl-rf-svm_[0-9]{4}_[0-9]_[0-9]{4}_[0-9]_vote.tif"
+img_pattern <- "^l8_(simple|maskcloud)_[0-9]{6}_[0-9]{4}_(dl|rf|svm|dl-rf-svm)_[0-9]{4}_[0-9]_[0-9]{4}_[0-9](_vote.tif|.tif)"
 corner_mask_path <- "/home/alber/shared/mask_l8_corner"
 
 # setup
@@ -113,11 +117,12 @@ for(sc in unique(img_tb$scene)) {
         stringr::str_sub(2, 5) %>%
         as.integer() %>%
         max()
-    out_dir <- img_tb %>% dplyr::filter(scene == sc) %>%
-        dplyr::pull(filepath) %>%
-        dplyr::first() %>%
-        dirname() %>%
-        file.path("prodes_reproduction")
+    if (is.null(out_dir))
+        out_dir <- img_tb %>% dplyr::filter(scene == sc) %>%
+            dplyr::pull(filepath) %>%
+            dplyr::first() %>%
+            dirname() %>%
+            file.path("prodes_reproduction")
     if(!dir.exists(out_dir))
         out_dir %>% dir.create()
     out_file <- file.path(out_dir, sprintf("prodes_reproduction_%s_%s.tif", sc, prodes_year))
