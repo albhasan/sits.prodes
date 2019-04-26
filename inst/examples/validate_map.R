@@ -60,6 +60,9 @@ prodes_maps <- c(
     "232066" = file.path(base_path, "data/vector/prodes_tiled/prodes_232_066.shp"),
     "233067" = file.path(base_path, "data/vector/prodes_tiled/prodes_233_067.shp")
 )
+stopifnot(all(vapply(water_masks, file.exists, logical(1))))
+stopifnot(all(vapply(prodes_maps, file.exists, logical(1))))
+
 corner_masks <- file.path(base_path, "data/raster/mask_l9_corner")
 
 # get classification labels
