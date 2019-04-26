@@ -6,6 +6,45 @@
 ################################################################################
 
 
+#' @title Rasterize PRODES to match MAPBIOMAS. 
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description Rasterize a PRODES map to MAPBIOMAS resolution while recoding MAPBIOMAS to PRODES classes.
+#' 
+#' @param file_pd    A length-one character. Path to a PRODES map (a shapefile).
+#' @param file_mb    A length-one character. Path to a MAPBIOMAS map (a tif).
+#' @param tile       A length-one character. The Landsat scene id (6 numbers).
+#' @param year_mb    A length-one integer. The year of the MAPBIOMAS map.
+#' @param prodes_lbl A tibble mapping the labels of PRODES to MAPBIOMAS. It must contais the PRODES' labels in Portuguese (label_ld_pt, character) and english (label_pd, character), and its ID (id_pd, an integerthat must have a one-to-one relationship to label_id), as well as MAPBIOMAS' label (label_mb, character) and id (id_mb).
+#' @return           A length-one character. The path to a raster file. 
+prodes2mapbiomas <- function(file_pd, file_mb, tile, year_mb, prodes_lbl){
+    fname <- tools::file_path_sans_ext(basename(file_pd))
+
+    # prepare labels for recoding and reclassification
+    unique_label_pt <- prodes_lbl %>% dplyr::group_by(label_pd_pt) %>%
+        dplyr::slice(1) %>% dplyr::ungroup()
+    unique_id_pd    <- prodes_lbl %>% dplyr::group_by(id_pd) %>%
+        dplyr::slice(1) %>% dplyr::ungroup()
+    key_label_pt <- unique_label_pt %>% dplyr::pull(label_pd) %>% as.list()
+    key_id_pd    <- unique_id_pd    %>% dplyr::pull(id_pd)    %>% as.list()
+    names(key_label_pt) <- unique_label_pt %>% dplyr::pull(label_pd_pt)
+    names(key_id_pd) <-    unique_id_pd    %>% dplyr::pull(label_pd)
+ 
+    # rasterization 
+    mb_raster <- raster::raster(file_mb) 
+    sf::st_read(dsn = dirname(file_pd), layer = fname, 
+                stringsAsFactors = FALSE, quiet = TRUE) %>%
+        dplyr::mutate(label    = dplyr::recode(mainclass, !!!key_label_pt),
+                      label_id = dplyr::recode(label,     !!!key_id_pd)) %>%
+        dplyr::filter(class_name %in% c(names(key_label_pt),
+                      paste0(c('d', 'r'), year_mb))) %>%
+        dplyr::select(label_id) %>%
+        vector2raster(raster_r = mb_raster, vector_field = "label_id") %>%
+        attr("file") %>% attr("name") %>%
+        return()
+}
+
+
+
 #' @title Compute PRODES areas.
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description Compute the area of each of the PRODES' labels
