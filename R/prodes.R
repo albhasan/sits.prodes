@@ -6,9 +6,9 @@
 ################################################################################
 
 
-#' @title Rasterize PRODES to match MAPBIOMAS. 
+#' @title Match PRODES and MAPBIOMAS. 
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description Rasterize a PRODES map to MAPBIOMAS resolution while recoding MAPBIOMAS to PRODES classes.
+#' @description Rasterize a PRODES vector map to match MAPBIOMAS resolution while recoding MAPBIOMAS classes to match PRODES's.
 #' 
 #' @param file_pd    A length-one character. Path to a PRODES map (a shapefile).
 #' @param file_mb    A length-one character. Path to a MAPBIOMAS map (a tif).
@@ -16,7 +16,7 @@
 #' @param year_mb    A length-one integer. The year of the MAPBIOMAS map.
 #' @param prodes_lbl A tibble mapping the labels of PRODES to MAPBIOMAS. It must contais the PRODES' labels in Portuguese (label_ld_pt, character) and english (label_pd, character), and its ID (id_pd, an integerthat must have a one-to-one relationship to label_id), as well as MAPBIOMAS' label (label_mb, character) and id (id_mb).
 #' @return           A length-one character. The path to a raster file. 
-prodes2mapbiomas <- function(file_pd, file_mb, tile, year_mb, prodes_lbl){
+prodes_mapbiomas <- function(file_pd, file_mb, tile, year_mb, prodes_lbl){
     fname <- tools::file_path_sans_ext(basename(file_pd))
 
     # prepare labels for recoding and reclassification
