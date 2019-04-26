@@ -140,6 +140,41 @@ splitAt <- function(x, pos){
 }
 
 
+#' @title Rasterize vectors
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description Rasterize a sf object to match the given raster
+#'
+#' @param vector_sf    A sf object. 
+#' @param raster_r     A raster object.
+#' @param vector_field A length-one character. The name of an integer column in vector_sf.
+#' @return             A raster layer. 
+#' @export
+vector2raster <- function(vector_sf, raster_r, vector_field){
+    stopifnot(lapply(vector_sf, class)[[vector_field]] == "integer")
+
+    tmp_raster_path <- tempfile(pattern = "vector2raster", fileext = ".tif")
+    tmp_vector_path <- tempfile(pattern = "vector2raster", fileext = ".shp")
+    raster::writeRaster(raster::setValues(raster_r, NA),
+                        filename = tmp_raster_path, overwrite = TRUE)
+    suppressWarnings(
+        vector_sf %>%
+        sf::st_transform(crs = raster::projection(raster_r, asText = TRUE)) %>%
+        sf::st_write(dsn = tmp_vector_path, delete_dsn = TRUE,
+                     quiet = TRUE, delete_layer = TRUE)
+    )
+    gdalUtils::gdal_rasterize(src_datasource = tmp_vector_path,
+                              dst_filename = tmp_raster_path, a = vector_field,
+                              l = tools::file_path_sans_ext(basename(tmp_vector_path)),
+                              output_Raster = TRUE) %>%
+        .[[1]] %>% # Cast to raster layer
+        return()
+}
+
+
+
+
+
+
 
 # TODO: Review functions -----
 
