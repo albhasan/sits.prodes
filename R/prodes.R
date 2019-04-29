@@ -8,15 +8,15 @@
 
 #' @title Match PRODES and MAPBIOMAS. 
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description Rasterize a PRODES vector map to match MAPBIOMAS resolution while recoding MAPBIOMAS classes to match PRODES's.
+#' @description Rasterize a PRODES vector map to match a reference raster resolution.
 #' 
 #' @param file_pd    A length-one character. Path to a PRODES map (a shapefile).
-#' @param file_mb    A length-one character. Path to a MAPBIOMAS map (a tif).
+#' @param file_rt    A length-one character. Path to raster of reference (a tif).
 #' @param tile       A length-one character. The Landsat scene id (6 numbers).
-#' @param year_mb    A length-one integer. The year of the MAPBIOMAS map.
-#' @param prodes_lbl A tibble mapping the labels of PRODES to MAPBIOMAS. It must contais the PRODES' labels in Portuguese (label_ld_pt, character) and english (label_pd, character), and its ID (id_pd, an integerthat must have a one-to-one relationship to label_id), as well as MAPBIOMAS' label (label_mb, character) and id (id_mb).
+#' @param year_pd    A integer. The years of deforestation to keep in the output.
+#' @param prodes_lbl A tibble mapping the labels of PRODES from Portuguesse to English. It must contais the PRODES' labels in Portuguese (label_ld_pt, character) and english (label_pd, character), and its ID (id_pd, an integer that must have a one-to-one relationship to label_id).
 #' @return           A length-one character. The path to a raster file. 
-prodes_mapbiomas <- function(file_pd, file_mb, tile, year_mb, prodes_lbl){
+prodes2raster <- function(file_pd, file_rt, tile, year_pd, prodes_lbl){
     fname <- tools::file_path_sans_ext(basename(file_pd))
 
     # prepare labels for recoding and reclassification
@@ -30,13 +30,14 @@ prodes_mapbiomas <- function(file_pd, file_mb, tile, year_mb, prodes_lbl){
     names(key_id_pd) <-    unique_id_pd    %>% dplyr::pull(label_pd)
  
     # rasterization 
-    mb_raster <- raster::raster(file_mb) 
+    mb_raster <- raster::raster(file_rt) 
     sf::st_read(dsn = dirname(file_pd), layer = fname, 
                 stringsAsFactors = FALSE, quiet = TRUE) %>%
         dplyr::mutate(label    = dplyr::recode(mainclass, !!!key_label_pt),
                       label_id = dplyr::recode(label,     !!!key_id_pd)) %>%
         dplyr::filter(class_name %in% c(names(key_label_pt),
-                      paste0(c('d', 'r'), year_mb))) %>%
+                      apply(expand.grid(c('d', 'r'), year_pd), 1, paste0, 
+                      collapse = ''))) %>%
         dplyr::select(label_id) %>%
         vector2raster(raster_r = mb_raster, vector_field = "label_id") %>%
         attr("file") %>% attr("name") %>%
@@ -44,6 +45,15 @@ prodes_mapbiomas <- function(file_pd, file_mb, tile, year_mb, prodes_lbl){
 }
 
 
+#' @title Convert the PRODES' scene format to LANDSAT's.
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description Insert missing 0s in PRODES' landsat scene id.
+#' 
+#' @param prodes_scene A length-one character. A PRODES scene id.
+#' @return             A length-one character. A Landsat scene id. 
+prodes2scene <- function(prodes_scene){
+    gsub('^([0-9]{3})([0-9]+)$', '\\10\\2', prodes_scene)
+}
 
 #' @title Compute PRODES areas.
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
@@ -102,6 +112,7 @@ prodes_compute_area <- function(pd_polygons){
 #' @return A raster object
 prodes_rasterize <- function(ref_path, pyear, cov_res, level_key_pt, 
                              level_key, class_name_filter = "FLORESTA"){
+    .Deprecated("prodes2raster")
     stopifnot(length(ref_path) == 1)
 
     tmp_raster_path <- file.path(paste0(tempfile(pattern = tools::file_path_sans_ext(basename(ref_path))), ".tif"))

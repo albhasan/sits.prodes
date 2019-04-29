@@ -3,6 +3,7 @@
 export("%>%")
 export(asses_accuracy_area)
 export(asses_accuracy_simple)
+export(castable2numeric)
 export(compare_ts)
 export(compute_indexes)
 export(parse_training_log)

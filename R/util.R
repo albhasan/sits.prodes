@@ -1,3 +1,14 @@
+#' @title Test if a character can be casted to numeric.
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description  Test if a character can be casted to numeric.
+#'
+#' @param chr A length-one character.
+#' @return    A logical.
+#' @export
+castable2numeric <- function(chr){
+    is.numeric(as.numeric(chr)) & !is.na(chr)
+}
+
 #' @title Util function for computing similarity parameters between two time series
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description    Compute comparison parameters between two time series
@@ -57,6 +68,33 @@ compute_indexes <- function(x, sat){
         )
     }
     return(res)
+}
+
+
+#' @title Compute the confusion matrix between two raster files.
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description  Compute the confusion matrix between two raster files.
+#'
+#' @param r1_path A length-one character. Path to a raster file.
+#' @param r2_path A length-one character. Path to a raster file.
+#' @param key_ls  A named list used to recode the integer values of r1_path and r2_path. The list is made of labels and its names are the numbers (as character) in the rasters.
+#' @return            A list as explained in caret::confusionMatrix
+#' export
+confusion_raster <- function(r1_path, r2_path, key_ls){
+    stopifnot(!tibble::is_tibble(key_ls))
+    lev <- names(key_ls)
+    lab <- unlist(key_ls)
+    stopifnot(length(lev) > 0)
+    stopifnot(length(lev) == length(lab))
+    stopifnot(all(is.atomic(lev), is.atomic(lab)))
+    data_df <- raster::stack(r1_path, r2_path, quick = FALSE)[] %>%
+        as.data.frame() %>%
+        tidyr::drop_na() %>%
+        dplyr::rename("lab_ref_num" = !!names(.[1]),  # reference labels as integers
+                      "lab_pred_num" = !!names(.[2])) # predicted labels as integers
+    caret::confusionMatrix(data      = factor(data_df$lab_pred_num, levels = lev, labels = lab),
+                           reference = factor(data_df$lab_ref_num,  levels = lev, labels = lab)) %>%
+        return()
 }
 
 
@@ -145,7 +183,7 @@ splitAt <- function(x, pos){
 #' @description Rasterize a sf object to match the given raster
 #'
 #' @param vector_sf    A sf object. 
-#' @param raster_r     A raster object.
+#' @param raster_r     A raster object. This raster is the reference for coordinate sytem, spatial resolution, and dimensions.
 #' @param vector_field A length-one character. The name of an integer column in vector_sf.
 #' @return             A raster layer. 
 #' @export

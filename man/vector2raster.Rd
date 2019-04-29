@@ -9,7 +9,7 @@ vector2raster(vector_sf, raster_r, vector_field)
 \arguments{
 \item{vector_sf}{A sf object.}
 
-\item{raster_r}{A raster object.}
+\item{raster_r}{A raster object. This raster is the reference for coordinate sytem, spatial resolution, and dimensions.}
 
 \item{vector_field}{A length-one character. The name of an integer column in vector_sf.}
 }
