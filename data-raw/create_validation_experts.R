@@ -79,6 +79,12 @@ validation_experts %>%
     .[!is.na(.)] %>%
 	    ensurer::ensure_that(all(. %in% c("cloud", "degradation", prodes_lbl$label_pd)), err_desc = "Unknow labels found!") 
 
+validation_experts <- validation_experts %>%
+    dplyr::mutate(to_remove = all(is.na(Label2013), is.na(Label2014),
+                  is.na(Label2015), is.na(Label2016), is.na(Label2017))) %>%
+    tidyr::drop_na(to_remove) %>%
+    dplyr::select(-to_remove)
+
 # save
 devtools::use_data(validation_experts, overwrite = TRUE)
 
