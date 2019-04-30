@@ -9,16 +9,8 @@ base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 ###############
 # Rodrigo's shp
 ###############
-prodes_lbl <- tibble::tribble(
-             ~label_pd_pt,     ~label_pd,  ~id_pd,
-        #--------------#-----------------#--------
-        "DESMATAMENTO",  "deforestation", 1L,
-        "RESIDUO",       "deforestation", 1L,
-        "FLORESTA",      "forest",        2L,
-        "NAO_FLORESTA",  "no forest",     3L,
-        "NAO_FLORESTA2", "no forest",     3L,
-        "HIDROGRAFIA",   "water",         4L
-    )
+data("prodes_labels", package = "sits.prodes")
+prodes_lbl <- prodes_labels
 
 # read shapefile
 shp_path <- file.path(base_path, "data/samples/expert_validated_samples/samples") %>%
@@ -87,6 +79,4 @@ validation_experts <- validation_experts %>%
 
 # save
 devtools::use_data(validation_experts, overwrite = TRUE)
-
-#    %>% dplyr::select(Label2013, Label2014, Label2015, Label2016, Label2017) %>% sf::st_set_geometry(NULL) %>% unlist() %>% unique() %>% print()
  
