@@ -89,7 +89,8 @@ key_tb <- prodes_lbl %>% dplyr::select(label_pd, id_pd) %>%
 key_pd        <- key_tb %>% dplyr::pull(label_pd) %>% as.list()
 names(key_pd) <- key_tb %>% dplyr::pull(id_pd)
 prodes_files$conmat <- purrr::map2(prodes_files$match_pd_mb,
-                                   prodes_files$match_pd_mb, confusion_raster,
+                                   prodes_files$file_rt,
+                                   confusion_raster,
                                    key_ls = key_pd)
 
 # save
