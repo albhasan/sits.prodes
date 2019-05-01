@@ -25,9 +25,9 @@ stopifnot(all(file.exists(mapbiomas_style)))
 # get labels
 data("prodes_labels", package = "sits.prodes")
 data("mapbiomas_labels", package = "sits.prodes")
-stopifnot(exists(c("prodes_labels", "mapbiomas_labels"))
+stopifnot(exists(c("prodes_labels", "mapbiomas_labels")))
 
-prodes_lbl <- prodes_labels %>% dplyr::full_join(mapbiomas_labels), by = "label_pd") %>%
+prodes_lbl <- prodes_labels %>% dplyr::full_join(mapbiomas_labels, by = "label_pd") %>%
     ensurer::ensure_that(!all(sapply(., is.na)),
                          all.equal(as.vector(table(.$label_pd)), as.vector(table(.$id_pd))))
 
@@ -94,5 +94,5 @@ prodes_files$conmat <- purrr::map2(prodes_files$match_pd_mb,
 
 # save
 prodes_mapbiomas <- prodes_files %>% dplyr::select(tile, year_pd, conmat)
-devtools::use_data(prodes_mapbiomas)
+devtools::use_data(prodes_mapbiomas, overwrite = TRUE)
 
