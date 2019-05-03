@@ -4,7 +4,7 @@
 \alias{prodes2raster}
 \title{Match PRODES and MAPBIOMAS.}
 \usage{
-prodes2raster(file_pd, file_rt, tile, year_pd, prodes_lbl)
+prodes2raster(file_pd, file_rt, tile, year_pd, prodes_lbl, img_type)
 }
 \arguments{
 \item{file_pd}{A length-one character. Path to a PRODES map (a shapefile).}
@@ -16,6 +16,8 @@ prodes2raster(file_pd, file_rt, tile, year_pd, prodes_lbl)
 \item{year_pd}{A integer. The years of deforestation to keep in the output.}
 
 \item{prodes_lbl}{A tibble mapping the labels of PRODES from Portuguesse to English. It must contais the PRODES' labels in Portuguese (label_ld_pt, character) and english (label_pd, character), and its ID (id_pd, an integer that must have a one-to-one relationship to label_id).}
+
+\item{img_type}{A length-one character. Target image data type. See gdal_rasterize for a list of data types.}
 }
 \value{
 A length-one character. The path to a raster file.

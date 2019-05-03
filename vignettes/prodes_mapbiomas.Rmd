@@ -1,0 +1,99 @@
+---
+title: "prodes mapbiomas"
+author: "Alber Sánchez"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+bibliography: references.bib
+vignette: >
+  %\VignetteIndexEntry{prodes mapbiomas}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\usepackage[utf8]{inputenc}
+---
+
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    comment = "#>"
+)
+
+library(dplyr)
+library(ggplot2)
+library(kableExtra)
+library(knitr)
+library(magrittr)
+library(purrr)
+library(tidyr)
+library(sits.prodes)
+library(xtable)
+
+# TODO: remove
+library(devtools)
+devtools::load_all()
+#devtools::build(vignettes = FALSE, manual = TRUE)
+#devtools::install()
+# - - - 
+
+utils::data("prodes_mapbiomas", package = "sits.prodes")
+utils::data("prodes_labels", package = "sits.prodes")
+utils::data("mapbiomas_labels", package = "sits.prodes")
+
+```
+
+# Comparison PRODES Mapbiomas
+
+## Label mappings
+
+### PRODES Portuguese to English
+
+```{r, echo = FALSE}
+prodes_labels %>% 
+    dplyr::select(-id_pd) %>% 
+    knitr::kable() %>% 
+    kableExtra::kable_styling(full_width = F)
+```
+
+
+### Mapbiomas to PRODES
+
+```{r, echo = FALSE}
+mapbiomas_labels %>% 
+    dplyr::select(-id_mb) %>% 
+    knitr::kable() %>% 
+    kableExtra::kable_styling(full_width = F) 
+
+```
+
+
+## Results
+
+* PRODES is the reference map (it is represented in the columns)
+* Data given in numer of pixels (except for user and producer accuracies)
+
+```{r, results='asis', echo=FALSE}
+
+# sort by scene-year
+prodes_mapbiomas <- prodes_mapbiomas %>% dplyr::arrange(tile, year_pd)
+
+# extract the confusion matrices
+prodes_mapbiomas$cm <- lapply(prodes_mapbiomas$conmat, function(x){
+    x %>% .$table %>% as.matrix() %>% return()    
+})
+
+# compute user-producer accuracies
+prodes_mapbiomas$up_acc <- add_upacc(prodes_mapbiomas$cm)
+
+for (i in 1:nrow(prodes_mapbiomas)) {
+    cap <- sprintf("Confusion matrix %s %s", unlist(prodes_mapbiomas[i, "tile"]), unlist(prodes_mapbiomas[i, "year_pd"]))
+    cat(paste0("### ", cap), "\n")
+    p_conmat <- prodes_mapbiomas$up_acc[[i]] %>% 
+        apply(2, function(x){x/1}) %>% 
+        tibble::as_tibble(rownames = NA, caption = cap) %>% 
+        knitr::kable(digits = 2, row.names = TRUE) %>% 
+        kableExtra::kable_styling(full_width = F)
+    print(p_conmat)
+    cat("\n\n")
+}    
+
+```
+
