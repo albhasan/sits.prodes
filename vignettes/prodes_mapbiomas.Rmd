@@ -28,8 +28,8 @@ library(sits.prodes)
 library(xtable)
 
 # TODO: remove
-library(devtools)
-devtools::load_all()
+#library(devtools)
+#devtools::load_all()
 #devtools::build(vignettes = FALSE, manual = TRUE)
 #devtools::install()
 # - - - 
@@ -54,11 +54,25 @@ prodes_labels %>%
 ```
 
 
+## Mapbiomas
+- Their Landsat images' maximum cloud cover is 30% 
+- Their classification algorithm is random forest
+- Their maps accuracy is unavailable (under construction)
+- Their maps have 6 (plus 'No information') classes (out of 27 for the whole Mapbiomas). 
+- They use 10 variables for classification:
+    - GVS Green Vegetation Shade (mean and sd)
+    - NFVI Normalized Fraction Difference Index (mean and sd)
+    - NPV Non-Photosynthetic Vegetation (mean and sd)
+    - Shade and Soil fractions (means and sds)
+- During training, they sampled TerraClass, GlobeLand30, PRODES, Global Forest Cover, ESA CCI (among others) using a majority rule.
+- They used postprocessing rules for improving their results.
+
 ### Mapbiomas to PRODES
 
 ```{r, echo = FALSE}
 mapbiomas_labels %>% 
-    dplyr::select(-id_mb) %>% 
+    dplyr::filter(id_mb %in% c(3, 13, 21, 25, 26, 27)) %>% 
+    dplyr::select(-id_mb) %>%
     knitr::kable() %>% 
     kableExtra::kable_styling(full_width = F) 
 
@@ -69,6 +83,7 @@ mapbiomas_labels %>%
 
 * PRODES is the reference map (it is represented in the columns)
 * Data given in numer of pixels (except for user and producer accuracies)
+
 
 ```{r, results='asis', echo=FALSE}
 

@@ -5,11 +5,13 @@ date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 bibliography: references.bib
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteIndexEntry{Training record}
   %\VignetteEngine{knitr::rmarkdown}
   %\usepackage[utf8]{inputenc}
 ---
-
+  
+  
+  
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
 collapse = TRUE,
@@ -44,27 +46,27 @@ library(xtable)
 
 
 * High bias:     High crossvalidation error using a low  degree polynomial
-    +There is a high error but training and validation errors are similar. 
++There is a high error but training and validation errors are similar. 
 * High variance: High crossvalidation error using a high degree polynomial
-    + High variance: There is a big difference between training error and crossvalidation error
-    
++ High variance: There is a big difference between training error and crossvalidation error
+
 * Classification with a HIGH BIAS problem (underfit)
-    + Training set error is high
-    + Crossvalidation error is close to the trainng error
-    + If a leraning algorithm is suffering from high bias, getting more training data will not (by itself) help much
++ Training set error is high
++ Crossvalidation error is close to the trainng error
++ If a leraning algorithm is suffering from high bias, getting more training data will not (by itself) help much
 * Classification with a HIGH VARAINCE problem (overfit)
-    + Training set error is low
-    + Crossvalidation error is much bigger than the training set error
-    + If a leraning algorithm is suffering from high variance getting more training data is likely to help
++ Training set error is low
++ Crossvalidation error is much bigger than the training set error
++ If a leraning algorithm is suffering from high variance getting more training data is likely to help
 
 * Fix HIGH BIAS (underfit)
-    + Try getting additional features (curretn hyppothesis is too simple)
-    + Try adding polynomial features 
-    + Try decreasing regularization (cost function)
++ Try getting additional features (curretn hyppothesis is too simple)
++ Try adding polynomial features 
++ Try decreasing regularization (cost function)
 * Fix HIGH VARIANCE (overfit)
-    + Get more training examples
-    + Try smaller set of features (the attributes of each sample)
-    + Try increasing regularization (keep the features but reduce the magnitud/values of the parameters. Works well if there are a lot of features)
++ Get more training examples
++ Try smaller set of features (the attributes of each sample)
++ Try increasing regularization (keep the features but reduce the magnitud/values of the parameters. Works well if there are a lot of features)
 
 Source: Machine Learning — Andrew Ng, Stanford University [FULL COURSE]
 
@@ -85,11 +87,29 @@ data, and the accuracy of the network over the training data.** - [@Chollet:2018
 overfitting** - [@Chollet:2018]
 
 
+
 ```{r echo=FALSE}
 warning("Run get_training_logs.R and devtools::build() to update the logs in this package!")
 # parse log files
 load(system.file("extdata/log_files.Rdata", package = "sits.prodes"))
 stopifnot(exists("log_files"))
+
+
+
+tibble::tribble(
+    ~Classification_type, ~Obs_year, ~Description,
+    #--------------------|----------|--------------------|
+    "interpolated",       23,        "The samples were taken from the bricks of Landsat 8 where the clouds were filled up by interpolation of MXD13 data. The vegetation indexes were recalculated from the bricks of the corresponding bands.",
+    "starfm",             23,        "The samples were taken from the bricks of Landsat 8 where the clouds were filled up by the StarFM mixture model (Landsat 8 - MOD13Q1 mixture model).",
+    "simple",             4,         "The samples were taken from the bricks of the best 4 Landsat 8 images of a year.",
+    "mask_clouds",        4,         "The samples were taken from the bricks of the best 4 Landsat 8 images of a year and the clouds were masked as 'no_data'."
+) %>% 
+    knitr::kable() %>% 
+    kableExtra::kable_styling(full_width = FALSE) 
+
+
+
+
 
 # parse logs
 logs_ls <- system.file(file.path("extdata", log_files), package = "sits.prodes") %>%
@@ -98,24 +118,24 @@ logs_ls <- system.file(file.path("extdata", log_files), package = "sits.prodes")
     dplyr::select(experiment, path) %>%
     dplyr::mutate(parsed_log = purrr::map(.$path, parse_training_log)) %>% 
     dplyr::mutate(setup = purrr::map(.$parsed_log, 
-                              function(x){
-                                  x[["header"]] %>%
-                                      dplyr::mutate(key = stringr::str_replace_all(key, 
-                                          c("\\(" = "", "\\)" = "", " " = "_"))) %>% 
-                                      tidyr::spread(key, value) %>%
-                                  return()}),
-                  trains = purrr::map(.$parsed_log, 
-                              function(x){
-                                  x[["experiments"]] %>%
-                                  lapply(function(y){
-                                             y %>% 
-                                             dplyr::filter(value != "<environment>") %>%
+                                     function(x){
+                                         x[["header"]] %>%
+                                             dplyr::mutate(key = stringr::str_replace_all(key, 
+                                                                                          c("\\(" = "", "\\)" = "", " " = "_"))) %>% 
                                              tidyr::spread(key, value) %>%
-                                             return() 
-                                         }) %>%
-                                  dplyr::bind_rows() %>%
-                                  return()
-                              })) %>%
+                                             return()}),
+                  trains = purrr::map(.$parsed_log, 
+                                      function(x){
+                                          x[["experiments"]] %>%
+                                              lapply(function(y){
+                                                  y %>% 
+                                                      dplyr::filter(value != "<environment>") %>%
+                                                      tidyr::spread(key, value) %>%
+                                                      return() 
+                                              }) %>%
+                                              dplyr::bind_rows() %>%
+                                              return()
+                                      })) %>%
     dplyr::select(-parsed_log)
 
 na_remover <- function(x){return(trimws(gsub("NA", "", x[!is.na(x)])))}
@@ -136,11 +156,11 @@ logs_ls %>% tidyr::unnest(setup) %>%
 
 ```{r fig.width=9, fig.height=7, echo=FALSE}
 plot_tb <- logs_ls %>% tidyr::unnest(trains) %>% dplyr::select(experiment, model_name, acc, loss, val_acc, val_loss) %>%
-              dplyr::mutate(acc  = purrr::map(acc,  function(x) eval(parse(text = x))),
-                            loss = purrr::map(loss, function(x) eval(parse(text = x))),
-                            val_acc  = purrr::map(val_acc, function(x) eval(parse(text = x))),
-                            val_loss = purrr::map(val_loss, function(x) eval(parse(text = x))), 
-                            val_acc_mean = purrr::map_dbl(val_acc, mean)) 
+    dplyr::mutate(acc  = purrr::map(acc,  function(x) eval(parse(text = x))),
+                  loss = purrr::map(loss, function(x) eval(parse(text = x))),
+                  val_acc  = purrr::map(val_acc, function(x) eval(parse(text = x))),
+                  val_loss = purrr::map(val_loss, function(x) eval(parse(text = x))), 
+                  val_acc_mean = purrr::map_dbl(val_acc, mean)) 
 
 #plot_tb %>% dplyr::select(experiment, model_name, val_acc_mean) %>%
 #    knitr::kable() %>% kableExtra::kable_styling(full_width = F)
@@ -162,17 +182,17 @@ plot_tb <- logs_ls %>% tidyr::unnest(trains) %>% dplyr::select(experiment, model
 
 
 plot_ls <- lapply(unique(plot_tb$experiment), function(exp){
-  plot_tb %>% dplyr::filter(experiment %in% exp) %>% tidyr::unnest() %>%
-    dplyr::group_by(model_name) %>% dplyr::mutate(epoch = row_number()) %>%
-    ggplot2::ggplot() +
-    ggplot2::geom_path(aes(y = loss, x = epoch), colour = "blue") +
-    ggplot2::geom_path(ggplot2::aes(y = val_loss, x = epoch)) +
-    ggplot2::ggtitle(exp) +
-    ggplot2::ylim(0.0, 0.25) +
-    #ggplot2::theme(plot.title = element_text(size = 8)) +
-    ggplot2::labs(x = "Epochs", y = "Loss") +
-    ggplot2::facet_wrap(~ model_name, nrow = 5) %>%
-    return()
+    plot_tb %>% dplyr::filter(experiment %in% exp) %>% tidyr::unnest() %>%
+        dplyr::group_by(model_name) %>% dplyr::mutate(epoch = row_number()) %>%
+        ggplot2::ggplot() +
+        ggplot2::geom_path(aes(y = loss, x = epoch), colour = "blue") +
+        ggplot2::geom_path(ggplot2::aes(y = val_loss, x = epoch)) +
+        ggplot2::ggtitle(exp) +
+        ggplot2::ylim(0.0, 0.25) +
+        #ggplot2::theme(plot.title = element_text(size = 8)) +
+        ggplot2::labs(x = "Epochs", y = "Loss") +
+        ggplot2::facet_wrap(~ model_name, nrow = 5) %>%
+        return()
 })
 
 

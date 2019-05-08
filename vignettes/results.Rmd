@@ -5,7 +5,7 @@ date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 bibliography: references.bib
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteIndexEntry{Result record}
   %\VignetteEngine{knitr::rmarkdown}
   %\usepackage[utf8]{inputenc}
 ---
@@ -16,8 +16,17 @@ collapse = TRUE,
 comment = "#>"
 )
 
-base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
+# TODO: remove
+#library(devtools)
+#devtools::load_all()
+#devtools::build(vignettes = FALSE, manual = TRUE)
+#devtools::install()
+```
 
+
+
+
+```{r work, include = FALSE}
 experiment_set <- list(few_cloud         = c("rep_prodes_40", "rep_prodes_41", "rep_prodes_42"), 
                        few_masked_clouds = c("rep_prodes_50", "rep_prodes_51", "rep_prodes_52"))
 
@@ -126,6 +135,8 @@ if (nrow(accuracy_tb) > 0) {
 
 
 ```{r accuracy_user_producer, fig.width=7, fig.height=4, echo=FALSE}
+# TODO: check if the vignette size is less than 778052
+# 
 
 cnames <- colnames(accuracy_tb$up_acc[[1]])
 #cnames <- colnames(accuracy_tb$up_acc2[[1]])
@@ -145,7 +156,7 @@ if (nrow(accuracy_tb) > 0) {
                     ggplot2::geom_line(aes(x = pyear, y = up_value, group = up_accuracy, color = up_accuracy)) + 
                     ggplot2::geom_point(aes(x = pyear, y = up_value, color = up_accuracy)) + 
                     ggplot2::facet_grid(experiment ~ scene) +
-                    ggplot2::ggtitle(sprintf("Overall accuracy %s %s %s", names(experiment_set)[[exp_set]], al, sm)) 
+                    ggplot2::ggtitle(sprintf("Overall accuracy %s %s %s", names(experiment_set)[[exp_set]], al, sm))
                 print(p)
             }
         }
@@ -156,11 +167,5 @@ if (nrow(accuracy_tb) > 0) {
 ```
 
 
-
-# TODO
-* Vignette images too small
-* Weird results for rep_prodes_5X. Check we're using the right samples
-* Do the user-producer stat
-* What is the difference between the overall accuracies of the caret package and sits.prodes?
-
 # References
+
