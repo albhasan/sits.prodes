@@ -4,7 +4,8 @@
 \alias{vector2raster}
 \title{Rasterize vectors}
 \usage{
-vector2raster(vector_sf, raster_r, vector_field)
+vector2raster(vector_sf, raster_r, vector_field,
+  raster_path = tempfile(pattern = "vector2raster", fileext = ".tif"))
 }
 \arguments{
 \item{vector_sf}{A sf object.}
@@ -12,6 +13,8 @@ vector2raster(vector_sf, raster_r, vector_field)
 \item{raster_r}{A raster object. This raster is the reference for coordinate sytem, spatial resolution, and dimensions.}
 
 \item{vector_field}{A length-one character. The name of an integer column in vector_sf.}
+
+\item{raster_path}{A length-one character. An optional file path to store the resulting raster.}
 }
 \value{
 A raster layer.

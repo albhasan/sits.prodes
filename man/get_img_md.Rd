@@ -10,7 +10,7 @@ get_img_md(img_path)
 \item{img_path}{A character. Path to a file.}
 }
 \value{
-A list of character. 
+A list of character.
 export
 }
 \description{
