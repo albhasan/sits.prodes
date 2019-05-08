@@ -165,22 +165,22 @@ prodes_samples %>% sits::sits_kfold_validate(ml_method = sits::sits_svm()) %>%
 # save the samples to the package
 if (classification_type == "interpolated") {
     prodes_samples_interpolated <- prodes_samples
-    devtools::use_data(prodes_samples_interpolated, overwrite = TRUE)
+    usethis::use_data(prodes_samples_interpolated, overwrite = TRUE)
 }else if (classification_type == "interpolated_few_clouds") {
     prodes_samples_interpolated_few_clouds <- prodes_samples
-    devtools::use_data(prodes_samples_interpolated_few_clouds, overwrite = TRUE)
+    usethis::use_data(prodes_samples_interpolated_few_clouds, overwrite = TRUE)
 }else if (classification_type == "starfm") {
     prodes_samples_starfm <- prodes_samples
-    devtools::use_data(prodes_samples_starfm, overwrite = TRUE)
+    usethis::use_data(prodes_samples_starfm, overwrite = TRUE)
 }else if (classification_type == "starfm_few_clouds") {
     prodes_samples_starfm_few_clouds <- prodes_samples
-    devtools::use_data(prodes_samples_starfm_few_clouds, overwrite = TRUE)
+    usethis::use_data(prodes_samples_starfm_few_clouds, overwrite = TRUE)
 }else if (classification_type == "simple") {
     prodes_samples_simple <- prodes_samples
-    devtools::use_data(prodes_samples_simple, overwrite = TRUE)
+    usethis::use_data(prodes_samples_simple, overwrite = TRUE)
 }else if (classification_type == "mask_cloud") {
     prodes_samples_mask_cloud <- prodes_samples
-    devtools::use_data(prodes_samples_mask_cloud, overwrite = TRUE)
+    usethis::use_data(prodes_samples_mask_cloud, overwrite = TRUE)
 }
 
 

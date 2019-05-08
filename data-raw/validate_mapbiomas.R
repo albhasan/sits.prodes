@@ -1,5 +1,4 @@
 #!/usr/bin/Rscript
-
 # COMPUTE THE CONFUSION MATRICES OF MAPBIOMAS USING PRODES AS A REFERENCE
 
 suppressPackageStartupMessages(library(ensurer))
@@ -9,15 +8,16 @@ suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(raster))
 suppressPackageStartupMessages(library(magrittr))
 
-
 library(devtools)
 devtools::load_all()
-
 
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 mapbiomas_path <- file.path(base_path, c("data/raster/mapbiomas/amazonia/mapbiomas_tiled"))
 mapbiomas_style <- file.path(base_path, "qgis/styles/mapbiomas_amazonia_c3.qml")
 prodes_path <- file.path(base_path, "data/vector/prodes/prodes_tiled")
+
+img_dtype = "INT4S" # data type for rasterization using the raster package
+img_type = "Int32"  # data type for rasterization using gdal_rasterize
 
 stopifnot(all(dir.exists(c(base_path, mapbiomas_path, prodes_path))))
 stopifnot(all(file.exists(mapbiomas_style)))
@@ -57,7 +57,7 @@ mapbiomas_files <- mapbiomas_path %>%
             reclas_file)
         file_path %>% raster::raster() %>%
             raster::reclassify(rcl = rcl_mat, filename = out_file,
-                               overwrite = TRUE)
+                               overwrite = TRUE, datatype = img_dtype)
         return(out_file)
     }))
 
@@ -73,14 +73,13 @@ prodes_files <- prodes_path %>%
     ) %>% ensurer::ensure_that(all(nchar(.$tile) == 6),
                                 all(castable2numeric(.$tile))) %>%
     dplyr::right_join(mapbiomas_files, by = "tile") %>%
-    dplyr::select(file_pd = filepath_pd, file_rt = mb_reclass, tile, year_pd = year_mb) %>%
-    dplyr::mutate(rasterized = purrr::pmap_chr(., prodes2raster, prodes_lbl = prodes_lbl)) %>%
-    # save
     dplyr::mutate(match_pd_mb = file.path(base_path, "data",
         "raster", "prodes", "resampled2mapbiomas",
-        paste0("prodes_mb_", tile, '_', year_pd, ".tif"))) %>%
-    dplyr::mutate(res = purrr::pmap_lgl(dplyr::select(., rasterized, match_pd_mb),
-        function(rasterized, match_pd_mb){file.copy(rasterized, match_pd_mb, overwrite = TRUE)}))
+        paste0("prodes_mb_", tile, '_', year_mb, ".tif"))) %>%
+    dplyr::select(file_pd = filepath_pd, file_rt = mb_reclass,
+                  raster_path = match_pd_mb, tile, year_pd = year_mb) %>%
+    dplyr::mutate(pd_rasterized = purrr::pmap_chr(., prodes2raster,
+                  prodes_lbl = prodes_lbl))
 
 # compute confusion matrices prodes vs mapbiomas
 key_tb <- prodes_lbl %>% dplyr::select(label_pd, id_pd) %>%
@@ -88,12 +87,14 @@ key_tb <- prodes_lbl %>% dplyr::select(label_pd, id_pd) %>%
     dplyr::slice(1)
 key_pd        <- key_tb %>% dplyr::pull(label_pd) %>% as.list()
 names(key_pd) <- key_tb %>% dplyr::pull(id_pd)
-prodes_files$conmat <- purrr::map2(prodes_files$match_pd_mb,
+prodes_files$conmat <- purrr::map2(prodes_files$raster_path,
                                    prodes_files$file_rt,
                                    confusion_raster,
                                    key_ls = key_pd)
 
 # save
 prodes_mapbiomas <- prodes_files %>% dplyr::select(tile, year_pd, conmat)
-devtools::use_data(prodes_mapbiomas, overwrite = TRUE)
+
+setwd(file.path(base_path, "Rpackage", "sits.prodes"))
+usethis::use_data(prodes_mapbiomas, overwrite = TRUE)
 

@@ -1,10 +1,11 @@
 #!/usr/bin/Rscript
 # prepare the samples acquired by experts
-library(dplyr)
-library(sf)
-library(ensurer)
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(sf))
+suppressPackageStartupMessages(library(ensurer))
 
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
+setwd(base_path)
 
 ###############
 # Rodrigo's shp
@@ -32,7 +33,7 @@ shp_proc <- shp %>% lapply(function(x, shp_fields){
                               x <- x %>% dplyr::mutate(!!mn := NA)   
                           }
                           fn_sort <- sort(colnames(x)[!(colnames(x) %in% "geometry")])
-                          x %>% dplyr::select_(.dots = fn_sort) %>%
+                          x %>% dplyr::select(.dots = !!!fn_sort) %>%
                               return()
                         }, shp_fields)
 
@@ -78,5 +79,6 @@ validation_experts <- validation_experts %>%
     dplyr::select(-to_remove)
 
 # save
-devtools::use_data(validation_experts, overwrite = TRUE)
- 
+setwd(file.path(base_path, "Rpackage", "sits.prodes"))
+usethis::use_data(validation_experts, overwrite = TRUE) 
+

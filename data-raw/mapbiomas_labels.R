@@ -5,6 +5,9 @@
 library(tibble)
 library(devtools)
 
+base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes"
+setwd(base_path)
+
 mapbiomas_labels <- tibble::tribble(
         ~label_mb,                                ~id_mb,   ~label_pd,
         #----------------------------------------#--------#----------------
@@ -37,5 +40,5 @@ mapbiomas_labels <- tibble::tribble(
         "5.1 River, Lake and Ocean",              33L,      "water"
     )
 
-devtools::use_data(mapbiomas_labels, overwrite = TRUE)
+usethis::use_data(mapbiomas_labels, overwrite = TRUE)
 

@@ -4,6 +4,9 @@
 library(tibble)
 library(devtools)
 
+base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes"
+setwd(base_path)
+
 prodes_labels <- tibble::tribble(
              ~label_pd_pt,     ~label_pd,  ~id_pd,
         #--------------#-----------------#--------
@@ -15,5 +18,5 @@ prodes_labels <- tibble::tribble(
         "HIDROGRAFIA",   "water",         4L
     )
 
-devtools::use_data(prodes_labels, overwrite = TRUE)
+usethis::use_data(prodes_labels, overwrite = TRUE)
 
