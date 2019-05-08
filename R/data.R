@@ -1,4 +1,4 @@
-#' @title Sample time-series from the PRODES system using a fusion model. 
+#' @title Sample time-series from the PRODES system using a fusion model.
 #'
 #' @description A dataset containing a tibble with time series sampled on the
 #' brazilian Amazon. The time series come from Landsat 8 Collection images. The
@@ -19,19 +19,19 @@
 #'   time_series (list containing a tibble with the values of the time series).
 NULL
 
-#' @title Sample time-series from the PRODES system using a fusion model. 
+#' @title Sample time-series from the PRODES system using a fusion model.
 #'
 #' @description A dataset containing a tibble with time series sampled on the
 #' brazilian Amazon. The time series come from Landsat 8 Collection images. The
 #' clouds in the images are filled in using the StarFM image fusion model.
 #' StarFM builds a statistical model between MODIS and LANDSAT images at time
 #' t1 which is later applied to MODIS images at time t0. The result is a
-#' prediction of a Landsat 8 image at t0. These time series are the last four
+#' prediction of a Landsat 8 image at t0. These time series are the best four
 #' time steps of the samples in prodes_samples_starfm.
 #'
 #' @docType data
 #' @keywords datasets
-#' @name prodes_samples_starfm_few_clouds 
+#' @name prodes_samples_starfm_few_clouds
 #' @usage data(prodes_samples_starfm_few_clouds)
 #'
 #' @format A tibble with 15978 rows and 7 variables: (a) longitude: East-west coordinate of the time series sample (WGS 84);
@@ -86,7 +86,7 @@ NULL
 #'
 #' @docType data
 #' @keywords datasets
-#' @name prodes_samples_mask_cloud 
+#' @name prodes_samples_mask_cloud
 #' @usage data(prodes_samples_mask_cloud)
 #'
 #' @format A tibble with 1 rows and 7 variables: (a) longitude: East-west coordinate of the time series sample (WGS 84);
@@ -97,11 +97,11 @@ NULL
 NULL
 
 
-#' @title Sample time-series from the PRODES system using interpolation and 
+#' @title Sample time-series from the PRODES system using interpolation and
 #' LANDSAT 8 images with fewest clouds.
 #'
 #' @description A dataset containing a tibble with time series sampled on the
-#' brazilian Amazon. The time series come from Landsat 8 Collection images 
+#' brazilian Amazon. The time series come from Landsat 8 Collection images
 #' with the fewest cluods on each PRODES year.
 #' The clouds in the images are filled in using billinear resampled MODIS images
 #' (MOD13Q1 and MYD13Q1) of the closest in terms of place and date.
@@ -117,3 +117,45 @@ NULL
 #'   coverage (the name of the coverage associated with the data),
 #'   time_series (list containing a tibble with the values of the time series).
 NULL
+
+
+#' @title Labels of Mapboimas Amazonia.
+#'
+#' @description Labels for the collection 3 of Mapboimas Amazonia.
+#'
+#' @docType data
+#' @keywords datasets
+#' @name mapbiomas_labels
+#' @usage data(mapbiomas_labels)
+#'
+#' @format A tibble with 27 rows and 3 variables: Mapbiomas' labels and ids and
+#'         their mapping to PRODES labels.
+
+
+#' @title Labels of PRODES Amazonia.
+#'
+#' @description Labels for the 2017 release of PRODES shapefile.
+#'
+#' @docType data
+#' @keywords datasets
+#' @name prodes_labels
+#' @usage data(prodes_labels)
+#'
+#' @format A tibble with 6 rows and 3 variables: PRODES' labels in Portuguesse,
+#          English and identifiers for the latter.
+
+
+#' @title Similatity between PRODES and MAPBIOMAS.
+#'
+#' @description Confusion matrices of PRODES (reference map) and MAPBIOMAS. The
+#' comparison was made by mapping the MAPBIOMAS labels to PRODES (see data sets
+#' prodes_labesl and mapbiomas_labels).
+#'
+#' @docType data
+#' @keywords datasets
+#' @name prodes_mapbiomas
+#' @usage data(prodes_mapbiomas)
+#'
+#' @format A tibble with 15 rows and 3 variables: A Landsat Tile, a PRODES year,
+#' and a list-colum with the confusion matrix provided by the caret package.
+
