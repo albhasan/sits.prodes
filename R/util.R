@@ -1,3 +1,26 @@
+#' @title Add user and producer accuracies to a confusion matrix.
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description Add user and produser accuracies to a confusion matrix.
+#'
+#' @param conmat A confusion matrix or a list.
+#' @return       The input matrix with an extra row and column or a list.
+#' @export
+add_upacc <- function(conmat){
+    if (is.matrix(conmat)) {
+        stopifnot(nrow(conmat) == ncol(conmat))
+        cmat <- cbind(conmat, diag(conmat) / rowSums(conmat))
+        cmat <- rbind(cmat, c(diag(conmat) / colSums(conmat), NA))
+        colnames(cmat)[ncol(cmat)] <- "user_acc"
+        rownames(cmat)[nrow(cmat)] <- "prod_acc"
+        return(cmat)
+    }else if (is.list(conmat)) {
+        return(lapply(conmat, add_upacc))
+    }else {
+        stop("Unknow type of argument")
+    }
+}
+
+
 #' @title Test if a character can be casted to numeric.
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description  Test if a character can be casted to numeric.
@@ -111,9 +134,9 @@ get_brick_md <- function(brick_paths){
     # @return A length-one numeric. The number of bands
     get_number_of_bands <- function(filepath) {
         system2("gdalinfo", filepath, stdout = TRUE) %>%
-        stringr::str_subset("Band") %>% dplyr::last() %>%
-        stringr::str_split(" ") %>% unlist() %>% dplyr::nth(2) %>%
-        as.numeric() %>% return()
+            stringr::str_subset("Band") %>% dplyr::last() %>%
+            stringr::str_split(" ") %>% unlist() %>% dplyr::nth(2) %>%
+            as.numeric() %>% return()
     }
     brick_df <- lapply(brick_paths, function(x){
         fn <- substr(basename(x), 1, nchar(basename(x)) - 4)
@@ -143,6 +166,33 @@ get_brick_md <- function(brick_paths){
         return(res)
     })
     return(as.data.frame(do.call(rbind, brick_df), stringsAsFactors = FALSE))
+}
+
+
+#' @title Get metadata from an image.
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description   Get metadata from a image's path.
+#'
+#' @param img_path A character. Path to a file.
+#' @return         A list of character.
+#' export
+get_img_md <- function(img_path){
+    img_raster <- img_path %>% raster::raster()
+    img_extent <- img_raster %>% raster::extent()
+    param_crs <- paste0("'", raster::projection(img_raster), "'")
+    param_extent_output <- c(img_extent@xmin, img_extent@ymin,
+                             img_extent@xmax, img_extent@ymax)
+    param_ncol <- ncol(img_raster)
+    param_nrow <- nrow(img_raster)
+    param_img_size <- c(param_ncol, param_nrow)
+    param_pixel_size_x <- raster::xres(img_raster)
+    param_pixel_size_y <- raster::yres(img_raster)
+
+    return(list(crs = param_crs,
+                extent_output = param_extent_output,
+                ncol = param_ncol, nrow = param_nrow, img_size = param_img_size,
+                pixel_size_x = param_pixel_size_x,
+                pixel_size_y = param_pixel_size_y))
 }
 
 
@@ -182,29 +232,41 @@ splitAt <- function(x, pos){
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description Rasterize a sf object to match the given raster
 #'
-#' @param vector_sf    A sf object. 
+#' @param vector_sf    A sf object.
 #' @param raster_r     A raster object. This raster is the reference for coordinate sytem, spatial resolution, and dimensions.
 #' @param vector_field A length-one character. The name of an integer column in vector_sf.
-#' @return             A raster layer. 
+#' @param raster_path  A length-one character. An optional file path to store the resulting raster.
+#' @return             A raster layer.
 #' @export
-vector2raster <- function(vector_sf, raster_r, vector_field){
+vector2raster <- function(vector_sf, raster_r, vector_field, 
+                          raster_path = tempfile(pattern = "vector2raster", fileext = ".tif")){
+    #vector_sf = sf::st_read("/home/alber/Documents/data/experiments/prodes_reproduction/data/vector/prodes/prodes_tiled", "PDigital2017_AMZ_pol_225_063") %>% dplyr::mutate(label_id = 1:n())
+    #raster_r = raster::raster("/home/alber/Documents/data/experiments/prodes_reproduction/data/raster/mapbiomas/amazonia/reclas2prodes/Classification_2013_22563_prodes.tif")
+    #vector_field = "label_id"
+    #no_data = -9999
+    #raster_path = tempfile(pattern = "vector2raster", fileext = ".tif")
+
     stopifnot(lapply(vector_sf, class)[[vector_field]] == "integer")
 
-    tmp_raster_path <- tempfile(pattern = "vector2raster", fileext = ".tif")
-    tmp_vector_path <- tempfile(pattern = "vector2raster", fileext = ".shp")
     raster::writeRaster(raster::setValues(raster_r, NA),
-                        filename = tmp_raster_path, overwrite = TRUE)
+                        filename = raster_path,
+                        overwrite = TRUE,
+                        options = c("BIGTIFF=YES"))
+    tmp_vector_path <- tempfile(pattern = "vector2raster", fileext = ".shp")
     suppressWarnings(
         vector_sf %>%
-        sf::st_transform(crs = raster::projection(raster_r, asText = TRUE)) %>%
-        sf::st_write(dsn = tmp_vector_path, delete_dsn = TRUE,
-                     quiet = TRUE, delete_layer = TRUE)
+            sf::st_transform(crs = raster::projection(raster_r, asText = TRUE)) %>%
+            sf::st_write(dsn = tmp_vector_path,
+                         delete_dsn = TRUE,
+                         quiet = TRUE,
+                         delete_layer = TRUE)
     )
     gdalUtils::gdal_rasterize(src_datasource = tmp_vector_path,
-                              dst_filename = tmp_raster_path, a = vector_field,
+                              dst_filename = raster_path,
+                              a = vector_field,
                               l = tools::file_path_sans_ext(basename(tmp_vector_path)),
                               output_Raster = TRUE) %>%
-        .[[1]] %>% # Cast to raster layer
+        .[[1]] %>% # Cast to raster layer, why? Because fuck you R! That's why
         return()
 }
 
@@ -327,7 +389,7 @@ get_confusion_matrix <- function(cov_res, cov_ref, n, cores = 1L){
 # Given file paths to images, get the scene to which they belong.
 #
 # @param file_path A charater. Paths to image files.
-# @return          A character. The images' Landsat scenes or NA. 
+# @return          A character. The images' Landsat scenes or NA.
 # @export
 get_scene <- function(file_path){
     file_path %>% basename() %>%

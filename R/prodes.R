@@ -12,11 +12,12 @@
 #' 
 #' @param file_pd    A length-one character. Path to a PRODES map (a shapefile).
 #' @param file_rt    A length-one character. Path to raster of reference (a tif).
+#' @param raster_path  A length-one character. An optional file path to store the resulting raster.
 #' @param tile       A length-one character. The Landsat scene id (6 numbers).
 #' @param year_pd    A integer. The years of deforestation to keep in the output.
 #' @param prodes_lbl A tibble mapping the labels of PRODES from Portuguesse to English. It must contais the PRODES' labels in Portuguese (label_ld_pt, character) and english (label_pd, character), and its ID (id_pd, an integer that must have a one-to-one relationship to label_id).
 #' @return           A length-one character. The path to a raster file. 
-prodes2raster <- function(file_pd, file_rt, tile, year_pd, prodes_lbl){
+prodes2raster <- function(file_pd, file_rt, raster_path, tile, year_pd, prodes_lbl){
     fname <- tools::file_path_sans_ext(basename(file_pd))
 
     # prepare labels for recoding and reclassification
@@ -39,7 +40,9 @@ prodes2raster <- function(file_pd, file_rt, tile, year_pd, prodes_lbl){
                       apply(expand.grid(c('d', 'r'), year_pd), 1, paste0, 
                       collapse = ''))) %>%
         dplyr::select(label_id) %>%
-        vector2raster(raster_r = mb_raster, vector_field = "label_id") %>%
+        vector2raster(raster_r = mb_raster,
+                      vector_field = "label_id",
+                      raster_path = raster_path) %>%
         attr("file") %>% attr("name") %>%
         return()
 }
