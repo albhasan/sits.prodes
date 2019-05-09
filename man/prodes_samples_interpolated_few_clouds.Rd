@@ -3,7 +3,7 @@
 \docType{data}
 \name{prodes_samples_interpolated_few_clouds}
 \alias{prodes_samples_interpolated_few_clouds}
-\title{Sample time-series from the PRODES system using interpolation and 
+\title{Sample time-series from the PRODES system using interpolation and
 LANDSAT 8 images with fewest clouds.}
 \format{A tibble with 16305 rows and 7 variables: (a) longitude: East-west coordinate of the time series sample (WGS 84);
   latitude (North-south coordinate of the time series sample in WGS 84), start_date (initial date of the time series),
@@ -15,7 +15,7 @@ data(prodes_samples_interpolated_few_clouds)
 }
 \description{
 A dataset containing a tibble with time series sampled on the
-brazilian Amazon. The time series come from Landsat 8 Collection images 
+brazilian Amazon. The time series come from Landsat 8 Collection images
 with the fewest cluods on each PRODES year.
 The clouds in the images are filled in using billinear resampled MODIS images
 (MOD13Q1 and MYD13Q1) of the closest in terms of place and date.

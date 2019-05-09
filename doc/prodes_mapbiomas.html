@@ -12,7 +12,7 @@
 
 <meta name="author" content="Alber Sánchez" />
 
-<meta name="date" content="2019-05-06" />
+<meta name="date" content="2019-05-08" />
 
 <title>prodes mapbiomas</title>
 
@@ -36,7 +36,7 @@
 
 <h1 class="title toc-ignore">prodes mapbiomas</h1>
 <h4 class="author">Alber Sánchez</h4>
-<h4 class="date">2019-05-06</h4>
+<h4 class="date">2019-05-08</h4>
 
 
 
@@ -109,6 +109,24 @@ water
 </tbody>
 </table>
 </div>
+</div>
+<div id="mapbiomas" class="section level2">
+<h2>Mapbiomas</h2>
+<ul>
+<li>Their Landsat images’ maximum cloud cover is 30%</li>
+<li>Their classification algorithm is random forest</li>
+<li>Their maps accuracy is unavailable (under construction)</li>
+<li>Their maps have 6 (plus ‘No information’) classes (out of 27 for the whole Mapbiomas).</li>
+<li>They use 10 variables for classification:
+<ul>
+<li>GVS Green Vegetation Shade (mean and sd)</li>
+<li>NFVI Normalized Fraction Difference Index (mean and sd)</li>
+<li>NPV Non-Photosynthetic Vegetation (mean and sd)</li>
+<li>Shade and Soil fractions (means and sds)</li>
+</ul></li>
+<li>During training, they sampled TerraClass, GlobeLand30, PRODES, Global Forest Cover, ESA CCI (among others) using a majority rule.</li>
+<li>They used postprocessing rules for improving their results.</li>
+</ul>
 <div id="mapbiomas-to-prodes" class="section level3">
 <h3>Mapbiomas to PRODES</h3>
 <table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
@@ -125,74 +143,10 @@ label_pd
 <tbody>
 <tr>
 <td style="text-align:left;">
-1 Forest
-</td>
-<td style="text-align:left;">
-forest
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-1.1 Natural Forest
-</td>
-<td style="text-align:left;">
-forest
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
 1.1.1 Forest Formation
 </td>
 <td style="text-align:left;">
 forest
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-1.1.2 Savanna Formation
-</td>
-<td style="text-align:left;">
-no forest
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-1.1.3 Mangrove
-</td>
-<td style="text-align:left;">
-forest
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-1.2 Forest Plantation
-</td>
-<td style="text-align:left;">
-forest
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-2 Non Forest Natural Formation
-</td>
-<td style="text-align:left;">
-no forest
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-2.1 Wetland
-</td>
-<td style="text-align:left;">
-no forest
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-2.2 Grass Formation
-</td>
-<td style="text-align:left;">
-no forest
 </td>
 </tr>
 <tr>
@@ -205,74 +159,10 @@ no forest
 </tr>
 <tr>
 <td style="text-align:left;">
-3 Farming
-</td>
-<td style="text-align:left;">
-deforestation
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-3.1 Pasture
-</td>
-<td style="text-align:left;">
-deforestation
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-3.2 Agriculture
-</td>
-<td style="text-align:left;">
-deforestation
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-3.2.1 Annual and Perennial Crop
-</td>
-<td style="text-align:left;">
-deforestation
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-3.2.2 Semi-Perennial Crop
-</td>
-<td style="text-align:left;">
-deforestation
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
 3.3 Mosaic of Agriculture and Pasture
 </td>
 <td style="text-align:left;">
 deforestation
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-4 Non vegerated area
-</td>
-<td style="text-align:left;">
-no forest
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-4.1 Beach and Dune
-</td>
-<td style="text-align:left;">
-no forest
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-4.2 Urban Infrastucture
-</td>
-<td style="text-align:left;">
-no forest
 </td>
 </tr>
 <tr>
@@ -297,46 +187,6 @@ water
 </td>
 <td style="text-align:left;">
 no forest
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-4.3 Rocky outcrop
-</td>
-<td style="text-align:left;">
-no forest
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-4.4 Mining
-</td>
-<td style="text-align:left;">
-deforestation
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-5.2 Aquaculture
-</td>
-<td style="text-align:left;">
-water
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-2.3 Salt Flat
-</td>
-<td style="text-align:left;">
-no forest
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-5.1 River, Lake and Ocean
-</td>
-<td style="text-align:left;">
-water
 </td>
 </tr>
 </tbody>

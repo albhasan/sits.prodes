@@ -2,7 +2,7 @@
 % Please edit documentation in R/util.R
 \name{add_upacc}
 \alias{add_upacc}
-\title{Add user and produser accuracies to a confusion matrix.}
+\title{Add user and producer accuracies to a confusion matrix.}
 \usage{
 add_upacc(conmat)
 }

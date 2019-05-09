@@ -12,7 +12,7 @@
 
 <meta name="author" content="Alber Sánchez" />
 
-<meta name="date" content="2019-05-06" />
+<meta name="date" content="2019-05-08" />
 
 <title>Training record</title>
 
@@ -36,7 +36,7 @@
 
 <h1 class="title toc-ignore">Training record</h1>
 <h4 class="author">Alber Sánchez</h4>
-<h4 class="date">2019-05-06</h4>
+<h4 class="date">2019-05-08</h4>
 
 
 
@@ -49,34 +49,24 @@
 <p><strong>One way to understand overfitting is by decomposing generalization error into bias and variance. Bias is a learner’s tendency to consistently learn the same wrong thing. Variance is the tendency to learn random things irrespective of irrespective of the real signal</strong> - <span class="citation">(Domingos 2012)</span></p>
 <ul>
 <li>High bias: High crossvalidation error using a low degree polynomial +There is a high error but training and validation errors are similar.</li>
-<li>High variance: High crossvalidation error using a high degree polynomial
-<ul>
-<li>High variance: There is a big difference between training error and crossvalidation error</li>
-</ul></li>
-<li>Classification with a HIGH BIAS problem (underfit)
-<ul>
+<li>High variance: High crossvalidation error using a high degree polynomial</li>
+<li><p>High variance: There is a big difference between training error and crossvalidation error</p></li>
+<li>Classification with a HIGH BIAS problem (underfit)</li>
 <li>Training set error is high</li>
 <li>Crossvalidation error is close to the trainng error</li>
 <li>If a leraning algorithm is suffering from high bias, getting more training data will not (by itself) help much</li>
-</ul></li>
-<li>Classification with a HIGH VARAINCE problem (overfit)
-<ul>
+<li>Classification with a HIGH VARAINCE problem (overfit)</li>
 <li>Training set error is low</li>
 <li>Crossvalidation error is much bigger than the training set error</li>
-<li>If a leraning algorithm is suffering from high variance getting more training data is likely to help</li>
-</ul></li>
-<li>Fix HIGH BIAS (underfit)
-<ul>
+<li><p>If a leraning algorithm is suffering from high variance getting more training data is likely to help</p></li>
+<li>Fix HIGH BIAS (underfit)</li>
 <li>Try getting additional features (curretn hyppothesis is too simple)</li>
 <li>Try adding polynomial features</li>
 <li>Try decreasing regularization (cost function)</li>
-</ul></li>
-<li>Fix HIGH VARIANCE (overfit)
-<ul>
+<li>Fix HIGH VARIANCE (overfit)</li>
 <li>Get more training examples</li>
 <li>Try smaller set of features (the attributes of each sample)</li>
-<li>Try increasing regularization (keep the features but reduce the magnitud/values of the parameters. Works well if there are a lot of features)</li>
-</ul></li>
+<li><p>Try increasing regularization (keep the features but reduce the magnitud/values of the parameters. Works well if there are a lot of features)</p></li>
 </ul>
 <p>Source: Machine Learning — Andrew Ng, Stanford University [FULL COURSE]</p>
 </div>
@@ -89,6 +79,67 @@
 <p><strong>[The] gap between training accuracy and test accuracy is an example of overfitting</strong> - <span class="citation">(Chollet and Allaire 2018)</span></p>
 <pre><code>#&gt; Warning: Run get_training_logs.R and devtools::build() to update the logs
 #&gt; in this package!</code></pre>
+<table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Classification_type
+</th>
+<th style="text-align:right;">
+Obs_year
+</th>
+<th style="text-align:left;">
+Description
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+interpolated
+</td>
+<td style="text-align:right;">
+23
+</td>
+<td style="text-align:left;">
+The samples were taken from the bricks of Landsat 8 where the clouds were filled up by interpolation of MXD13 data. The vegetation indexes were recalculated from the bricks of the corresponding bands.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+starfm
+</td>
+<td style="text-align:right;">
+23
+</td>
+<td style="text-align:left;">
+The samples were taken from the bricks of Landsat 8 where the clouds were filled up by the StarFM mixture model (Landsat 8 - MOD13Q1 mixture model).
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+simple
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:left;">
+The samples were taken from the bricks of the best 4 Landsat 8 images of a year.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+mask_clouds
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:left;">
+The samples were taken from the bricks of the best 4 Landsat 8 images of a year and the clouds were masked as ‘no_data’.
+</td>
+</tr>
+</tbody>
+</table>
 <table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <thead>
 <tr>

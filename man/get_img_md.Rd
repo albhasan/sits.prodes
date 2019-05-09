@@ -2,7 +2,7 @@
 % Please edit documentation in R/util.R
 \name{get_img_md}
 \alias{get_img_md}
-\title{Get metadata from a image.}
+\title{Get metadata from an image.}
 \usage{
 get_img_md(img_path)
 }

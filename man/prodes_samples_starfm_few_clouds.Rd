@@ -18,7 +18,7 @@ brazilian Amazon. The time series come from Landsat 8 Collection images. The
 clouds in the images are filled in using the StarFM image fusion model.
 StarFM builds a statistical model between MODIS and LANDSAT images at time
 t1 which is later applied to MODIS images at time t0. The result is a
-prediction of a Landsat 8 image at t0. These time series are the last four
+prediction of a Landsat 8 image at t0. These time series are the best four
 time steps of the samples in prodes_samples_starfm.
 }
 \keyword{datasets}
