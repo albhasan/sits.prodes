@@ -130,6 +130,7 @@ NULL
 #'
 #' @format A tibble with 27 rows and 3 variables: Mapbiomas' labels and ids and
 #'         their mapping to PRODES labels.
+NULL
 
 
 #' @title Labels of PRODES Amazonia.
@@ -143,7 +144,7 @@ NULL
 #'
 #' @format A tibble with 6 rows and 3 variables: PRODES' labels in Portuguesse,
 #          English and identifiers for the latter.
-
+NULL
 
 #' @title Similatity between PRODES and MAPBIOMAS.
 #'
@@ -158,4 +159,20 @@ NULL
 #'
 #' @format A tibble with 15 rows and 3 variables: A Landsat Tile, a PRODES year,
 #' and a list-colum with the confusion matrix provided by the caret package.
+NULL
+
+#' @title Validation samples collected by experts.
+#'
+#' @description Set of sample points for validating classification results. The
+#' samples were selected randomically an classified by hand by an expert
+#' (Rodrigo Begotti) using Landsat mosaics from PRODES Digital.
+#'
+#' @docType data
+#' @keywords datasets
+#' @name validation_experts 
+#' @usage data(validation_experts)
+#'
+#' @format An sf object with 450 rows and 9 colmns inclusing Identification,
+#' Landsat tile, and the labels from 2014 to 2017.
+NULL
 

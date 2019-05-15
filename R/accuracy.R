@@ -1,3 +1,27 @@
+#' @title Add user and producer accuracies to a confusion matrix.
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description Add user and produser accuracies to a confusion matrix.
+#'
+#' @param conmat A confusion matrix or a list.
+#' @return       The input matrix with an extra row and column or a list.
+#' @export
+add_upacc <- function(conmat){
+    if (is.matrix(conmat)) {
+        stopifnot(nrow(conmat) == ncol(conmat))
+        ac_mat <- asses_accuracy_simple(conmat)
+        cmat <- cbind(conmat, ac_mat$user)
+        cmat <- rbind(cmat, c(ac_mat$producer, NA))
+        colnames(cmat)[ncol(cmat)] <- "user_acc"
+        rownames(cmat)[nrow(cmat)] <- "prod_acc"
+        return(cmat)
+    }else if (is.list(conmat)) {
+        return(lapply(conmat, add_upacc))
+    }else {
+        stop("Unknow type of argument")
+    }
+}
+
+
 #' @title Asses accuracy
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description Compute the overall, user, and producer accuracies.

@@ -1,26 +1,3 @@
-#' @title Add user and producer accuracies to a confusion matrix.
-#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description Add user and produser accuracies to a confusion matrix.
-#'
-#' @param conmat A confusion matrix or a list.
-#' @return       The input matrix with an extra row and column or a list.
-#' @export
-add_upacc <- function(conmat){
-    if (is.matrix(conmat)) {
-        stopifnot(nrow(conmat) == ncol(conmat))
-        cmat <- cbind(conmat, diag(conmat) / rowSums(conmat))
-        cmat <- rbind(cmat, c(diag(conmat) / colSums(conmat), NA))
-        colnames(cmat)[ncol(cmat)] <- "user_acc"
-        rownames(cmat)[nrow(cmat)] <- "prod_acc"
-        return(cmat)
-    }else if (is.list(conmat)) {
-        return(lapply(conmat, add_upacc))
-    }else {
-        stop("Unknow type of argument")
-    }
-}
-
-
 #' @title Test if a character can be casted to numeric.
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description  Test if a character can be casted to numeric.
@@ -238,7 +215,7 @@ splitAt <- function(x, pos){
 #' @param raster_path  A length-one character. An optional file path to store the resulting raster.
 #' @return             A raster layer.
 #' @export
-vector2raster <- function(vector_sf, raster_r, vector_field, 
+vector2raster <- function(vector_sf, raster_r, vector_field,
                           raster_path = tempfile(pattern = "vector2raster", fileext = ".tif")){
     #vector_sf = sf::st_read("/home/alber/Documents/data/experiments/prodes_reproduction/data/vector/prodes/prodes_tiled", "PDigital2017_AMZ_pol_225_063") %>% dplyr::mutate(label_id = 1:n())
     #raster_r = raster::raster("/home/alber/Documents/data/experiments/prodes_reproduction/data/raster/mapbiomas/amazonia/reclas2prodes/Classification_2013_22563_prodes.tif")

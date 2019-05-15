@@ -37,33 +37,29 @@ if (!all(vapply(c(in_dir), dir.exists, logical(1)))) {
     stop("Directory not found!")
 }
 
+
+
+data(prodes_labels, package = "sits.prodes")
 img_pattern <- "^l8_(simple|maskcloud)_[0-9]{6}_[0-9]{4}_dl-rf-svm_[0-9]{4}_[0-9]_[0-9]{4}_[0-9]_vote.tif"
+corner_masks <- file.path(base_path, "data/raster/mask_l9_corner")
+
 
 # key for encoding PRODES's SHP into a TIF
-prodes_labels <- list(
-    DESMATAMENTO  = "deforestation",
-    RESIDUO       = "deforestation",
-    FLORESTA      = "forest",
-    NAO_FLORESTA  = "no forest",
-    NAO_FLORESTA2 = "no forest",
-    HIDROGRAFIA   = "water"
-)
+prodes_labels_ls <- prodes_labels %>% dplyr::pull(label_pd) %>% as.list()
+names(prodes_labels_ls) <- prodes_labels %>% dplyr::pull(label_pd_pt) 
 water_masks <- c(
     "225063" = file.path(base_path, "data/raster/mascaras/surface_water-Pekel_et_al_2016/tiled/extent_225063.tif"),
     "226064" = file.path(base_path, "data/raster/mascaras/surface_water-Pekel_et_al_2016/tiled/extent_226064.tif"),
-    "232066" = file.path(base_path, "data/raster/mascaras/surface_water-Pekel_et_al_2016/tiled/extent_232066.tif"),
     "233067" = file.path(base_path, "data/raster/mascaras/surface_water-Pekel_et_al_2016/tiled/extent_233067.tif")
 )
 prodes_maps <- c(
-    "225063" = file.path(base_path, "data/vector/prodes_tiled/prodes_225_063.shp"),
-    "226064" = file.path(base_path, "data/vector/prodes_tiled/prodes_226_064.shp"),
-    "232066" = file.path(base_path, "data/vector/prodes_tiled/prodes_232_066.shp"),
-    "233067" = file.path(base_path, "data/vector/prodes_tiled/prodes_233_067.shp")
+    "225063" = file.path(base_path, "data/vector/prodes/prodes_tiled/PDigital2017_AMZ_pol_225_063.shp"),
+    "226064" = file.path(base_path, "data/vector/prodes/prodes_tiled/PDigital2017_AMZ_pol_226_064.shp"),
+    "233067" = file.path(base_path, "data/vector/prodes/prodes_tiled/PDigital2017_AMZ_pol_233_067.shp")
 )
 stopifnot(all(vapply(water_masks, file.exists, logical(1))))
 stopifnot(all(vapply(prodes_maps, file.exists, logical(1))))
 
-corner_masks <- file.path(base_path, "data/raster/mask_l9_corner")
 
 # get classification labels
 labels_csv <- label_file %>%
@@ -77,7 +73,7 @@ if(sum(stringr::str_detect(names(int_labels), "_[0-9]+$")) > 0){
         stringr::str_replace_all(pattern = "_[0-9]+$", replacement = "")
 }
 # match reference and results keys
-unique_prodes_labels <- prodes_labels %>% unlist() %>% unique() %>% sort()
+unique_prodes_labels <- prodes_labels_ls %>% unlist() %>% unique() %>% sort()
 kv_ref_res <- dplyr::full_join(
     dplyr::tibble(key_ref = seq_along(unique_prodes_labels),
                   label = unique_prodes_labels),
@@ -128,7 +124,7 @@ res_acc <- purrr::map(path_res_vec, function(res_file, out_dir = NULL){
     # rasterize PRODES
     cov_ref <- prodes_rasterize(ref_path = prodes_maps[scene],
                                 pyear = pyear, cov_res = cov_res,
-                                level_key_pt = prodes_labels,
+                                level_key_pt = prodes_labels_ls,
                                 level_key = key_labels_rev) %>%
         ensurer::ensure_that(!is.null(.), err_desc = "Rasterization failed!")
 
@@ -149,7 +145,7 @@ res_acc <- purrr::map(path_res_vec, function(res_file, out_dir = NULL){
         dplyr::rename("lab_ref_num" = !!names(.[1]), "lab_res_num" = !!names(.[2])) %>%
         dplyr::mutate(lab_ref = dplyr::recode(lab_ref_num, !!!key_labels),
                       lab_res = dplyr::recode(lab_res_num, !!!key_labels)) %>%
-        dplyr::filter(lab_res %in% unlist(prodes_labels))                           # filter out classes not available in PRODES
+        dplyr::filter(lab_res %in% unlist(prodes_labels_ls))                           # filter out classes not available in PRODES
 
     # computing and storing reference-result differences
     cov_diff <- cov_ref - cov_res_masked

@@ -3,6 +3,7 @@ title: "Samples"
 author: "Alber Sánchez"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
+bibliography: references.bib
 vignette: >
   %\VignetteIndexEntry{Samples}
   %\VignetteEngine{knitr::rmarkdown}

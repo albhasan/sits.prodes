@@ -15,15 +15,7 @@ knitr::opts_chunk$set(
 collapse = TRUE,
 comment = "#>"
 )
-
-# TODO: remove
-#library(devtools)
-#devtools::load_all()
-#devtools::build(vignettes = FALSE, manual = TRUE)
-#devtools::install()
 ```
-
-
 
 
 ```{r work, include = FALSE}
@@ -31,6 +23,7 @@ experiment_set <- list(few_cloud         = c("rep_prodes_40", "rep_prodes_41", "
                        few_masked_clouds = c("rep_prodes_50", "rep_prodes_51", "rep_prodes_52"))
 
 library(dplyr)
+library(lubridate)
 library(knitr)
 library(xtable)
 library(ggplot2)
@@ -50,6 +43,7 @@ accuracy_tb <- accuracy_ls %>% names() %>%
     dplyr::rename("file_path" = "value")
 }
 
+# get data for confussion matrices
 if (nrow(accuracy_tb) > 0) {
     accuracy_tb <- accuracy_tb %>% 
         dplyr::mutate(acc_data = accuracy_ls,
@@ -61,110 +55,181 @@ if (nrow(accuracy_tb) > 0) {
                       scene = stringr::str_extract(basename(file_path), "[0-9]{6}"),
                       pyear = purrr::map_chr(file_path, function(x){
                           as.integer(dplyr::last(unlist(stringr::str_extract_all(basename(x), "[0-9]{4}"))))
-                      }),
-                      overall = purrr::map_dbl(accuracy_ls, function(x){x$accuracy$overall}), 
-                      overall2 = purrr::map_dbl(accuracy_ls, function(x){sits.prodes::asses_accuracy_simple(x$error_matrix)$overall}),
-                      up_acc = purrr::map(accuracy_ls, function(x){
-                           c(x$accuracy$user, x$accuracy$producer) %>%
-                               tibble::enframe(name = NULL) %>%
-                               dplyr::bind_cols(cname =  c(paste0("ua_", names(x$accuracy$user)), paste0("pa_", names(x$accuracy$producer))))  %>%
-                               tidyr::spread("cname", "value") %>%
-                               return()
-                      }),
-                      up_acc2 = purrr::map(accuracy_ls, function(x){
-                          res <- sits.prodes::asses_accuracy_simple(x$error_matrix)
-                          c(res$user, res$producer) %>%
-                              tibble::enframe(name = NULL) %>%
-                              dplyr::bind_cols(cname =  c(paste0("ua2_", names(res$user)), paste0("pa2_", names(res$producer)))) %>%
-                              tidyr::spread("cname", "value") %>%
-                              return()
-                      })
-        ) %>%
-        dplyr::select(experiment, algorithm, scene, pyear, smooth, overall, overall2, up_acc, up_acc2, acc_data, file_path)
+                      })) %>%
+        dplyr::select(experiment, algorithm, scene, pyear, smooth, #overall, overall2, up_acc, up_acc2, 
+                      acc_data, file_path) %>% 
+        dplyr::mutate(cm = purrr::map(.$acc_data, function(x){return(x$error_matrix)})) %>%
+        dplyr::mutate(up_acc2 = purrr::map(accuracy_ls, function(x){
+            res <- sits.prodes::asses_accuracy_simple(x$error_matrix)
+            c(res$user, res$producer) %>%
+                tibble::enframe(name = NULL) %>%
+                dplyr::bind_cols(cname =  c(paste0("ua_", names(res$user)), paste0("pa_", names(res$producer)))) %>%
+                tidyr::spread("cname", "value") %>%
+                return()
+        })) %>%
+        dplyr::mutate(up_acc3 = purrr::map(.$cm, add_upacc)) %>%
+        dplyr::arrange(experiment, algorithm, scene, pyear, smooth)
 }
+
+# get data for grpahs
+acc_tb <- accuracy_tb %>% 
+    dplyr::mutate(ua = purrr::map(.$up_acc3, function(x){
+        return(x[1:(nrow(x) - 1), ncol(x)])
+    }),
+    pa = purrr::map(.$up_acc3, function(x){
+        return(x[nrow(x), 1:(ncol(x) - 1)])
+    })) %>% 
+    dplyr::select(experiment, algorithm, scene, pyear, smooth, up_acc2) %>% 
+    tidyr::unnest() %>% 
+    tidyr::gather(tidyselect::starts_with("pa_"), tidyselect::starts_with("ua_"), 
+                  key = "variable", value = "value") %>% 
+    dplyr::mutate(acc_type = ifelse(stringr::str_sub(variable, 1, 3) == "ua_", 
+                                    "user", "producer"),
+                  variable = stringr::str_sub(variable, 4)) 
+acc_pr <- acc_tb %>% dplyr::filter(acc_type == "producer") %>% 
+    dplyr::rename(prod_acc = value) %>% 
+    dplyr::select(-acc_type)
+acc_ur <- acc_tb %>% dplyr::filter(acc_type == "user") %>% 
+    dplyr::rename(user_acc = value) %>% 
+    dplyr::select(-acc_type)
+pa_acc_tb <- acc_pr %>% 
+    dplyr::inner_join(acc_ur, by = c("experiment", "algorithm", "scene", "pyear", 
+                                     "smooth", "variable"))
 
 ```
 
 
 
 
-# Accuracy
+## Accuracy
 
 It is a decomposition of the accuracy, originally proposed by Story and Congalton [@Story:1986].
 * **Producers' accuracy** (omission error) is how well a specific area on the Earth is mapped. It 
 is the probability that a reference sample is correctly classified. 
 * **User's accuracy** (or reliability) is how well the map represents what is really on the ground.
 
-![Exmple of user and producer accuracies](./img/user_producer_accuracy_example.png)
+
+```{r, out.width = "6
+00px", echo = FALSE}
+knitr::include_graphics("./img/user_producer_accuracy_example.png")
+```
+
 
 [TODO] Olafson extended this definition by pointig the need of normalizing the results using the area of on class
 
 
-# Classification results
+## Classification results
 
-## Overall accuracy
+### Overall accuracy
 
 * Random forest bahaves homogenously accros experiments, smooths, and scenes.
 * Accuracy improvement due to smooth window size is marginal.
-* Filling the clouds using with No Data decreses Deep Learning's accuracy.
+* Filling the clouds using  *No Data* decreses Deep Learning's accuracy.
 
-```{r accuracy_overall, fig.width=7, fig.height=4, echo=FALSE}
 
+
+### Accuracy by type of algorithm
+
+
+```{r plot_graphics_algorithm, echo=FALSE, fig.height=7, fig.width=9, results='asis'}
+
+pa_acc_tb %>% 
+    dplyr::filter(algorithm == "dl", smooth == "smooth_7x7_n10") %>% 
+    ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
+                        color = variable, 
+                        shape = experiment
+    )) +
+    ggplot2::geom_point() +
+    ggplot2::facet_wrap(scene ~ pyear) + 
+    labs(title = "Deep Learning smooth_7x7_n10", 
+         x = "Producer accuracy", 
+         y = "User accuracy")
+pa_acc_tb %>% 
+    dplyr::filter(algorithm == "rf", smooth == "smooth_7x7_n10") %>% 
+    ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
+                        color = variable, 
+                        shape = experiment
+    )) +
+    ggplot2::geom_point() +
+    ggplot2::facet_wrap(scene ~ pyear) + 
+    labs(title = "Random Forest smooth_7x7_n10", 
+         x = "Producer accuracy", 
+         y = "User accuracy")
+pa_acc_tb %>% 
+    dplyr::filter(algorithm == "svm", smooth == "smooth_7x7_n10") %>% 
+    ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
+                        color = variable, 
+                        shape = experiment
+    )) +
+    ggplot2::geom_point() +
+    ggplot2::facet_wrap(scene ~ pyear) + 
+    labs(title = "Suport Vector Machine smooth_7x7_n10", 
+         x = "Producer accuracy", 
+         y = "User accuracy")
+pa_acc_tb %>% 
+    dplyr::filter(algorithm == "vote", smooth == "smooth_7x7_n10") %>% 
+    ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
+                        color = variable, 
+                        shape = experiment
+    )) +
+    ggplot2::geom_point() +
+    ggplot2::facet_wrap(scene ~ pyear) + 
+    labs(title = "Vote DL RF SVM smooth_7x7_n10", 
+         x = "Producer accuracy", 
+         y = "User accuracy")
+
+```
+
+
+### Accuracy by type of smooth
+
+
+```{r plot_graphics_smooth, echo=FALSE, fig.height=7, fig.width=9, results='asis'}
+pa_acc_tb %>% 
+    dplyr::filter(variable == "deforestation", experiment == "rep_prodes_40") %>% 
+    ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
+                        color = smooth, 
+                        shape = algorithm
+    )) +
+    ggplot2::geom_point() +
+    ggplot2::facet_wrap(scene ~ pyear) + 
+    labs(title = "rep_prodes_40 deforestation", 
+         x = "Producer accuracy", 
+         y = "User accuracy")
+```
+
+
+
+
+
+### Confusion matrices
+
+
+```{r confusion_matrix, echo=FALSE, results='asis'}
 if (nrow(accuracy_tb) > 0) {
-    for (exp_set in seq_along(experiment_set)) {
-        for (sm in unique(accuracy_tb$smooth)) {
-            p <- accuracy_tb %>% 
-                dplyr::filter(smooth == sm, 
-                              experiment %in% experiment_set[[exp_set]]) %>%
-                ggplot2::ggplot() + 
-                #ggplot2::geom_line(aes(x = pyear, y = overall, group = experiment, color = experiment)) + 
-                #ggplot2::geom_point(aes(x = pyear, y = overall, color = experiment)) + 
-                ggplot2::geom_line(aes(x = pyear, y = overall2, group = experiment, color = experiment)) + 
-                ggplot2::geom_point(aes(x = pyear, y = overall2, color = experiment)) + 
-                ggplot2::facet_grid(scene ~ algorithm) +
-                ggplot2::ggtitle(sprintf("Overall accuracy %s %s", names(experiment_set)[[exp_set]], sm)) + 
-                ggplot2::coord_cartesian(ylim = c(0.5, 1))
-            print(p)
-        }
+    for (i in 1:nrow(accuracy_tb)) {
+        cap <- sprintf("Confusion matrix %s %s %s %s %s ", 
+                       unlist(accuracy_tb[i, "experiment"]), 
+                       unlist(accuracy_tb[i, "scene"]), 
+                       unlist(accuracy_tb[i, "pyear"]),
+                       unlist(accuracy_tb[i, "algorithm"]),
+                       unlist(accuracy_tb[i, "smooth"]))
+        cat(paste0("### ", cap), "\n")
+        p_conmat <- suppressMessages(suppressWarnings(accuracy_tb$up_acc3[[i]] %>% 
+            apply(2, function(x){x/1}) %>% 
+            tibble::as_tibble(rownames = NA, caption = cap) %>% 
+            knitr::kable(digits = 2, row.names = TRUE, full_width = FALSE) %>% 
+            kableExtra::kable_styling()))
+        print(p_conmat)
+        cat("\n\n")
     }
 }
 
 ```
 
-## User-Producer accuracy
 
 
-```{r accuracy_user_producer, fig.width=7, fig.height=4, echo=FALSE}
-# TODO: check if the vignette size is less than 778052
-# 
 
-cnames <- colnames(accuracy_tb$up_acc[[1]])
-#cnames <- colnames(accuracy_tb$up_acc2[[1]])
-if (nrow(accuracy_tb) > 0) {
-    for (exp_set in seq_along(experiment_set)) {
-        for (sm in unique(accuracy_tb$smooth)) {
-            for (al in unique(accuracy_tb$algorithm)) {
-                p <- accuracy_tb %>% 
-                    tidyr::unnest(up_acc) %>%
-                    #tidyr::unnest(up_acc2) %>%
-                    dplyr::select(-c(acc_data, file_path, overall, overall2)) %>%
-                    tidyr::gather_(cnames, key = "up_accuracy", value = "up_value") %>%
-                    dplyr::filter(smooth == sm, 
-                                  algorithm == al,
-                                  experiment %in% experiment_set[[exp_set]]) %>%
-                    ggplot2::ggplot() + 
-                    ggplot2::geom_line(aes(x = pyear, y = up_value, group = up_accuracy, color = up_accuracy)) + 
-                    ggplot2::geom_point(aes(x = pyear, y = up_value, color = up_accuracy)) + 
-                    ggplot2::facet_grid(experiment ~ scene) +
-                    ggplot2::ggtitle(sprintf("Overall accuracy %s %s %s", names(experiment_set)[[exp_set]], al, sm))
-                print(p)
-            }
-        }
-    }
-}
-
-
-```
 
 
 # References
