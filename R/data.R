@@ -169,8 +169,8 @@ NULL
 #'
 #' @docType data
 #' @keywords datasets
-#' @name validation_experts 
-#' @usage data(validation_experts)
+#' @name expert_validation
+#' @usage data(expert_validation)
 #'
 #' @format An sf object with 450 rows and 9 colmns inclusing Identification,
 #' Landsat tile, and the labels from 2014 to 2017.

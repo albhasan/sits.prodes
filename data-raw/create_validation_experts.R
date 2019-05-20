@@ -1,17 +1,27 @@
 #!/usr/bin/Rscript
-# prepare the samples acquired by experts
-suppressPackageStartupMessages(library(dplyr))
-suppressPackageStartupMessages(library(sf))
-suppressPackageStartupMessages(library(ensurer))
+
+# PREPARE THE SAMPLES VALIDATED BY EXPERTS
+# VALIDATE CLASSIFICATION RESULTS USING THE SAMPLES PROVIDED BY THE EXPERTS
+
+suppressMessages(library(caret))
+suppressMessages(library(dplyr))
+suppressMessages(library(ensurer))
+suppressMessages(library(purrr))
+suppressMessages(library(raster))
+suppressMessages(library(sf))
+suppressMessages(library(sits.prodes))
+suppressMessages(library(stringr))
+suppressMessages(library(tibble))
+suppressMessages(library(tidyr))
 
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 setwd(base_path)
 
-###############
-# Rodrigo's shp
-###############
 data("prodes_labels", package = "sits.prodes")
-prodes_lbl <- prodes_labels
+
+#------------------------------------------------------------------------------
+# prepare the shapefile
+#------------------------------------------------------------------------------
 
 # read shapefile
 shp_path <- file.path(base_path, "data/samples/expert_validated_samples/samples") %>%
@@ -70,7 +80,7 @@ validation_experts %>%
     unlist() %>%
     unique() %>%
     .[!is.na(.)] %>%
-	    ensurer::ensure_that(all(. %in% c("cloud", "degradation", prodes_lbl$label_pd)), err_desc = "Unknow labels found!") 
+	    ensurer::ensure_that(all(. %in% c("cloud", "degradation", prodes_labels$label_pd)), err_desc = "Unknow labels found!") 
 
 validation_experts <- validation_experts %>%
     dplyr::mutate(to_remove = all(is.na(Label2013), is.na(Label2014),
@@ -78,7 +88,82 @@ validation_experts <- validation_experts %>%
     tidyr::drop_na(to_remove) %>%
     dplyr::select(-to_remove)
 
+
+#------------------------------------------------------------------------------
+# do the validation
+#------------------------------------------------------------------------------
+
+experiments <- c("rep_prodes_40", "rep_prodes_41", "rep_prodes_42", "rep_prodes_50", "rep_prodes_51", "rep_prodes_52" )
+results     <- c("results_dl", "results_rf", "results_svm", "results_vote")
+smooths     <- c("smooth_3x3_n10", "smooth_5x5_n10", "smooth_7x7_n10")
+
+# get a tibble of raster files
+expert_validation <- expand.grid(experiment = experiments, algorithm = results, smooth = smooths, stringsAsFactors = FALSE) %>%
+    tibble::as_tibble() %>%
+    dplyr::mutate(file_path = purrr::pmap(., function(experiment, algorithm, smooth){
+        file.path(base_path, "03_classify", experiment, algorithm, smooth) %>%
+            list.files(pattern = "*_masked.tif$", recursive = TRUE, full.names = TRUE)
+    })) %>%
+    tidyr::unnest() %>%
+    dplyr::mutate(fname = basename(file_path)) %>%
+    dplyr::mutate(scene = purrr::map_chr(.$fname, function(x){
+                        x %>% stringr::str_extract(pattern = '_[]0-9]{6}_') %>%
+                            stringr::str_sub(start = 2, end = -2)
+                    }), 
+                  pyear = purrr::map_chr(.$fname, function(x){
+                        x %>% stringr::str_extract_all(pattern = '_[]0-9]{4}_') %>%
+                            unlist() %>% tail(n = 1) %>%
+                            stringr::str_sub(start = 2, end = -2)
+                    }))
+
+# get the values
+expert_validation$match_ref_res <- expert_validation%>% dplyr::select(file_path, scene) %>%
+    purrr::pmap(function(file_path, scene){
+        # build recode table
+        lab_tb <- prodes_labels %>% dplyr::select(label_pd, id_pd) %>%
+            dplyr::distinct() %>% dplyr::arrange(id_pd)
+        lab <- lab_tb %>% dplyr::pull(label_pd) %>% as.list()
+        names(lab) <- lab_tb %>% dplyr::pull(id_pd)
+        # 
+        r <- file_path %>% raster::raster()
+        pts <- validation_experts %>% dplyr::filter(tile == scene) %>%
+            sf::st_transform(crs = r@crs@projargs)
+        pts$raster_val <- r %>% raster::extract(y = as(pts, "Spatial"))
+        pts %>% dplyr::mutate(label_res = dplyr::recode(.$raster_val, !!!lab)) %>%
+            return()
+    })
+
+# compute confusion matrixes
+expert_validation$confusion_matrix <- lapply(expert_validation$match_ref_res, function(x){
+        label_tb <- x %>% sf::st_set_geometry(NULL) %>%
+            tibble::as_tibble() %>%
+            dplyr::select(tidyselect::starts_with("Label"))
+        ys <- label_tb %>%
+            dplyr::select(tidyselect::starts_with("Label", ignore.case = FALSE)) %>%
+            colnames() %>% stringr::str_extract("[0-9]{4}") %>% sort()
+        res <- list()
+        for (y in ys) {
+            con_mat <- NA
+            cname <- paste("Label", y, sep = '')
+            cm_dat <- label_tb %>%
+                dplyr::select(c(cname, "label_res")) %>%
+                tidyr::drop_na() %>%
+                dplyr::filter(.data[[cname]] %in% unique(dplyr::pull(prodes_labels, label_pd)))
+            # compute confusion matrix
+            if(nrow(cm_dat) > 0) {
+                flevels <- prodes_labels %>% dplyr::pull(label_pd) %>% unlist() %>% unique()
+                data_f <- factor(label_tb[[cname]], flevels)
+                ref_f  <- factor(label_tb[["label_res"]], flevels)
+                con_mat <- caret::confusionMatrix(data = data_f,
+                                                  reference = ref_f)
+            }
+            res[[y]] <- con_mat
+        }
+        return(res)
+    }
+)
+
 # save
 setwd(file.path(base_path, "Rpackage", "sits.prodes"))
-usethis::use_data(validation_experts, overwrite = TRUE) 
+usethis::use_data(expert_validation, overwrite = TRUE)
 
