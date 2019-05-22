@@ -23,11 +23,12 @@ experiment_set <- list(few_cloud         = c("rep_prodes_40", "rep_prodes_41", "
                        few_masked_clouds = c("rep_prodes_50", "rep_prodes_51", "rep_prodes_52"))
 
 library(dplyr)
-library(lubridate)
-library(knitr)
-library(xtable)
 library(ggplot2)
+library(knitr)
+library(lubridate)
+library(magrittr)
 library(sits.prodes)
+library(xtable)
 
 accuracy_ls <- list()
 accuracy_tb <- tibble::tibble()
@@ -71,14 +72,8 @@ if (nrow(accuracy_tb) > 0) {
         dplyr::arrange(experiment, algorithm, scene, pyear, smooth)
 }
 
-# get data for grpahs
+# get data for graphs
 acc_tb <- accuracy_tb %>% 
-    dplyr::mutate(ua = purrr::map(.$up_acc3, function(x){
-        return(x[1:(nrow(x) - 1), ncol(x)])
-    }),
-    pa = purrr::map(.$up_acc3, function(x){
-        return(x[nrow(x), 1:(ncol(x) - 1)])
-    })) %>% 
     dplyr::select(experiment, algorithm, scene, pyear, smooth, up_acc2) %>% 
     tidyr::unnest() %>% 
     tidyr::gather(tidyselect::starts_with("pa_"), tidyselect::starts_with("ua_"), 
@@ -109,8 +104,7 @@ is the probability that a reference sample is correctly classified.
 * **User's accuracy** (or reliability) is how well the map represents what is really on the ground.
 
 
-```{r, out.width = "6
-00px", echo = FALSE}
+```{r, out.width = "600px", echo = FALSE}
 knitr::include_graphics("./img/user_producer_accuracy_example.png")
 ```
 
@@ -140,8 +134,11 @@ pa_acc_tb %>%
                         shape = experiment
     )) +
     ggplot2::geom_point() +
+    ggplot2::coord_fixed() +
+    ggplot2::xlim(0, 1) +
+    ggplot2::ylim(0, 1) +
     ggplot2::facet_wrap(scene ~ pyear) + 
-    labs(title = "Deep Learning smooth_7x7_n10", 
+    ggplot2::labs(title = "Deep Learning smooth_7x7_n10", 
          x = "Producer accuracy", 
          y = "User accuracy")
 pa_acc_tb %>% 
@@ -151,8 +148,11 @@ pa_acc_tb %>%
                         shape = experiment
     )) +
     ggplot2::geom_point() +
+    ggplot2::coord_fixed() +
+    ggplot2::xlim(0, 1) +
+    ggplot2::ylim(0, 1) +
     ggplot2::facet_wrap(scene ~ pyear) + 
-    labs(title = "Random Forest smooth_7x7_n10", 
+    ggplot2::labs(title = "Random Forest smooth_7x7_n10", 
          x = "Producer accuracy", 
          y = "User accuracy")
 pa_acc_tb %>% 
@@ -162,8 +162,11 @@ pa_acc_tb %>%
                         shape = experiment
     )) +
     ggplot2::geom_point() +
+    ggplot2::coord_fixed() +
+    ggplot2::xlim(0, 1) +
+    ggplot2::ylim(0, 1) +
     ggplot2::facet_wrap(scene ~ pyear) + 
-    labs(title = "Suport Vector Machine smooth_7x7_n10", 
+    ggplot2::labs(title = "Suport Vector Machine smooth_7x7_n10", 
          x = "Producer accuracy", 
          y = "User accuracy")
 pa_acc_tb %>% 
@@ -173,8 +176,11 @@ pa_acc_tb %>%
                         shape = experiment
     )) +
     ggplot2::geom_point() +
+    ggplot2::coord_fixed() +
+    ggplot2::xlim(0, 1) +
+    ggplot2::ylim(0, 1) +
     ggplot2::facet_wrap(scene ~ pyear) + 
-    labs(title = "Vote DL RF SVM smooth_7x7_n10", 
+    ggplot2::labs(title = "Vote DL RF SVM smooth_7x7_n10", 
          x = "Producer accuracy", 
          y = "User accuracy")
 
@@ -192,7 +198,10 @@ pa_acc_tb %>%
                         shape = algorithm
     )) +
     ggplot2::geom_point() +
-    ggplot2::facet_wrap(scene ~ pyear) + 
+    ggplot2::coord_fixed() +
+    #ggplot2::xlim(0, 1) +
+    #ggplot2::ylim(0, 1) +
+    ggplot2::facet_wrap(scene ~ pyear) +
     labs(title = "rep_prodes_40 deforestation", 
          x = "Producer accuracy", 
          y = "User accuracy")

@@ -27,13 +27,6 @@ library(tidyr)
 library(sits.prodes)
 library(xtable)
 
-# TODO: remove
-#library(devtools)
-#devtools::load_all()
-#devtools::build(vignettes = FALSE, manual = TRUE)
-#devtools::install()
-# - - - 
-
 utils::data("prodes_mapbiomas", package = "sits.prodes")
 utils::data("prodes_labels", package = "sits.prodes")
 utils::data("mapbiomas_labels", package = "sits.prodes")
@@ -46,7 +39,7 @@ utils::data("mapbiomas_labels", package = "sits.prodes")
 
 ### PRODES Portuguese to English
 
-```{r, echo = FALSE}
+```{r print_prodes_labels, echo = FALSE}
 prodes_labels %>% 
     dplyr::select(-id_pd) %>% 
     knitr::kable() %>% 
@@ -69,7 +62,7 @@ prodes_labels %>%
 
 ### Mapbiomas to PRODES
 
-```{r, echo = FALSE}
+```{r print_mapbiomas_labels, echo = FALSE}
 mapbiomas_labels %>% 
     dplyr::filter(id_mb %in% c(3, 13, 21, 25, 26, 27)) %>% 
     dplyr::select(-id_mb) %>%
@@ -85,7 +78,7 @@ mapbiomas_labels %>%
 * Data given in numer of pixels (except for user and producer accuracies)
 
 
-```{r, results='asis', echo=FALSE}
+```{r prepare_data, results='asis', echo=FALSE}
 
 # sort by scene-year
 prodes_mapbiomas <- prodes_mapbiomas %>% dplyr::arrange(tile, year_pd)
@@ -97,9 +90,59 @@ prodes_mapbiomas$cm <- lapply(prodes_mapbiomas$conmat, function(x){
 
 # compute user-producer accuracies
 prodes_mapbiomas$up_acc <- add_upacc(prodes_mapbiomas$cm)
+```
 
+
+
+```{r plot_confusion_matrices, results='asis', echo=FALSE, fig.height=9, fig.width=9}
+
+# get data for plots
+acc_tb <- prodes_mapbiomas %>% 
+    dplyr::mutate(up_acc2 = purrr::map(.$conmat, function(x){
+        res <- sits.prodes::asses_accuracy_simple(x$table)
+        c(res$user, res$producer) %>%
+            tibble::enframe(name = NULL) %>%
+            dplyr::bind_cols(cname =  c(paste0("ua_", names(res$user)), 
+                                        paste0("pa_", names(res$producer)))) %>%
+            tidyr::spread("cname", "value") %>%
+            return()
+    })) %>% 
+    dplyr::select(tile, year_pd, up_acc2) %>% 
+    tidyr::unnest() %>% 
+    tidyr::gather(tidyselect::starts_with("pa_"), tidyselect::starts_with("ua_"), 
+                  key = "variable", value = "value") %>% 
+    dplyr::mutate(acc_type = ifelse(stringr::str_sub(variable, 1, 3) == "ua_", 
+                                    "user", "producer"),
+                  variable = stringr::str_sub(variable, 4)) 
+acc_pr <- acc_tb %>% dplyr::filter(acc_type == "producer") %>% 
+    dplyr::rename(prod_acc = value) %>% 
+    dplyr::select(-acc_type)
+acc_ur <- acc_tb %>% dplyr::filter(acc_type == "user") %>% 
+    dplyr::rename(user_acc = value) %>% 
+    dplyr::select(-acc_type)
+pa_acc_tb <- acc_pr %>% 
+    dplyr::inner_join(acc_ur, by = c("tile", "year_pd", "variable"))
+prodes_years <- pa_acc_tb %>% dplyr::pull(year_pd) %>% unique()
+pa_acc_tb %>% 
+    ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
+                        shape = variable, color = variable)) +
+    ggplot2::geom_point() +
+    ggplot2::coord_fixed() +
+    ggplot2::xlim(0, 1) +
+    ggplot2::ylim(0, 1) +
+    ggplot2::facet_wrap(tile ~ year_pd, ncol = length(prodes_years)) + 
+    ggplot2::labs(title = "PRODES - Mapbiomas", 
+         x = "Producer accuracy", 
+         y = "User accuracy")
+
+```
+
+
+
+```{r print_confusion_matrices, results='asis', echo=FALSE}
 for (i in 1:nrow(prodes_mapbiomas)) {
-    cap <- sprintf("Confusion matrix %s %s", unlist(prodes_mapbiomas[i, "tile"]), unlist(prodes_mapbiomas[i, "year_pd"]))
+    cap <- sprintf("Confusion matrix %s %s", unlist(prodes_mapbiomas[i, "tile"]), 
+                   unlist(prodes_mapbiomas[i, "year_pd"]))
     cat(paste0("### ", cap), "\n")
     p_conmat <- prodes_mapbiomas$up_acc[[i]] %>% 
         apply(2, function(x){x/1}) %>% 
