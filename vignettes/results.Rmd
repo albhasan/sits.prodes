@@ -122,7 +122,7 @@ knitr::include_graphics("./img/user_producer_accuracy_example.png")
 
 
 
-### Accuracy by type of algorithm
+### Accuracy by algorithm
 
 
 ```{r plot_graphics_algorithm, echo=FALSE, fig.height=7, fig.width=9, results='asis'}
@@ -130,8 +130,8 @@ knitr::include_graphics("./img/user_producer_accuracy_example.png")
 pa_acc_tb %>% 
     dplyr::filter(algorithm == "dl", smooth == "smooth_7x7_n10") %>% 
     ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
-                        color = variable, 
-                        shape = experiment
+                        color = experiment, 
+                        shape = variable
     )) +
     ggplot2::geom_point() +
     ggplot2::coord_fixed() +
@@ -141,11 +141,12 @@ pa_acc_tb %>%
     ggplot2::labs(title = "Deep Learning smooth_7x7_n10", 
          x = "Producer accuracy", 
          y = "User accuracy")
+
 pa_acc_tb %>% 
     dplyr::filter(algorithm == "rf", smooth == "smooth_7x7_n10") %>% 
     ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
-                        color = variable, 
-                        shape = experiment
+                        color = experiment, 
+                        shape = variable
     )) +
     ggplot2::geom_point() +
     ggplot2::coord_fixed() +
@@ -155,56 +156,73 @@ pa_acc_tb %>%
     ggplot2::labs(title = "Random Forest smooth_7x7_n10", 
          x = "Producer accuracy", 
          y = "User accuracy")
+
 pa_acc_tb %>% 
     dplyr::filter(algorithm == "svm", smooth == "smooth_7x7_n10") %>% 
     ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
-                        color = variable, 
-                        shape = experiment
+                        color = experiment, 
+                        shape = variable
     )) +
     ggplot2::geom_point() +
     ggplot2::coord_fixed() +
     ggplot2::xlim(0, 1) +
     ggplot2::ylim(0, 1) +
     ggplot2::facet_wrap(scene ~ pyear) + 
-    ggplot2::labs(title = "Suport Vector Machine smooth_7x7_n10", 
+    ggplot2::labs(title = "SVM smooth_7x7_n10", 
          x = "Producer accuracy", 
          y = "User accuracy")
+
 pa_acc_tb %>% 
     dplyr::filter(algorithm == "vote", smooth == "smooth_7x7_n10") %>% 
     ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
-                        color = variable, 
-                        shape = experiment
+                        color = experiment, 
+                        shape = variable
     )) +
     ggplot2::geom_point() +
     ggplot2::coord_fixed() +
     ggplot2::xlim(0, 1) +
     ggplot2::ylim(0, 1) +
     ggplot2::facet_wrap(scene ~ pyear) + 
-    ggplot2::labs(title = "Vote DL RF SVM smooth_7x7_n10", 
+    ggplot2::labs(title = "Vote DL, RF, SVM smooth_7x7_n10", 
          x = "Producer accuracy", 
          y = "User accuracy")
 
 ```
 
 
-### Accuracy by type of smooth
+### Accuracy by algorithm and smooth
 
 
 ```{r plot_graphics_smooth, echo=FALSE, fig.height=7, fig.width=9, results='asis'}
+
 pa_acc_tb %>% 
-    dplyr::filter(variable == "deforestation", experiment == "rep_prodes_40") %>% 
+    dplyr::filter(variable == "deforestation" , experiment == "rep_prodes_40") %>% 
     ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
                         color = smooth, 
-                        shape = algorithm
-    )) +
+                        shape = algorithm)) +
     ggplot2::geom_point() +
     ggplot2::coord_fixed() +
     #ggplot2::xlim(0, 1) +
     #ggplot2::ylim(0, 1) +
     ggplot2::facet_wrap(scene ~ pyear) +
-    labs(title = "rep_prodes_40 deforestation", 
+    labs(title = "rep_prodes_40 - deforestation by algorithm and smooth", 
          x = "Producer accuracy", 
          y = "User accuracy")
+
+pa_acc_tb %>% 
+    dplyr::filter(variable == "forest" , experiment == "rep_prodes_40") %>% 
+    ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
+                        color = smooth, 
+                        shape = algorithm)) +
+    ggplot2::geom_point() +
+    ggplot2::coord_fixed() +
+    ggplot2::xlim(0.9, 1) +
+    ggplot2::ylim(0.9, 1) +
+    ggplot2::facet_wrap(scene ~ pyear) +
+    labs(title = "rep_prodes_40 - forest by algorithm and smooth", 
+         x = "Producer accuracy", 
+         y = "User accuracy")
+
 ```
 
 
