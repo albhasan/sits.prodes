@@ -32,11 +32,11 @@ Suggests:
     ggplot2,
     kableExtra,
     knitr,
-    lubridate,
     rgeos,
     rmarkdown,
     rnaturalearth,
     rnaturalearthdata,
+    sits.starfm,
     testthat,
     vctrs,
     xtable

@@ -36,11 +36,11 @@ shp <- lapply(shp_path, function(x){
 })
 
 # make sure the shps have the same fields
-shp_fields <- shp %>% sapply(colnames) %>% unlist() %>% unique() 
+shp_fields <- shp %>% sapply(colnames) %>% unlist() %>% unique()
 shp_proc <- shp %>% lapply(function(x, shp_fields){
-                          missing_names <- shp_fields[!(shp_fields %in% colnames(x))] 
+                          missing_names <- shp_fields[!(shp_fields %in% colnames(x))]
                           for(mn in missing_names){
-                              x <- x %>% dplyr::mutate(!!mn := NA)   
+                              x <- x %>% dplyr::mutate(!!mn := NA)
                           }
                           fn_sort <- sort(colnames(x)[!(colnames(x) %in% "geometry")])
                           x %>% dplyr::select(.dots = !!!fn_sort) %>%
@@ -72,7 +72,7 @@ validation_experts <- validation_experts %>%
         Label2015 = dplyr::recode(.$Label2015, !!!recode_ls),
         Label2016 = dplyr::recode(.$Label2016, !!!recode_ls),
         Label2017 = dplyr::recode(.$Label2017, !!!recode_ls)
-    ) 
+    )
 
 validation_experts %>%
     dplyr::select(Label2013, Label2014, Label2015, Label2016, Label2017) %>%
@@ -80,8 +80,11 @@ validation_experts %>%
     unlist() %>%
     unique() %>%
     .[!is.na(.)] %>%
-	    ensurer::ensure_that(all(. %in% c("cloud", "degradation", prodes_labels$label_pd)), err_desc = "Unknow labels found!") 
+	    ensurer::ensure_that(all(. %in% c("cloud", "degradation",
+	                                      prodes_labels$label_pd)),
+	                         err_desc = "Unknow labels found!")
 
+# remove rows where every observation is NA
 validation_experts <- validation_experts %>%
     dplyr::mutate(to_remove = all(is.na(Label2013), is.na(Label2014),
                   is.na(Label2015), is.na(Label2016), is.na(Label2017))) %>%
@@ -100,31 +103,33 @@ smooths     <- c("smooth_3x3_n10", "smooth_5x5_n10", "smooth_7x7_n10")
 # get a tibble of raster files
 expert_validation <- expand.grid(experiment = experiments, algorithm = results, smooth = smooths, stringsAsFactors = FALSE) %>%
     tibble::as_tibble() %>%
+    # build paths from the combination of experiments, algorithms, and smooths
     dplyr::mutate(file_path = purrr::pmap(., function(experiment, algorithm, smooth){
         file.path(base_path, "03_classify", experiment, algorithm, smooth) %>%
             list.files(pattern = "*_masked.tif$", recursive = TRUE, full.names = TRUE)
     })) %>%
     tidyr::unnest() %>%
     dplyr::mutate(fname = basename(file_path)) %>%
+    # get the year and scene of each image from its name
     dplyr::mutate(scene = purrr::map_chr(.$fname, function(x){
                         x %>% stringr::str_extract(pattern = '_[]0-9]{6}_') %>%
                             stringr::str_sub(start = 2, end = -2)
-                    }), 
+                    }),
                   pyear = purrr::map_chr(.$fname, function(x){
                         x %>% stringr::str_extract_all(pattern = '_[]0-9]{4}_') %>%
                             unlist() %>% tail(n = 1) %>%
                             stringr::str_sub(start = 2, end = -2)
                     }))
 
-# get the values
-expert_validation$match_ref_res <- expert_validation%>% dplyr::select(file_path, scene) %>%
+# get values from the classified rasters using the sample points
+expert_validation$match_ref_res <- expert_validation %>% dplyr::select(file_path, scene) %>%
     purrr::pmap(function(file_path, scene){
-        # build recode table
+        # build the recode table
         lab_tb <- prodes_labels %>% dplyr::select(label_pd, id_pd) %>%
             dplyr::distinct() %>% dplyr::arrange(id_pd)
         lab <- lab_tb %>% dplyr::pull(label_pd) %>% as.list()
         names(lab) <- lab_tb %>% dplyr::pull(id_pd)
-        # 
+        # get values from the rasters
         r <- file_path %>% raster::raster()
         pts <- validation_experts %>% dplyr::filter(tile == scene) %>%
             sf::st_transform(crs = r@crs@projargs)
@@ -133,35 +138,31 @@ expert_validation$match_ref_res <- expert_validation%>% dplyr::select(file_path,
             return()
     })
 
-# compute confusion matrixes
-expert_validation$confusion_matrix <- lapply(expert_validation$match_ref_res, function(x){
-        label_tb <- x %>% sf::st_set_geometry(NULL) %>%
-            tibble::as_tibble() %>%
-            dplyr::select(tidyselect::starts_with("Label"))
-        ys <- label_tb %>%
-            dplyr::select(tidyselect::starts_with("Label", ignore.case = FALSE)) %>%
-            colnames() %>% stringr::str_extract("[0-9]{4}") %>% sort()
-        res <- list()
-        for (y in ys) {
-            con_mat <- NA
-            cname <- paste("Label", y, sep = '')
-            cm_dat <- label_tb %>%
-                dplyr::select(c(cname, "label_res")) %>%
-                tidyr::drop_na() %>%
-                dplyr::filter(.data[[cname]] %in% unique(dplyr::pull(prodes_labels, label_pd)))
-            # compute confusion matrix
-            if(nrow(cm_dat) > 0) {
-                flevels <- prodes_labels %>% dplyr::pull(label_pd) %>% unlist() %>% unique()
-                data_f <- factor(label_tb[[cname]], flevels)
-                ref_f  <- factor(label_tb[["label_res"]], flevels)
-                con_mat <- caret::confusionMatrix(data = data_f,
-                                                  reference = ref_f)
-            }
-            res[[y]] <- con_mat
-        }
-        return(res)
+# utilitary function to compute confusion matrices
+compute_confusion_matrix <- function(match_ref_res, pyear, label_pd){
+    stopifnot(length(label_pd) == length(unique(label_pd)))
+    con_mat <- NA
+    cname <- paste0("Label", pyear)
+    cm_dat <- match_ref_res %>%
+	sf::st_set_geometry(NULL) %>%
+	tibble::as_tibble() %>%
+	ensurer::ensure_that(all(c(cname, "label_res") %in% colnames(.)), err_desc = sprintf("Missing filds in year %s", pyear)) %>%
+	dplyr::select(c(cname, "label_res")) %>%
+	tidyr::drop_na() %>%
+	dplyr::filter(.data[[cname]] %in% label_pd)
+    # compute confusion matrix
+    if (nrow(cm_dat) > 0) {
+        data_f <- factor(cm_dat[[cname]], levels = label_pd)
+        ref_f  <- factor(cm_dat[["label_res"]], levels = label_pd)
+        con_mat <- caret::confusionMatrix(data = data_f,
+                                          reference = ref_f)
     }
-)
+    return(con_mat)
+}
+
+expert_validation <- expert_validation %>%
+    dplyr::mutate(confusion_matrix = purrr::pmap(dplyr::select(., match_ref_res, pyear), compute_confusion_matrix, label_pd = sort(unique(prodes_labels$label_pd)))) %>%
+    dplyr::select(-fname)
 
 # save
 setwd(file.path(base_path, "Rpackage", "sits.prodes"))
