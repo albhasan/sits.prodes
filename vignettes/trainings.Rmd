@@ -27,14 +27,6 @@ library(tidyr)
 library(sits.prodes)
 library(xtable)
 
-# TODO: remove
-#library(devtools)
-#devtools::load_all()
-#devtools::build(vignettes = FALSE, manual = TRUE)
-#devtools::install()
-# - - - 
-
-
 ```
 
 
@@ -89,63 +81,21 @@ overfitting** - [@Chollet:2018]
 
 
 ```{r echo=FALSE}
-warning("Run get_training_logs.R and devtools::build() to update the logs in this package!")
-# parse log files
-load(system.file("extdata/log_files.Rdata", package = "sits.prodes"))
-stopifnot(exists("log_files"))
 
-
-
-tibble::tribble(
-    ~Classification_type, ~Obs_year, ~Description,
-    #--------------------|----------|--------------------|
-    "interpolated",       23,        "The samples were taken from the bricks of Landsat 8 where the clouds were filled up by interpolation of MXD13 data. The vegetation indexes were recalculated from the bricks of the corresponding bands.",
-    "starfm",             23,        "The samples were taken from the bricks of Landsat 8 where the clouds were filled up by the StarFM mixture model (Landsat 8 - MOD13Q1 mixture model).",
-    "simple",             4,         "The samples were taken from the bricks of the best 4 Landsat 8 images of a year.",
-    "mask_clouds",        4,         "The samples were taken from the bricks of the best 4 Landsat 8 images of a year and the clouds were masked as 'no_data'."
-) %>% 
+data("brick_description", package = "sits.prodes")
+brick_description %>% 
     knitr::kable() %>% 
     kableExtra::kable_styling(full_width = FALSE) 
 
-
-
-
-
-# parse logs
-logs_ls <- system.file(file.path("extdata", log_files), package = "sits.prodes") %>%
-    tibble::enframe(name = NULL) %>% dplyr::rename(path = value) %>% 
-    dplyr::mutate(experiment = basename(path)) %>% 
-    dplyr::select(experiment, path) %>%
-    dplyr::mutate(parsed_log = purrr::map(.$path, parse_training_log)) %>% 
-    dplyr::mutate(setup = purrr::map(.$parsed_log, 
-                                     function(x){
-                                         x[["header"]] %>%
-                                             dplyr::mutate(key = stringr::str_replace_all(key, 
-                                                                                          c("\\(" = "", "\\)" = "", " " = "_"))) %>% 
-                                             tidyr::spread(key, value) %>%
-                                             return()}),
-                  trains = purrr::map(.$parsed_log, 
-                                      function(x){
-                                          x[["experiments"]] %>%
-                                              lapply(function(y){
-                                                  y %>% 
-                                                      dplyr::filter(value != "<environment>") %>%
-                                                      tidyr::spread(key, value) %>%
-                                                      return() 
-                                              }) %>%
-                                              dplyr::bind_rows() %>%
-                                              return()
-                                      })) %>%
-    dplyr::select(-parsed_log)
-
+data("training_logs", package = "sits.prodes")
 na_remover <- function(x){return(trimws(gsub("NA", "", x[!is.na(x)])))}
-
-logs_ls %>% tidyr::unnest(setup) %>% 
+training_logs %>% tidyr::unnest(setup) %>%
     dplyr::mutate(bands = na_remover(paste(Bands_experiment, Bands__experiment))) %>%
     dplyr::mutate(labels = na_remover(paste(Labels, Labels_experiment))) %>%
     dplyr::select(experiment, Clasification_type, labels, bands, Scenes_experiment) %>%
-    knitr::kable() %>% 
-    kableExtra::kable_styling(full_width = F) 
+    knitr::kable() %>%
+    kableExtra::kable_styling(full_width = F)
+
 ```
 
 ## Training results
@@ -155,7 +105,8 @@ logs_ls %>% tidyr::unnest(setup) %>%
 
 
 ```{r fig.width=9, fig.height=7, echo=FALSE}
-plot_tb <- logs_ls %>% tidyr::unnest(trains) %>% dplyr::select(experiment, model_name, acc, loss, val_acc, val_loss) %>%
+plot_tb <- training_logs %>% tidyr::unnest(trains) %>% 
+    dplyr::select(experiment, model_name, acc, loss, val_acc, val_loss) %>%
     dplyr::mutate(acc  = purrr::map(acc,  function(x) eval(parse(text = x))),
                   loss = purrr::map(loss, function(x) eval(parse(text = x))),
                   val_acc  = purrr::map(val_acc, function(x) eval(parse(text = x))),

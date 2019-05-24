@@ -1,27 +1,41 @@
 #!/usr/bin/env Rscript
 
-# Copy the logs of training Deep Learning models to the package
+# parse classification logs
 
 suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(sits.prodes))
 
-setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
+base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 log_pattern <- "^train_[0-9]{2}_esensing"
 
-old_logs <- "./inst/extdata" %>%
-    list.files(pattern = log_pattern, full.names = TRUE, recursive = FALSE)
-print(sprintf("Removing old logs: %s", old_logs))
-old_logs %>% file.remove()
+parse_header <- function(x){
+    x[["header"]] %>%
+        dplyr::mutate(key = stringr::str_replace_all(key, c("\\(" = "", "\\)" = "", " " = "_"))) %>%
+        tidyr::spread(key, value) %>%
+        return()
+}
 
-new_logs_from <- "/home/alber/Documents/data/experiments/prodes_reproduction/02_train_model" %>%
-    list.files(pattern = log_pattern, full.names = TRUE, recursive = TRUE)
-log_files <- file.path("./inst/extdata", basename(new_logs_from))
-print(sprintf("Copying new logs: %s", log_files))
-new_logs_from %>% file.copy(to = log_files)
+parse_experiment <- function(x){
+    x[["experiments"]] %>%
+        lapply(function(y){
+            y %>% dplyr::filter(value != "<environment>") %>%
+                tidyr::spread(key, value) %>%
+                return()
+        }) %>%
+        dplyr::bind_rows() %>%
+        return()
+}
 
-print("Saving file names to log_files.Rdata...")
-file.remove("./inst/extdata/log_files.Rdata")
-log_files <- basename(log_files)
-save(log_files, file = "./inst/extdata/log_files.Rdata")
+training_logs <- base_path %>% file.path("02_train_model") %>%
+    list.files(pattern = log_pattern, full.names = TRUE, recursive = TRUE) %>%
+    tibble::enframe(name = NULL) %>%
+    dplyr::rename(path = value) %>%
+    dplyr::mutate(experiment = basename(path)) %>%
+    dplyr::select(experiment, path) %>%
+    dplyr::mutate(parsed_log = purrr::map(.$path, parse_training_log)) %>%
+    dplyr::mutate(setup = purrr::map(.$parsed_log, parse_header),
+                  trains = purrr::map(.$parsed_log, parse_experiment)) %>%
+    dplyr::select(-parsed_log)
 
-print("Finished!")
-
+setwd(file.path(base_path, "Rpackage", "sits.prodes"))
+usethis::use_data(training_logs, overwrite = TRUE)

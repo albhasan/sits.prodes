@@ -126,11 +126,12 @@ prodes_years <- pa_acc_tb %>% dplyr::pull(year_pd) %>% unique()
 pa_acc_tb %>% 
     ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
                         shape = variable, color = variable)) +
-    ggplot2::geom_point() +
+    ggplot2::geom_point(size = 3) +
     ggplot2::coord_fixed() +
     ggplot2::xlim(0, 1) +
     ggplot2::ylim(0, 1) +
     ggplot2::facet_wrap(tile ~ year_pd, ncol = length(prodes_years)) + 
+    ggplot2::guides(shape = guide_legend(override.aes = list(size = 4))) +
     ggplot2::labs(title = "PRODES - Mapbiomas", 
          x = "Producer accuracy", 
          y = "User accuracy")

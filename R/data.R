@@ -176,3 +176,32 @@ NULL
 #' Landsat tile, and the labels from 2014 to 2017.
 NULL
 
+
+#' @title Description of the Bricks used for the classifications.
+#'
+#' @description A tibble with the description of the Bricks used for the
+#' classifications.
+#'
+#' @docType data
+#' @keywords datasets
+#' @name brick_description
+#' @usage data(brick_description)
+#'
+#' @format A tibble of four rows and three columns with the description of the
+#' Bricks used for the classifications.
+NULL
+
+
+#' @title Logs of the training of Deep Learning.
+#'
+#' @description Logs obtained during the training phase of Deep Learning
+#' classification.
+#'
+#' @docType data
+#' @keywords datasets
+#' @name training_logs
+#' @usage data(training_logs)
+#'
+#' @format A tibble of 14 rows and 4 columns with the experiment, the log's path,
+#' the trainig's setup, and the training's partial results.
+NULL
