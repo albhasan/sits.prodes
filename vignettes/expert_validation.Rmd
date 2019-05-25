@@ -1,0 +1,129 @@
+---
+title: "expert_validation"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{expert_validation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, echo = FALSE}
+
+suppressMessages(library(dplyr))
+suppressMessages(library(ggplot2))
+suppressMessages(library(kableExtra))
+suppressMessages(library(knitr))
+suppressMessages(library(magrittr))
+suppressMessages(library(purrr))
+suppressMessages(library(tidyr))
+suppressMessages(library(sf))
+suppressMessages(library(sits.prodes))
+suppressMessages(library(xtable))
+
+utils::data("expert_validation", package = "sits.prodes")
+
+```
+
+
+```{r, echo = FALSE}
+
+f <- function(x){
+        if (length(x) == 1 && is.na(x)) return(tibble::tibble(NA))
+        res <- sits.prodes::asses_accuracy_simple(x$table)
+        c(res$user, res$producer) %>%
+            tibble::enframe(name = NULL) %>%
+            dplyr::bind_cols(cname =  c(paste0("ua_", names(res$user)),
+                                        paste0("pa_", names(res$producer)))) %>%
+            tidyr::spread("cname", "value") %>%
+            return()
+    }
+
+# get data for plots
+acc_tb <- expert_validation %>%
+    dplyr::mutate(up_acc2 = purrr::map(.$confusion_matrix, f)) %>%
+    tidyr::drop_na(confusion_matrix) %>% 
+    dplyr::select(experiment, algorithm, smooth, scene, pyear, up_acc2) %>%
+    tidyr::unnest() %>%
+    dplyr::select(-'NA', 
+                  -tidyselect::ends_with(match = "no forest"), 
+                  -tidyselect::ends_with(match = "water")) %>%
+    tidyr::gather(tidyselect::starts_with("pa_"), tidyselect::starts_with("ua_"),
+                  key = "variable", value = "value") %>%
+    dplyr::mutate(acc_type = ifelse(stringr::str_sub(variable, 1, 3) == "ua_",
+                                    "user", "producer"),
+                  variable = stringr::str_sub(variable, 4))
+acc_pr <- acc_tb %>% dplyr::filter(acc_type == "producer") %>%
+    dplyr::rename(prod_acc = value) %>%
+    dplyr::select(-acc_type)
+acc_ur <- acc_tb %>% dplyr::filter(acc_type == "user") %>%
+    dplyr::rename(user_acc = value) %>%
+    dplyr::select(-acc_type)
+pa_acc_tb <- acc_pr %>%
+    dplyr::inner_join(acc_ur, by = c("experiment", "algorithm", "smooth", 
+                                     "scene", "pyear", "variable"))
+
+```
+
+
+```{r plot_confusion_matrices, results='asis', echo=FALSE, fig.height=9, fig.width=9}
+
+prodes_years <- pa_acc_tb %>% dplyr::pull(pyear) %>% unique()
+
+pa_acc_tb %>%
+    dplyr::filter(smooth == "smooth_7x7_n10", 
+                  algorithm == "results_dl") %>% 
+    ggplot2::ggplot(aes(x = prod_acc, y = user_acc,
+                        shape = variable, color = experiment)) +
+    ggplot2::geom_point() +
+    ggplot2::coord_fixed() +
+    ggplot2::xlim(0, 1) +
+    ggplot2::ylim(0, 1) +
+    ggplot2::facet_wrap(scene ~ pyear, ncol = length(prodes_years)) +
+    ggplot2::labs(title = "Expert validation, DL, smooth_7x7_n10",
+         x = "Producer accuracy",
+         y = "User accuracy")
+
+pa_acc_tb %>%
+    dplyr::filter(smooth == "smooth_7x7_n10", 
+                  algorithm == "results_dl") %>% 
+    ggplot2::ggplot(aes(x = prod_acc, y = user_acc,
+                        shape = variable, color = experiment)) +
+    ggplot2::geom_point() +
+    ggplot2::coord_fixed() +
+    ggplot2::xlim(0, 1) +
+    ggplot2::ylim(0, 1) +
+    ggplot2::facet_wrap(scene ~ pyear, ncol = length(prodes_years)) +
+    ggplot2::labs(title = "Expert validation, DL, smooth_7x7_n10",
+         x = "Producer accuracy",
+         y = "User accuracy")
+
+```
+
+
+```{r print_confusion_matrices, results='asis', echo=FALSE}
+for (i in 1:nrow(expert_validation)) {
+    cap <- sprintf("Confusion matrix %s %s", unlist(expert_validation[i, "scene"]), 
+                   unlist(expert_validation[i, "pyear"]))
+    cat(paste0("### ", cap), "\n")
+    if (!(length(expert_validation$confusion_matrix[[i]]) == 1 &&
+          is.na(expert_validation$confusion_matrix[[i]]))) {
+        p_conmat <- expert_validation$confusion_matrix[[i]]$table %>%
+            apply(2, function(x){x/1}) %>% 
+            add_upacc() %>%
+            tibble::as_tibble(rownames = NA, caption = cap) %>% 
+            knitr::kable(digits = 2, row.names = TRUE) %>% 
+            kableExtra::kable_styling(full_width = F)
+    }
+    print(p_conmat)
+    cat("\n\n")
+}  
+
+```
+
