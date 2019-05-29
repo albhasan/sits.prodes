@@ -7,13 +7,13 @@
 prodes2scene(prodes_scene)
 }
 \arguments{
-\item{prodes_scene}{A length-one character. A PRODES scene id.}
+\item{prodes_scene}{A character. A PRODES scene id.}
 }
 \value{
-A length-one character. A Landsat scene id.
+A character. A Landsat scene id.
 }
 \description{
-Insert missing 0s in PRODES' landsat scene id.
+Convert the PRODES' 5 digit scene Id to Landsat's 6 digit scene Id.
 }
 \author{
 Alber Sanchez, \email{alber.ipia@inpe.br}
