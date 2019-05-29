@@ -101,7 +101,7 @@ asses_accuracy_area <- function(error_matrix, class_areas){
 #' @param r2_path A length-one character. Path to a raster file.
 #' @param key_ls  A named list used to recode the integer values of r1_path and r2_path. The list is made of labels and its names are the numbers (as character) in the rasters.
 #' @return            A list as explained in caret::confusionMatrix
-#' export
+#' @export
 confusion_raster <- function(r1_path, r2_path, key_ls){
     stopifnot(!tibble::is_tibble(key_ls))
     lev <- names(key_ls)
