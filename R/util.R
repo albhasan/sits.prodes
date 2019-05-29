@@ -71,33 +71,6 @@ compute_indexes <- function(x, sat){
 }
 
 
-#' @title Compute the confusion matrix between two raster files.
-#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description  Compute the confusion matrix between two raster files.
-#'
-#' @param r1_path A length-one character. Path to a raster file.
-#' @param r2_path A length-one character. Path to a raster file.
-#' @param key_ls  A named list used to recode the integer values of r1_path and r2_path. The list is made of labels and its names are the numbers (as character) in the rasters.
-#' @return            A list as explained in caret::confusionMatrix
-#' export
-confusion_raster <- function(r1_path, r2_path, key_ls){
-    stopifnot(!tibble::is_tibble(key_ls))
-    lev <- names(key_ls)
-    lab <- unlist(key_ls)
-    stopifnot(length(lev) > 0)
-    stopifnot(length(lev) == length(lab))
-    stopifnot(all(is.atomic(lev), is.atomic(lab)))
-    data_df <- raster::stack(r1_path, r2_path, quick = FALSE)[] %>%
-        as.data.frame() %>%
-        tidyr::drop_na() %>%
-        dplyr::rename("lab_ref_num" = !!names(.[1]),  # reference labels as integers
-                      "lab_pred_num" = !!names(.[2])) # predicted labels as integers
-    caret::confusionMatrix(data      = factor(data_df$lab_pred_num, levels = lev, labels = lab),
-                           reference = factor(data_df$lab_ref_num,  levels = lev, labels = lab)) %>%
-        return()
-}
-
-
 #' @title Get metadata from a Brick filename
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description   Get metadata from a Brick filename
