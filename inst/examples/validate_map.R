@@ -1,14 +1,11 @@
-# validate the result of a classification
+#!/usr/bin/Rscript
+
+# validate the result of a classification using PRODES
+
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(ensurer))
 suppressPackageStartupMessages(library(optparse))
 suppressPackageStartupMessages(library(sits.prodes))
-
-# TODO: remove
-setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
-library(devtools)
-devtools::load_all()
-# - - - 
 
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 stopifnot(dir.exists(base_path))
@@ -37,12 +34,9 @@ if (!all(vapply(c(in_dir), dir.exists, logical(1)))) {
     stop("Directory not found!")
 }
 
-
-
 data(prodes_labels, package = "sits.prodes")
 img_pattern <- "^l8_(simple|maskcloud)_[0-9]{6}_[0-9]{4}_dl-rf-svm_[0-9]{4}_[0-9]_[0-9]{4}_[0-9]_vote.tif"
 corner_masks <- file.path(base_path, "data/raster/mask_l9_corner")
-
 
 # key for encoding PRODES's SHP into a TIF
 prodes_labels_ls <- prodes_labels %>% dplyr::pull(label_pd) %>% as.list()
@@ -67,11 +61,13 @@ labels_csv <- label_file %>%
 int_labels        <- labels_csv$Code
 names(int_labels) <- labels_csv$Label
 rm(labels_csv)
+
 # when the classes are clustered
 if(sum(stringr::str_detect(names(int_labels), "_[0-9]+$")) > 0){
     names(int_labels) <- names(int_labels) %>%
         stringr::str_replace_all(pattern = "_[0-9]+$", replacement = "")
 }
+
 # match reference and results keys
 unique_prodes_labels <- prodes_labels_ls %>% unlist() %>% unique() %>% sort()
 kv_ref_res <- dplyr::full_join(
