@@ -50,12 +50,21 @@ prodes2raster <- function(file_pd, file_rt, raster_path, tile, year_pd, prodes_l
 
 #' @title Convert the PRODES' scene format to LANDSAT's.
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description Insert missing 0s in PRODES' landsat scene id.
+#' @description Convert the PRODES' 5 digit scene Id to Landsat's 6 digit scene Id.
 #' 
-#' @param prodes_scene A length-one character. A PRODES scene id.
-#' @return             A length-one character. A Landsat scene id. 
+#' @param prodes_scene A character. A PRODES scene id.
+#' @return             A character. A Landsat scene id.
+#' @export
 prodes2scene <- function(prodes_scene){
-    gsub('^([0-9]{3})([0-9]+)$', '\\10\\2', prodes_scene)
+    res <- NA
+    if (length(prodes_scene) == 1) {
+        if (is.na(prodes_scene) || nchar(prodes_scene) != 5)
+            return(NA)
+        res <- gsub('^([0-9]{3})([0-9]+)$', '\\10\\2', prodes_scene)
+    }else if (length(prodes_scene) > 1) {
+        res <- vapply(prodes_scene, prodes2scene, character(1))
+    }
+    return(res)
 }
 
 #' @title Compute PRODES areas.
