@@ -1,17 +1,14 @@
 #!/usr/bin/Rscript
 
+# NOTE: I'm not sure why I needed this for.
+base::deprecated()
+
 # rasterize PRODES' shapefiles
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(ensurer))
 suppressPackageStartupMessages(library(optparse))
 
 library(sits.prodes)
-
-# TODO: remove
-setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
-library(devtools)
-devtools::load_all()
-# - - - 
 
 base_path  <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 in_dir     <- "/net/150.163.2.206/disks/d6/shared/alber/prodes_reproduction/03_classify/rep_prodes_40/results_vote/smooth_3x3_n10"
@@ -23,14 +20,9 @@ stopifnot(vapply(c(base_path, in_dir, out_dir), dir.exists, logical(1)))
 stopifnot(file.exists(label_file))
 
 # key for encoding PRODES's SHP into a TIF
-prodes_labels <- list(
-    DESMATAMENTO  = "deforestation",
-    RESIDUO       = "deforestation",
-    FLORESTA      = "forest",
-    NAO_FLORESTA  = "no forest",
-    NAO_FLORESTA2 = "no forest",
-    HIDROGRAFIA   = "water"
-)
+prodes_lab <- prodes_labels %>% dplyr::pull(label_pd) %>% as.list()
+names(prodes_lab) <- prodes_labels %>% pull(label_pd_pt)
+stopifnot(length(unique(names(prodes_lab))) == length(prodes_lab))
 
 prodes_maps <- c(
     "225063" = file.path(base_path, "data/vector/prodes_tiled/prodes_225_063.shp"),
@@ -47,7 +39,7 @@ names(int_labels) <- labels_csv$Label
 rm(labels_csv)
 
 # match reference and results keys
-unique_prodes_labels <- prodes_labels %>% unlist() %>% unique() %>% sort()
+unique_prodes_labels <- prodes_lab %>% unlist() %>% unique() %>% sort()
 kv_ref_res <- dplyr::full_join(
     dplyr::tibble(key_ref = seq_along(unique_prodes_labels),
                   label = unique_prodes_labels),
@@ -88,7 +80,7 @@ for(res_file in path_res_vec){
     print(sprintf("Rasterizing PRODES to %s", out_file))
     prodes_rasterize(ref_path = prodes_maps[scene],
                                 pyear = pyear, cov_res = cov_res,
-                                level_key_pt = prodes_labels,
+                                level_key_pt = prodes_lab,
                                 level_key = key_labels_rev) %>%
         ensurer::ensure_that(!is.null(.), err_desc = "Rasterization failed!") %>%
         raster::writeRaster(filename = out_file, format = "GTiff", datatype = "INT4S")
