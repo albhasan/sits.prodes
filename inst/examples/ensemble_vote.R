@@ -1,5 +1,6 @@
+#!/usr/bin/Rscript
+# Ensemble the results of classification using simple majority 
 
-# ensemble the results of classification
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(parallel))
