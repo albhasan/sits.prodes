@@ -16,6 +16,7 @@
 #' @param cov      A coverage.
 #' @param label    A character. The name of the stratification field.
 #' @return         A simple feature object of type point (sf).
+#' @export
 cov_get_areas <- function(cov, label){
   lab_area <- NULL
   if(cov_type(cov) == "vector"){  
@@ -47,6 +48,7 @@ cov_get_areas <- function(cov, label){
 #' @param cov           A coverage.
 #' @param sample_points A simple feature object of type point (sf).
 #' @return              A simple feature object of type point (sf).
+#' @export
 cov_get_values <- function(cov, sample_points){
   cov_points <- NULL
   # Match CRS
@@ -73,6 +75,7 @@ cov_get_values <- function(cov, sample_points){
 #' @param cov         A coverage.
 #' @param proj4string A Character. A proj4string description of the target SRS
 #' @return            An projected object of the same class of cov
+#' @export
 cov_proj <- function(cov, proj4string){
   pcov <- cov
   if(cov_type(cov) == "vector"){
@@ -93,6 +96,7 @@ cov_proj <- function(cov, proj4string){
 #' @description Read a coverage from a file on disk.
 #' @param cov_path A character. The path to a coverage file.
 #' @return         A coverage
+#' @export
 cov_read <- function(cov_path){
   cov <- NULL
   cov_ext <- cov_path %>% basename() %>% stringr::str_split(pattern = '[.]') %>% 
@@ -114,6 +118,7 @@ cov_read <- function(cov_path){
 #' @param cov      A coverage.
 #' @param n        A numeric. The number of samples.
 #' @return         A simple feature object (sf) of type point.
+#' @export
 cov_sample_random <- function(cov, n){
   sample_points <- NULL
   if(cov_type(cov) == "vector"){
@@ -147,6 +152,7 @@ cov_sample_random <- function(cov, n){
 #' @param cores    A numeric. The number of cores for parallel processing. The 
 #' defailt is one.
 #' @return         A simple feature object of type point (sf).
+#' @export
 cov_sample_stratified <- function(cov, n, label = NULL, cores = 1L){
   sample_points <- NULL
   samples_per_class <- n
@@ -193,6 +199,7 @@ cov_sample_stratified <- function(cov, n, label = NULL, cores = 1L){
 #' @description Get a coverage's spatial reference system.
 #' @param cov      A coverage.
 #' @return         A character. The proj4string description of the coverage's SRS
+#' @export
 cov_srs <- function(cov){
   proj4string <- NULL
   if(cov_type(cov) == "vector"){
@@ -211,6 +218,7 @@ cov_srs <- function(cov){
 #' @description Test if the given object is either a vector or a raster.
 #' @param cov      A coverage.
 #' @return         A character
+#' @export
 cov_type <- function(cov){
   res <- NA
   if(sum(class(cov) %in% c("sf")) > 0){
@@ -227,9 +235,11 @@ cov_type <- function(cov){
 #' @description Test if the given object is supported.
 #' @param cov      A coverage.
 #' @return         A logical.
+#' @export
 is_cov <- function(cov){
   res <- FALSE
   if(!is.na(cov_type(cov)))
     res <- TRUE
   return(res)
 }
+
