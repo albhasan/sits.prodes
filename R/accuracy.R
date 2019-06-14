@@ -3,7 +3,7 @@
 #' @description Add user and produser accuracies to a confusion matrix.
 #'
 #' @param conmat A confusion matrix or a list.
-#' @return       The input matrix with an extra row and column or a list.
+#' @return       The conmat with an extra row and column, or a list.
 #' @export
 add_upacc <- function(conmat){
     if (is.matrix(conmat)) {
@@ -45,7 +45,7 @@ asses_accuracy_simple <- function(error_matrix){
 #'
 #' @param error_matrix A matrix given in sample counts. Columns represent the reference data and rows the results of the classification
 #' @param class_areas  A vector of the total area of each class on the map
-#' @return             A list of two lists: The confidence interval (confint95) and the accuracy
+#' @return             A list of lists: The error_matrix, the class_areas, confidence interval (confint95, a list of two numerics) and the accuracy (accuracy, a list of three numerics: overall, user, and producer)
 #' @export
 asses_accuracy_area <- function(error_matrix, class_areas){
 
@@ -97,10 +97,10 @@ asses_accuracy_area <- function(error_matrix, class_areas){
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description  Compute the confusion matrix between two raster files.
 #'
-#' @param r1_path A length-one character. Path to a raster file. The reference raster to appear in the coluns of the confusion matrices.
+#' @param r1_path A length-one character. Path to a raster file. The reference raster to appear in the colums of the confusion matrices.
 #' @param r2_path A length-one character. Path to a raster file.
 #' @param key_ls  A named list used to recode the integer values of r1_path and r2_path. The list is made of labels and its names are the numbers (as character) in the rasters.
-#' @return            A list as explained in caret::confusionMatrix
+#' @return        A list as explained in caret::confusionMatrix
 #' @export
 confusion_raster <- function(r1_path, r2_path, key_ls){
     stopifnot(!tibble::is_tibble(key_ls))
