@@ -14,3 +14,4 @@ brick_description <- tibble::tribble(
 
 setwd(file.path(base_path, "Rpackage", "sits.prodes"))
 usethis::use_data(brick_description, overwrite = TRUE)
+

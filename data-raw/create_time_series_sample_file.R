@@ -1,14 +1,12 @@
 # create binary files of sample time series from PRODES
 
-library(tidyverse)
+library(dplyr)
 library(kohonen)
 library(sits)
+library(sits.prodes)
 library(ensurer)
 
 # stop("Run on server!")
-
-setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
-devtools::load_all()
 
 # setup ----
 #classification_type <- "interpolated"
@@ -18,7 +16,9 @@ devtools::load_all()
 #classification_type <- "simple"
 classification_type <- "mask_cloud"
 
-samples_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/samples"
+base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
+
+samples_path <- base_path %>% file.path("data", "samples")
 samples_pattern <- c(interpolated            = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_interpolated.Rdata",
                      interpolated_few_clouds = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_interpolated_few_clouds.Rdata",
                      starfm                  = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_starfm.Rdata",
@@ -32,27 +32,24 @@ expected_rows <- c(interpolated            = 23,
                    starfm_few_clouds       = 4,
                    simple                  = 4,
                    mask_cloud              = 4)
+stopifnot(names(samples_pattern) == names(expected_rows))
+stopifnot(dir.exists(samples_path))
 
 # where to store partial results
-fp_suffix <- paste0(classification_type, "_", R.utils::System$getHostname(), ".Rdata")
-file_samples_koh          <- file.path("/home/alber/Documents/data/experiments/prodes_reproduction/tempdir", paste0("file_samples_koh_", fp_suffix))
-file_koh_evaluate_samples <- file.path("/home/alber/Documents/data/experiments/prodes_reproduction/tempdir", paste0("file_koh_evaluate_samples_", fp_suffix))
-#set.seed(666)
-# - - - -
-
+file_samples_koh          <- tempfile(pattern = paste0("file_samples_koh_",          classification_type, "_"), fileext = ".Rdata")
+file_koh_evaluate_samples <- tempfile(pattern = paste0("file_koh_evaluate_samples_", classification_type, "_"), fileext = ".Rdata")
 
 # load & filter samples
-test_labels <- c("deforestation", "forest")
 samples_tb <- samples_path %>%
     list.files(pattern = samples_pattern[classification_type], full.names = TRUE) %>%
     load_samples(sat = NULL, expected_nrow = expected_rows[classification_type]) %>%
-    dplyr::bind_rows() %>% sits::sits_prune() %>%
-    dplyr::filter(label %in% test_labels) %>% ensurer::ensure_that(nrow(.) > 0) %>%
+    dplyr::bind_rows() %>%
+    sits::sits_prune() %>%
+    dplyr::filter(label %in% c("deforestation", "forest")) %>%
+    ensurer::ensure_that(nrow(.) > 0) %>%
     dplyr::mutate(coverage = stringr::str_c("prodes_amazon_", classification_type))
-# samples_tb <- samples_tb %>% sits::sits_linear_interp(n = 23) %>% # fill in the NAs
-# samples_tb <- samples_tb %>% sits::sits_sample(n = 1000/length(test_labels))
 
-#Create cluster with Self-organizing maps (kohonen)
+# Create cluster with Self-organizing maps (kohonen)
 xd <- 25
 yd <- 25
 rl = 100

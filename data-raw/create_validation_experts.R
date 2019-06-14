@@ -98,7 +98,7 @@ validation_experts <- validation_experts %>%
 
 experiments <- c("rep_prodes_40", "rep_prodes_41", "rep_prodes_42", "rep_prodes_50", "rep_prodes_51", "rep_prodes_52" )
 results     <- c("results_dl", "results_rf", "results_svm", "results_vote")
-smooths     <- c("smooth_3x3_n10", "smooth_5x5_n10", "smooth_7x7_n10")
+smooths     <- c("smooth_3x3_n10", "smooth_5x5_n10", "smooth_7x7_n10","smooth_9x9_n10","smooth_11x11_n10")
 
 # get a tibble of raster files
 expert_validation <- expand.grid(experiment = experiments, algorithm = results, smooth = smooths, stringsAsFactors = FALSE) %>%

@@ -7,9 +7,9 @@ base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 stopifnot(dir.exists(base_path))
 
 # collect accuracy data
-accuracy_ls <- list()
 accuracy_files <- base_path %>% 
     list.files(pattern = "accuracy.rds", recursive = TRUE, full.names = TRUE)
+accuracy_ls <- list()
 for (f in accuracy_files) {
     accuracy_ls <- append(accuracy_ls, readRDS(f))
 }
