@@ -34,6 +34,7 @@ stopifnot(all(vapply(c(out_dir, base_path, dl_dir, rf_dir, svm_dir), dir.exists,
 
 img_pattern <- "^l8_(simple|maskcloud)_[0-9]{6}_[0-9]{4}_(dl|rf|svm)_[0-9]{4}_[0-9]_[0-9]{4}_[0-9].tif"
 
+# build a tibble of files of classification results
 result_tb <- function(path){
     path %>% list.files(pattern = img_pattern, full.names = TRUE) %>%
         ensurer::ensure_that(length(.) > 0, err_desc = sprintf("No classified images found in %s", path)) %>%
@@ -41,8 +42,8 @@ result_tb <- function(path){
         dplyr::rename("file_path" = "value") %>%
         dplyr::mutate(experiment = stringr::str_extract(file_path, "rep_prodes_[0-9]+"),
                       algorithm = purrr::map_chr(.$file_path, function(x){
-                          unlist(stringr::str_split(stringr::str_extract(x, "results_[a-z]+"), '_'))[2]
-                      }),
+                              unlist(stringr::str_split(stringr::str_extract(x, "results_[a-z]+"), '_'))[2]
+                          }),
                       smooth = stringr::str_extract(file_path, "smooth_[0-9]x[0-9]_n[0-9]{2}"),
                       scene = stringr::str_extract(basename(file_path), "[0-9]{6}"),
                       pyear = purrr::map_chr(file_path, function(x){
