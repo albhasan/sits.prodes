@@ -13,22 +13,23 @@
 #' @param sat           A Length-one character. The satellite or sensor name in c("Landsat8", "MOD13").
 #' @param expected_nrow A lengh-one inetger. Keep the samples with this number of time steps.
 #' @return              A tibble or a list of tibbles.
+#' @export
 load_samples <- function(x, sat, expected_nrow){
     stopifnot(is.character(x))
 
     # util functions
-    # test if a vector elements are the same. Take from https://stackoverflow.com/questions/4752275/test-for-equality-among-all-elements-of-a-single-vector
+    # test if a vector elements are the same. Taken from https://stackoverflow.com/questions/4752275/test-for-equality-among-all-elements-of-a-single-vector
     zero_range <- function(x, tol = .Machine$double.eps ^ 0.5) {
         if (length(x) == 1) return(TRUE)
         x <- range(x) / mean(x)
         isTRUE(all.equal(x[1], x[2], tolerance = tol))
     }
-    # validate the tme sereis of a SITS sample
+    # validate the time series of a SITS sample
     is_ts_valid <- function(ts_tb, expected_nrow){
         if (!dplyr::is.tbl(ts_tb)) return(FALSE)
         if (nrow(ts_tb) != expected_nrow || ncol(ts_tb) < 2) return(FALSE)
         if (!any(vapply(dplyr::select(ts_tb, -1), is.numeric, logical(1)))) return(FALSE)
-        # is there any NA?
+        # are there any NA?
         if (any(vapply(ts_tb, function(x) any(is.na(unlist(ts_tb))), logical(1))))
             return(FALSE)
         # are all the observations the same? This could be NAs, etc
@@ -262,6 +263,7 @@ get_timeseries_modis <- function(cpath){
 #'
 #' @param csv_paths    A character. Paths to a CSV file.
 #' @return             A character.
+#' @export
 validate_csv <- function(csv_paths){
     res <- lapply(csv_paths, function(x){
         r <- character()
@@ -278,5 +280,5 @@ validate_csv <- function(csv_paths){
         }
         return(r)
     })
-    unlist(res)
+    return(unlist(res))
 }
