@@ -2,16 +2,10 @@
 
 # Classify sits bricks 
 suppressMessages(suppressPackageStartupMessages(library(sits, quietly = TRUE, verbose = FALSE)))
-suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(log4r))
 suppressPackageStartupMessages(library(optparse))
-#library(sits.prodes)
-
-# TODO: remove
-setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
-library(devtools)
-devtools::load_all()
-# - - - 
+library(sits.prodes)
 
 # script setup ----
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"

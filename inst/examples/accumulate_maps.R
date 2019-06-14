@@ -6,10 +6,6 @@ suppressPackageStartupMessages(library(optparse))
 library(sits.starfm)
 library(sits.prodes)
 
-# TODO: remove
-library(devtools)
-devtools::load_all()
-
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 stopifnot(dir.exists(base_path))
 
