@@ -2,10 +2,7 @@
 
 # validate the result of a classification using PRODES
 
-suppressPackageStartupMessages(library(dplyr))
-suppressPackageStartupMessages(library(ensurer))
 suppressPackageStartupMessages(library(optparse))
-suppressPackageStartupMessages(library(sits.prodes))
 
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 stopifnot(dir.exists(base_path))
@@ -22,25 +19,32 @@ if (length(opt) != 4 || sum(sapply(opt, is.null)) != 0){
   print_help(opt_parser)
   stop("Wrong arguments!")
 }
-in_dir     <- opt$in_dir     # "/net/150.163.2.206/disks/d6/shared/alber/prodes_reproduction/03_classify/rep_prodes_40/results_vote/smooth_3x3_n10"
-label_file <- opt$label_file # "/net/150.163.2.206/disks/d6/shared/alber/prodes_reproduction/03_classify/rep_prodes_40/results_dl/int_labels.csv"
-out_dir    <- opt$out_dir    # "/net/150.163.2.206/disks/d6/shared/alber/prodes_reproduction/03_classify/rep_prodes_40/results_vote/smooth_3x3_n10/validation"
+in_dir     <- opt$in_dir     # /home/alber/Documents/data/experiments/prodes_reproduction/03_classify/rep_prodes_40/results_dl/smooth_5x5_n10
+label_file <- opt$label_file # /home/alber/Documents/data/experiments/prodes_reproduction/03_classify/rep_prodes_40/results_dl/int_labels.csv 
+out_dir    <- opt$out_dir    # /home/alber/Documents/data/experiments/prodes_reproduction/03_classify/rep_prodes_40/results_dl/smooth_5x5_n10/validation
+
 if (!file.exists(label_file)) {
-    print_help(opt_parse)
+    print_help(opt_parser)
     stop("File not found!")
 }
 if (!all(vapply(c(in_dir), dir.exists, logical(1)))) {
-    print_help(opt_parse)
-    stop("Directory not found!")
+    print_help(opt_parser)
+    stop(sprintf("Directories not found %s", paste(c(in_dir), collapse = " ")))
 }
 
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ensurer))
+suppressPackageStartupMessages(library(sits.prodes))
+
 data(prodes_labels, package = "sits.prodes")
-img_pattern <- "^l8_(simple|maskcloud)_[0-9]{6}_[0-9]{4}_dl-rf-svm_[0-9]{4}_[0-9]_[0-9]{4}_[0-9]_vote.tif"
-corner_masks <- file.path(base_path, "data/raster/mask_l9_corner")
+
+print(sprintf("Starting to process %s using th labels at %s ", in_dir, label_file))
 
 # key for encoding PRODES's SHP into a TIF
 prodes_labels_ls <- prodes_labels %>% dplyr::pull(label_pd) %>% as.list()
 names(prodes_labels_ls) <- prodes_labels %>% dplyr::pull(label_pd_pt) 
+
+# masks
 water_masks <- c(
     "225063" = file.path(base_path, "data/raster/mascaras/surface_water-Pekel_et_al_2016/tiled/extent_225063.tif"),
     "226064" = file.path(base_path, "data/raster/mascaras/surface_water-Pekel_et_al_2016/tiled/extent_226064.tif"),
@@ -51,9 +55,14 @@ prodes_maps <- c(
     "226064" = file.path(base_path, "data/vector/prodes/prodes_tiled/PDigital2017_AMZ_pol_226_064.shp"),
     "233067" = file.path(base_path, "data/vector/prodes/prodes_tiled/PDigital2017_AMZ_pol_233_067.shp")
 )
+corner_masks <- base_path %>% file.path("data", "raster", "mask_l8_corner") %>% 
+    list.files(pattern = "LC08_CORNERMASK_[0-9]{6}.tif", full.names = TRUE) %>%
+    tibble::enframe(name = NULL) %>%
+    dplyr::rename(file_path = "value") %>%
+    dplyr::mutate(fname = basename(file_path), 
+                  scene   = stringr::str_extract(fname, pattern = "_[0-9]{6}[.]")   %>% stringr::str_sub(2, -2))
 stopifnot(all(vapply(water_masks, file.exists, logical(1))))
 stopifnot(all(vapply(prodes_maps, file.exists, logical(1))))
-
 
 # get classification labels
 labels_csv <- label_file %>%
@@ -91,7 +100,10 @@ names(key_labels) <- kv_ref_res %>% dplyr::select(key) %>% unlist()
 key_labels_rev <- key_labels %>% names() %>% as.list()
 names(key_labels_rev) <- key_labels %>% unlist() %>% as.vector()
 rm(available_keys, kv_ref_res)
+stopifnot(all(key_labels == names(key_labels_rev)),
+          all(names(key_labels) == key_labels_rev))
 
+img_pattern <- "^l8_(simple|maskcloud)_[0-9]{6}_[0-9]{4}_(dl|rf|svm|dl-rf-svm)_[0-9]{4}_[0-9]_[0-9]{4}_[0-9](.tif|_vote.tif)"
 path_res_vec <- in_dir %>% 
     list.files(pattern = img_pattern, full.names = TRUE,
                include.dirs = FALSE) %>%
@@ -111,26 +123,44 @@ res_acc <- purrr::map(path_res_vec, function(res_file, out_dir = NULL){
         stringr::str_extract_all(pattern = "_[0-9]{4}_") %>% unlist() %>%
         dplyr::last() %>% stringr::str_sub(2, -2) %>%
         ensurer::ensure_that(nchar(.) == 4, err_desc = "Invalid PRODES year")
-    scene <- res_file %>% basename() %>%
+    scene_file <- res_file %>% basename() %>%
         stringr::str_extract(pattern = "_[0-9]{6}_") %>%
         stringr::str_sub(2, -2) %>%
         ensurer::ensure_that(nchar(.) == 6, err_desc = "Invalid scene identifier")
-    cov_res <- cov_read(res_file)
+    cov_res <- raster::raster(res_file)
 
     # rasterize PRODES
-    cov_ref <- prodes_rasterize(ref_path = prodes_maps[scene],
-                                pyear = pyear, cov_res = cov_res,
-                                level_key_pt = prodes_labels_ls,
-                                level_key = key_labels_rev) %>%
+    cov_ref <- prodes2raster(file_pd = prodes_maps[scene_file],
+                  file_rt = slot(cov_res@file, "name"),
+                  raster_path = tempfile(pattern = "prodes2raster_",
+                                         fileext = ".tif"),
+                  tile = scene_file,
+                  year_pd = pyear,
+                  prodes_lbl = prodes_labels) %>%
+        raster::raster() %>%
         ensurer::ensure_that(!is.null(.), err_desc = "Rasterization failed!")
 
     # masking and storing results
     cov_res_masked <- raster::mask(cov_res, mask = cov_ref)
-    water_mask <- water_masks[scene] %>% cov_read()  %>%
+    water_mask <- water_masks[scene_file] %>% raster::raster()  %>%
         cov_proj(proj4string = raster::crs(cov_res_masked, asText = TRUE)) %>%
         raster::resample(y = cov_res_masked, method = "ngb") %>%
         raster::crop(y = raster::extent(cov_res_masked))
     cov_res_masked <- raster::mask(cov_res_masked, mask = water_mask, maskvalue = 1)
+    corner_mask <- corner_masks %>% dplyr::filter(scene == scene_file) %>%
+        ensurer::ensure_that(nrow(.) == 1, err_desc = "dplyr::filter failed") %>%
+        dplyr::pull(file_path) %>%
+        cov_read() %>%
+        cov_proj(proj4string = raster::crs(cov_res_masked, asText = TRUE)) %>%
+        raster::resample(y = cov_res_masked, method = "ngb") %>%
+        raster::crop(y = raster::extent(cov_res_masked))
+# NOTE: the masks are failing returning
+    fuck_u_R <- raster::mask(cov_res_masked, mask = corner_mask)
+    if (!is.na(mean(fuck_u_R[], na.rm = TRUE)))
+       cov_res_masked <- fuck_u_R 
+    #cov_res_masked <- raster::mask(cov_res_masked, mask = corner_mask) %>%
+    #    ensurer::ensure_that(is.nan(mean(.[], na.rm = TRUE) ==  FALSE),
+    #                         err_desc = "Masking failed, probably because R is a motherfucking piece of shit!")
     raster::writeRaster(cov_res_masked,
                         filename = file.path(out_dir, stringr::str_replace(basename(res_file), ".tif", "_masked.tif")),
                         overwrite=TRUE)
@@ -150,6 +180,9 @@ res_acc <- purrr::map(path_res_vec, function(res_file, out_dir = NULL){
                         overwrite = TRUE)
 
     # computing confusion matrix
+# Error in confusionMatrix.default(data = factor(ref_res_df[["lab_res"]],  :
+#  The data must contain some levels that overlap the reference.
+
     flevels <- ref_res_df %>% dplyr::select(lab_ref, lab_res) %>%
         unlist() %>% unique()
     con_mat <- caret::confusionMatrix(data = factor(ref_res_df[["lab_res"]], flevels),
