@@ -12,7 +12,7 @@ asses_accuracy_area(error_matrix, class_areas)
 \item{class_areas}{A vector of the total area of each class on the map}
 }
 \value{
-A list of two lists: The confidence interval (confint95) and the accuracy
+A list of lists: The error_matrix, the class_areas, confidence interval (confint95, a list of two numerics) and the accuracy (accuracy, a list of three numerics: overall, user, and producer)
 }
 \description{
 Compute the accuracy normalized by the area. Note that, these computations don't work on clustered sampling because the equations are different.

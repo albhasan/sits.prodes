@@ -7,7 +7,7 @@
 confusion_raster(r1_path, r2_path, key_ls)
 }
 \arguments{
-\item{r1_path}{A length-one character. Path to a raster file. The reference raster to appear in the coluns of the confusion matrices.}
+\item{r1_path}{A length-one character. Path to a raster file. The reference raster to appear in the colums of the confusion matrices.}
 
 \item{r2_path}{A length-one character. Path to a raster file.}
 
@@ -15,7 +15,6 @@ confusion_raster(r1_path, r2_path, key_ls)
 }
 \value{
 A list as explained in caret::confusionMatrix
-export
 }
 \description{
 Compute the confusion matrix between two raster files.

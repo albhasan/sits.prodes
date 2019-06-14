@@ -10,7 +10,7 @@ add_upacc(conmat)
 \item{conmat}{A confusion matrix or a list.}
 }
 \value{
-The input matrix with an extra row and column or a list.
+The conmat with an extra row and column, or a list.
 }
 \description{
 Add user and produser accuracies to a confusion matrix.
