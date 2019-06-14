@@ -11,14 +11,15 @@ vignette: >
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(
-collapse = TRUE,
-comment = "#>"
+    knitr::opts_chunk$set(
+    collapse = TRUE,
+    comment = "#>"
 )
 ```
 
 
 ```{r work, include = FALSE}
+
 experiment_set <- list(few_cloud         = c("rep_prodes_40", "rep_prodes_41", "rep_prodes_42"), 
                        few_masked_clouds = c("rep_prodes_50", "rep_prodes_51", "rep_prodes_52"))
 
@@ -37,40 +38,37 @@ warning("Run get_experiment_accuracy.R and devtools::build() to update the data 
 stopifnot(file.exists(system.file("extdata/accuracy_ls.Rdata", package = "sits.prodes")))
 load(system.file("extdata/accuracy_ls.Rdata", package = "sits.prodes"))
 stopifnot(exists("accuracy_tb"))
+stopifnot(length(accuracy_ls) > 0)
 
-if (length(accuracy_ls) > 0) {
+# Get data for confusion matrices.
 accuracy_tb <- accuracy_ls %>% names() %>% 
     tibble::enframe(name = NULL) %>% 
-    dplyr::rename("file_path" = "value")
-}
+    dplyr::rename("file_path" = "value") %>% 
+    dplyr::mutate(acc_data = accuracy_ls,
+                  experiment = stringr::str_extract(file_path, "rep_prodes_[0-9]+"), 
+                  algorithm = purrr::map_chr(.$file_path, function(x){
+                      unlist(stringr::str_split(stringr::str_extract(x, "results_[a-z]+"), '_'))[2]
+                  }), 
+                  smooth = stringr::str_extract(file_path, "smooth_[0-9]+x[0-9]+_n[0-9]{2}"), 
+                  scene = stringr::str_extract(basename(file_path), "[0-9]{6}"),
+                  pyear = purrr::map_chr(file_path, function(x){
+                      as.integer(dplyr::last(unlist(stringr::str_extract_all(basename(x), "[0-9]{4}"))))
+                  })) %>%
+    dplyr::mutate(smooth = ifelse(is.na(smooth), "no_smooth", smooth)) %>% 
+    dplyr::select(experiment, algorithm, scene, pyear, smooth, #overall, overall2, up_acc, up_acc2, 
+                  acc_data, file_path) %>% 
+    dplyr::mutate(cm = purrr::map(.$acc_data, function(x){return(x$error_matrix)})) %>%
+    dplyr::mutate(up_acc2 = purrr::map(accuracy_ls, function(x){
+        res <- sits.prodes::asses_accuracy_simple(x$error_matrix)
+        c(res$user, res$producer) %>%
+            tibble::enframe(name = NULL) %>%
+            dplyr::bind_cols(cname =  c(paste0("ua_", names(res$user)), paste0("pa_", names(res$producer)))) %>%
+            tidyr::spread("cname", "value") %>%
+            return()
+    })) %>%
+    dplyr::mutate(up_acc3 = purrr::map(.$cm, add_upacc)) %>%
+    dplyr::arrange(experiment, algorithm, scene, pyear, smooth)
 
-# get data for confussion matrices
-if (nrow(accuracy_tb) > 0) {
-    accuracy_tb <- accuracy_tb %>% 
-        dplyr::mutate(acc_data = accuracy_ls,
-                      experiment = stringr::str_extract(file_path, "rep_prodes_[0-9]+"), 
-                      algorithm = purrr::map_chr(.$file_path, function(x){
-                          unlist(stringr::str_split(stringr::str_extract(x, "results_[a-z]+"), '_'))[2]
-                      }), 
-                      smooth = stringr::str_extract(file_path, "smooth_[0-9]x[0-9]_n[0-9]{2}"), 
-                      scene = stringr::str_extract(basename(file_path), "[0-9]{6}"),
-                      pyear = purrr::map_chr(file_path, function(x){
-                          as.integer(dplyr::last(unlist(stringr::str_extract_all(basename(x), "[0-9]{4}"))))
-                      })) %>%
-        dplyr::select(experiment, algorithm, scene, pyear, smooth, #overall, overall2, up_acc, up_acc2, 
-                      acc_data, file_path) %>% 
-        dplyr::mutate(cm = purrr::map(.$acc_data, function(x){return(x$error_matrix)})) %>%
-        dplyr::mutate(up_acc2 = purrr::map(accuracy_ls, function(x){
-            res <- sits.prodes::asses_accuracy_simple(x$error_matrix)
-            c(res$user, res$producer) %>%
-                tibble::enframe(name = NULL) %>%
-                dplyr::bind_cols(cname =  c(paste0("ua_", names(res$user)), paste0("pa_", names(res$producer)))) %>%
-                tidyr::spread("cname", "value") %>%
-                return()
-        })) %>%
-        dplyr::mutate(up_acc3 = purrr::map(.$cm, add_upacc)) %>%
-        dplyr::arrange(experiment, algorithm, scene, pyear, smooth)
-}
 
 # get data for graphs
 acc_tb <- accuracy_tb %>% 
@@ -122,106 +120,77 @@ knitr::include_graphics("./img/user_producer_accuracy_example.png")
 
 
 
-### Accuracy by algorithm
+### Accuracy by algorithm and smooth
 
 
 ```{r plot_graphics_algorithm, echo=FALSE, fig.height=7, fig.width=9, results='asis'}
 
-pa_acc_tb %>% 
-    dplyr::filter(algorithm == "dl", smooth == "smooth_7x7_n10") %>% 
-    ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
-                        color = experiment, 
-                        shape = variable
-    )) +
-    ggplot2::geom_point() +
-    ggplot2::coord_fixed() +
-    ggplot2::xlim(0, 1) +
-    ggplot2::ylim(0, 1) +
-    ggplot2::facet_wrap(scene ~ pyear) + 
-    ggplot2::labs(title = "Deep Learning smooth_7x7_n10", 
-         x = "Producer accuracy", 
-         y = "User accuracy")
+plot_acc_by_alg_smt <- function(data_tb, my_algorithm, my_smooth){
+    print(
+        data_tb %>% 
+            dplyr::filter(algorithm == !!my_algorithm, smooth == !!my_smooth) %>% 
+            ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
+                                color = experiment, 
+                                shape = variable
+            )) +
+            ggplot2::geom_point() +
+            ggplot2::coord_fixed() +
+            ggplot2::xlim(0, 1) +
+            ggplot2::ylim(0, 1) +
+            ggplot2::facet_wrap(scene ~ pyear) + 
+            ggplot2::labs(title = sprintf("%s %s", my_algorithm, my_smooth), 
+                          x = "Producer accuracy", 
+                          y = "User accuracy")
+    )
+}
 
-pa_acc_tb %>% 
-    dplyr::filter(algorithm == "rf", smooth == "smooth_7x7_n10") %>% 
-    ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
-                        color = experiment, 
-                        shape = variable
-    )) +
-    ggplot2::geom_point() +
-    ggplot2::coord_fixed() +
-    ggplot2::xlim(0, 1) +
-    ggplot2::ylim(0, 1) +
-    ggplot2::facet_wrap(scene ~ pyear) + 
-    ggplot2::labs(title = "Random Forest smooth_7x7_n10", 
-         x = "Producer accuracy", 
-         y = "User accuracy")
 
-pa_acc_tb %>% 
-    dplyr::filter(algorithm == "svm", smooth == "smooth_7x7_n10") %>% 
-    ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
-                        color = experiment, 
-                        shape = variable
-    )) +
-    ggplot2::geom_point() +
-    ggplot2::coord_fixed() +
-    ggplot2::xlim(0, 1) +
-    ggplot2::ylim(0, 1) +
-    ggplot2::facet_wrap(scene ~ pyear) + 
-    ggplot2::labs(title = "SVM smooth_7x7_n10", 
-         x = "Producer accuracy", 
-         y = "User accuracy")
-
-pa_acc_tb %>% 
-    dplyr::filter(algorithm == "vote", smooth == "smooth_7x7_n10") %>% 
-    ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
-                        color = experiment, 
-                        shape = variable
-    )) +
-    ggplot2::geom_point() +
-    ggplot2::coord_fixed() +
-    ggplot2::xlim(0, 1) +
-    ggplot2::ylim(0, 1) +
-    ggplot2::facet_wrap(scene ~ pyear) + 
-    ggplot2::labs(title = "Vote DL, RF, SVM smooth_7x7_n10", 
-         x = "Producer accuracy", 
-         y = "User accuracy")
+for (my_algorithm in c("dl", "rf", "svm", "vote")) {
+    cat("\n\n")
+    cat(paste0("#### ", my_algorithm), "\n")
+    for (my_smooth in c("smooth_3x3_n10", "smooth_5x5_n10", "smooth_7x7_n10", 
+                  "smooth_9x9_n10","smooth_11x11_n10") ) {
+        suppressWarnings(pa_acc_tb %>% 
+                             plot_acc_by_alg_smt(my_algorithm, my_smooth))
+    }
+}
 
 ```
 
 
-### Accuracy by algorithm and smooth
+### Accuracy by label and experiment
 
 
 ```{r plot_graphics_smooth, echo=FALSE, fig.height=7, fig.width=9, results='asis'}
 
-pa_acc_tb %>% 
-    dplyr::filter(variable == "deforestation" , experiment == "rep_prodes_40") %>% 
-    ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
-                        color = smooth, 
-                        shape = algorithm)) +
-    ggplot2::geom_point() +
-    ggplot2::coord_fixed() +
-    #ggplot2::xlim(0, 1) +
-    #ggplot2::ylim(0, 1) +
-    ggplot2::facet_wrap(scene ~ pyear) +
-    labs(title = "rep_prodes_40 - deforestation by algorithm and smooth", 
-         x = "Producer accuracy", 
-         y = "User accuracy")
+plot_acc_by_alg_xp <- function(data_tb, my_label, my_experiment){
+    plot(
+        data_tb %>% 
+            dplyr::filter(variable ==  !!my_label, 
+                          experiment == !!my_experiment) %>% 
+            ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
+                                color = smooth, 
+                                shape = algorithm)) +
+            ggplot2::geom_point() +
+            ggplot2::coord_fixed() +
+            #ggplot2::xlim(0, 1) +
+            #ggplot2::ylim(0, 1) +
+            ggplot2::facet_wrap(scene ~ pyear) +
+            labs(title = sprintf("Whole validation %s %s", my_label, my_experiment),
+                 x = "Producer accuracy", 
+                 y = "User accuracy")
+    )
+}
 
-pa_acc_tb %>% 
-    dplyr::filter(variable == "forest" , experiment == "rep_prodes_40") %>% 
-    ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
-                        color = smooth, 
-                        shape = algorithm)) +
-    ggplot2::geom_point() +
-    ggplot2::coord_fixed() +
-    ggplot2::xlim(0.9, 1) +
-    ggplot2::ylim(0.9, 1) +
-    ggplot2::facet_wrap(scene ~ pyear) +
-    labs(title = "rep_prodes_40 - forest by algorithm and smooth", 
-         x = "Producer accuracy", 
-         y = "User accuracy")
+for (my_label in c("deforestation", "forest")) {
+    cat("\n\n")
+    cat(paste0("#### ", my_label), "\n")
+    for (my_experiment in c("rep_prodes_40", "rep_prodes_41", "rep_prodes_42", 
+                    "rep_prodes_50", "rep_prodes_51", "rep_prodes_52")) {
+        suppressWarnings(plot_acc_by_alg_xp(pa_acc_tb, my_label, my_experiment))
+    }
+}
+
 
 ```
 
@@ -233,6 +202,7 @@ pa_acc_tb %>%
 
 
 ```{r confusion_matrix, echo=FALSE, results='asis'}
+
 if (nrow(accuracy_tb) > 0) {
     for (i in 1:nrow(accuracy_tb)) {
         cap <- sprintf("Confusion matrix %s %s %s %s %s ", 
@@ -243,10 +213,10 @@ if (nrow(accuracy_tb) > 0) {
                        unlist(accuracy_tb[i, "smooth"]))
         cat(paste0("### ", cap), "\n")
         p_conmat <- suppressMessages(suppressWarnings(accuracy_tb$up_acc3[[i]] %>% 
-            apply(2, function(x){x/1}) %>% 
-            tibble::as_tibble(rownames = NA, caption = cap) %>% 
-            knitr::kable(digits = 2, row.names = TRUE, full_width = FALSE) %>% 
-            kableExtra::kable_styling()))
+                                                          apply(2, function(x){x/1}) %>% 
+                                                          tibble::as_tibble(rownames = NA, caption = cap) %>% 
+                                                          knitr::kable(digits = 2, row.names = TRUE, full_width = FALSE) %>% 
+                                                          kableExtra::kable_styling()))
         print(p_conmat)
         cat("\n\n")
     }

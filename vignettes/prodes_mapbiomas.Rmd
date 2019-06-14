@@ -8,8 +8,7 @@ vignette: >
   %\VignetteIndexEntry{prodes mapbiomas}
   %\VignetteEngine{knitr::rmarkdown}
   %\usepackage[utf8]{inputenc}
----
-
+--- 
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(

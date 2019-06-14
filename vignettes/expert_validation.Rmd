@@ -13,7 +13,7 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-
+    
 ```{r setup, echo = FALSE}
 
 suppressMessages(library(dplyr))
@@ -29,30 +29,83 @@ suppressMessages(library(xtable))
 
 utils::data("expert_validation", package = "sits.prodes")
 
+# Get the accuracies out of a confusionMatrix object. 
+# 
+# @param  x A confusionMatrix object (see caret::confusionMatrix).
+# @return A list of numeric. The overall, user, and producer accuracies.
+.get_accuracies <- function(x){
+    if (length(x) == 1 && is.na(x)) 
+        return(tibble::tibble(NA))
+    res <- sits.prodes::asses_accuracy_simple(x$table)
+    c(res$user, res$producer) %>%
+        tibble::enframe(name = NULL) %>%
+        dplyr::bind_cols(cname =  c(paste0("ua_", names(res$user)),
+                                    paste0("pa_", names(res$producer)))) %>%
+        tidyr::spread("cname", "value") %>%
+        return()
+}
+
+
+# Check if the confusion matrix's values are greater than zero. 
+# 
+# @param  x         A confusionMatrix object (see caret::confusionMatrix).
+# @param  label_vec A chatacter. Names of the labels to consider.
+# @return           A length-one logical.
+.is_mt_complete <- function(x, label_vec){
+    if (length(x) == 1 && is.na(x)) 
+        return(FALSE)
+    mt <- x$table %>% as.matrix()
+    if (!all(label_vec %in% colnames(mt)) && all(label_vec %in% rownames(mt)))
+        return(FALSE)
+    mt_lab <- mt[label_vec, label_vec]
+    if (any(is.na(mt_lab)))
+        return(FALSE)
+    if (any(apply(mt_lab, 2, sum) == 0))
+        return(FALSE)
+    return(TRUE)
+}
+
 ```
+
+
+# Comparison PRODES to SITS classification results
+
+
+### PRODES Portuguese to English
+
+```{r print_prodes_labels, echo = FALSE}
+
+prodes_labels %>% 
+    dplyr::select(-id_pd) %>% 
+    knitr::kable() %>% 
+    kableExtra::kable_styling(full_width = F)
+
+```
+
+## Results
+
+* PRODES is the reference map (it is represented in the columns of th confusion
+matrices).
+* The data given in numer of pixels (except for user and producer accuracies).
+* Experts validation is a set of sample points for validating classification 
+results. The samples were selected randomically an classified by hand by an 
+expert (Rodrigo Begotti) using Landsat mosaics from PRODES Digital.
 
 
 ```{r, echo = FALSE}
 
-f <- function(x){
-        if (length(x) == 1 && is.na(x)) return(tibble::tibble(NA))
-        res <- sits.prodes::asses_accuracy_simple(x$table)
-        c(res$user, res$producer) %>%
-            tibble::enframe(name = NULL) %>%
-            dplyr::bind_cols(cname =  c(paste0("ua_", names(res$user)),
-                                        paste0("pa_", names(res$producer)))) %>%
-            tidyr::spread("cname", "value") %>%
-            return()
-    }
-
 # get data for plots
 acc_tb <- expert_validation %>%
-    dplyr::mutate(up_acc2 = purrr::map(.$confusion_matrix, f)) %>%
+    dplyr::mutate(
+        is_mt_complete = purrr::map_lgl(.$confusion_matrix, .is_mt_complete, 
+                                    label_vec = c("deforestation", "forest")),
+        up_acc2 = purrr::map(.$confusion_matrix, .get_accuracies)
+    ) %>%
+    dplyr::filter(is_mt_complete == TRUE) %>%
     tidyr::drop_na(confusion_matrix) %>% 
     dplyr::select(experiment, algorithm, smooth, scene, pyear, up_acc2) %>%
     tidyr::unnest() %>%
-    dplyr::select(-'NA', 
-                  -tidyselect::ends_with(match = "no forest"), 
+    dplyr::select(-tidyselect::ends_with(match = "no forest"), 
                   -tidyselect::ends_with(match = "water")) %>%
     tidyr::gather(tidyselect::starts_with("pa_"), tidyselect::starts_with("ua_"),
                   key = "variable", value = "value") %>%
@@ -72,42 +125,54 @@ pa_acc_tb <- acc_pr %>%
 ```
 
 
-```{r plot_confusion_matrices, results='asis', echo=FALSE, fig.height=9, fig.width=9}
+```{r plot_confusion_matrices_DL, results='asis', echo=FALSE, fig.height=9, fig.width=9}
 
-prodes_years <- pa_acc_tb %>% dplyr::pull(pyear) %>% unique()
+f_plot <- function(data_tb, my_algorithm, my_smooth){
+    
+   prodes_years <- data_tb %>% dplyr::pull(pyear) %>% unique() %>% sort() 
+    # TODO: ensure there is plot for all years && scenes
+    # make sure there is data for all
+    #data_tb %>% dplyr::select(experiment, algorithm , smooth, scene, pyear) %>% 
+        #dplyr::group_by(experiment, algorithm , smooth, scene, pyear) %>% 
+   #     dplyr::tally()
+    
+    
+    
+    
+    plot(
+        data_tb %>%
+            dplyr::filter(smooth == !!my_smooth, 
+                          algorithm == !!my_algorithm) %>% 
+            ggplot2::ggplot(aes(x = prod_acc, y = user_acc,
+                                shape = variable, color = experiment)) +
+            ggplot2::geom_point(size = 2) +
+            ggplot2::coord_fixed() +
+            ggplot2::xlim(0, 1) +
+            ggplot2::ylim(0, 1) +
+            ggplot2::guides(shape = guide_legend(override.aes = list(size = 3))) +
+            ggplot2::facet_wrap(scene ~ pyear, ncol = length(prodes_years)) +
+            ggplot2::labs(title = sprintf("Expert validation %s %s", 
+                                          my_algorithm, my_smooth),
+                          x = "Producer accuracy",
+                          y = "User accuracy")
+    )
+}
 
-pa_acc_tb %>%
-    dplyr::filter(smooth == "smooth_7x7_n10", 
-                  algorithm == "results_dl") %>% 
-    ggplot2::ggplot(aes(x = prod_acc, y = user_acc,
-                        shape = variable, color = experiment)) +
-    ggplot2::geom_point() +
-    ggplot2::coord_fixed() +
-    ggplot2::xlim(0, 1) +
-    ggplot2::ylim(0, 1) +
-    ggplot2::facet_wrap(scene ~ pyear, ncol = length(prodes_years)) +
-    ggplot2::labs(title = "Expert validation, DL, smooth_7x7_n10",
-         x = "Producer accuracy",
-         y = "User accuracy")
-
-pa_acc_tb %>%
-    dplyr::filter(smooth == "smooth_7x7_n10", 
-                  algorithm == "results_dl") %>% 
-    ggplot2::ggplot(aes(x = prod_acc, y = user_acc,
-                        shape = variable, color = experiment)) +
-    ggplot2::geom_point() +
-    ggplot2::coord_fixed() +
-    ggplot2::xlim(0, 1) +
-    ggplot2::ylim(0, 1) +
-    ggplot2::facet_wrap(scene ~ pyear, ncol = length(prodes_years)) +
-    ggplot2::labs(title = "Expert validation, DL, smooth_7x7_n10",
-         x = "Producer accuracy",
-         y = "User accuracy")
+for (my_algorithm in c("results_dl", "results_rf", "results_svm", 
+                       "results_vote")) {
+    cat("\n\n")
+    cat(paste0("#### ", my_algorithm), "\n")
+    for (my_smooth in c("smooth_3x3_n10","smooth_5x5_n10","smooth_7x7_n10",
+                        "smooth_9x9_n10","smooth_11x11_n10")) {
+        suppressWarnings(f_plot(data_tb = pa_acc_tb, my_algorithm, my_smooth))
+    }
+}
 
 ```
 
 
 ```{r print_confusion_matrices, results='asis', echo=FALSE}
+
 for (i in 1:nrow(expert_validation)) {
     cap <- sprintf("Confusion matrix %s %s", unlist(expert_validation[i, "scene"]), 
                    unlist(expert_validation[i, "pyear"]))
