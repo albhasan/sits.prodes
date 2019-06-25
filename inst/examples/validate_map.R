@@ -136,7 +136,8 @@ res_acc <- purrr::map(path_res_vec, function(res_file, out_dir = NULL){
                                          fileext = ".tif"),
                   tile = scene_file,
                   year_pd = pyear,
-                  prodes_lbl = prodes_labels) %>%
+                  prodes_lbl = dplyr::filter(prodes_labels,
+                                             label_pd %in% names(int_labels))) %>%
         raster::raster() %>%
         ensurer::ensure_that(!is.null(.), err_desc = "Rasterization failed!")
 
