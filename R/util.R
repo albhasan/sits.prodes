@@ -73,11 +73,11 @@ compute_indexes <- function(x, sat){
 
 #' @title Get metadata from a Brick filename
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description   Get metadata from a Brick filename
+#' @description Get metadata from a Brick's file name.
 #'
-#' @param brick_paths A character. Path to dbrick files
-#' @return            A character of path, pathrow, start_date, band, year (NA for MODIS)
-#' export
+#' @param brick_paths A character. Path to brick files.
+#' @return            A character of path, pathrow, start_date, band, year (NA for MODIS).
+#' @export
 get_brick_md <- function(brick_paths){
     # Get the number of bands in a file
     # @param filepath A length-one character. A path to a file
@@ -146,7 +146,53 @@ get_img_md <- function(img_path){
 }
 
 
-#' @title Replace column values with random numbers
+#' @title Identify bricks missing in directory.
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description   Given sets of years, scenes, bands, check if thre are bricks available for them.
+#'
+#' @param in_dir             A length-one character. A path to a directory of brick files.
+#' @param expected_scenes    A character. Expected path and rows.
+#' @param expected_years     A character. Expected years.
+#' @param expected_bands     A character. Expected bands.
+#' @param brick_file_pattern A length-one character· A regular expression to match brick files.
+#' @return                   A tibble.
+#' @export
+identify_missing_bricks <- function(in_dir, expected_scenes, expected_years,
+                                    expected_bands,
+                                    brick_file_pattern = "^LC8SR-(MASKCLOUD|MOD13Q1-MYD13Q1|MOD13Q1-STARFM|RAW|SIMPLE)_[0-9]{6}_[0-9]{4}-[0-9]{2}-[0-9]{2}_[a-z0-9]{+}_STACK_BRICK.tif$"){
+    found <- pathrow <- NULL
+    # Get bricks' metadata.
+    brick_md <- in_dir %>%
+        list.files(pattern = brick_file_pattern, full.names = TRUE) %>%
+        ensurer::ensure_that(length(.) > 0,
+                             err_desc = sprintf("No brick files found at %s",
+                                                in_dir)) %>%
+        get_brick_md() %>%
+        tibble::as_tibble()
+
+    # Build a tibble of expected bricks.
+    test_tb <- expand.grid(expected_scenes, expected_years,
+                        expected_bands, stringsAsFactors = FALSE) %>%
+        dplyr::as_tibble()
+    colnames(test_tb) <- c("e_scene", "e_year", "e_band")
+
+    # Find the missing bricks.
+    test_tb %>%
+        dplyr::mutate(found = purrr::pmap_lgl(.,
+            function(e_scene, e_year, e_band, brick_md){
+                brick_md %>% dplyr::filter(pathrow == e_scene,
+                                           year == e_year,
+                                           band == e_band) %>%
+                    nrow(.) == 1 %>%
+                    return()
+        }, brick_md = brick_md)) %>%
+        dplyr::filter(found == FALSE) %>%
+        dplyr::select(-found) %>%
+        return()
+}
+
+
+#' @title Replace column values with random numbers.
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description   Replace the values of the columns (from the second one on) of a tibble uniform random numbers between 0 and 1
 #'
