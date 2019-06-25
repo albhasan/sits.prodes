@@ -141,26 +141,25 @@ process_valid_shp <- function(shp_path, out_dir){
 }
 
 
-
-#' @title Get time series for validates sample points.
+#' @title Get time series for validated sample points.
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description Get validated PRODES samples (from a CSV file) and retrieve time
 #' series for each one
 #'
-#' @param cpath        A length-one character. Path to a CSV file.
-#' @param path_bricks  A character. Path to a directory with Landsdat8-MODIS bricks.
-#' @param brick_prefix A character. Prefix to the name of the Landsdat8-MODIS bricks.
-#' @param class_bands  A character. The name of the bands to process.
-#' @param scale_factor   A list. Scale factorof the image band files.
+#' @param cpath          A length-one character. Path to a CSV file.
+#' @param path_bricks    A character. Path to a directory with Landsdat8-MODIS bricks.
+#' @param brick_prefix   A character. Prefix to the name of the Landsdat8-MODIS bricks.
+#' @param class_bands    A character. The name of the bands to process.
+#' @param scale_factor   A list. Scale factor of the image band files.
 #' @param missing_values A list. Values representing missing pixels for each band.
 #' @param minimum_values A list. Minimum values of each band.
 #' @param maximum_values A list. Maximum values of each band.
 #' @param suffix         A length-one character. A suffix to append to the filename of the results
 #' @param max_time_diff  A length-one numeric. The maximum difference (in days) between the fist day of the bricks and the first day of the CSV sample file.
-#' @param cov_name     A length-one character. Name for the sits coverage to create.
-#' @param time_len     A length-one integer. The lenght of the brick's time line.
-#' @param time_by      A length-one inetger. The number of days between observations in the time line.
-#' @return             A vector of paths to Rdata files
+#' @param cov_name       A length-one character. Name for the sits coverage to create.
+#' @param time_len       A length-one integer. The lenght of the brick's time line.
+#' @param time_by        A length-one inetger. The number of days between observations in the time line.
+#' @return               A vector of paths to Rdata files
 get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
                            scale_factor = NULL, missing_values = NULL, 
                            minimum_values = NULL, maximum_values = NULL,
