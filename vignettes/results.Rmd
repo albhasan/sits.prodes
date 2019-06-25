@@ -26,7 +26,6 @@ experiment_set <- list(few_cloud         = c("rep_prodes_40", "rep_prodes_41", "
 library(dplyr)
 library(ggplot2)
 library(knitr)
-library(lubridate)
 library(magrittr)
 library(sits.prodes)
 library(xtable)
