@@ -42,6 +42,7 @@ tests <- diff_files %>% dplyr::select(experiment, smooth, pyear, scene) %>%
 
 # Helper function for computing the common areas of confusion maps.
 compute_confusion <- function(t_experiment, t_smooth, t_pyear, t_scene, data_tb){
+
     algorithms <- data_tb %>% dplyr::pull(algorithm) %>%
         unique() %>%
         ensurer::ensure_that(length(.) > 1, err_desc = "Not enough rasters.")
@@ -57,24 +58,18 @@ compute_confusion <- function(t_experiment, t_smooth, t_pyear, t_scene, data_tb)
         dplyr::mutate(dif_raster = lapply(.$file_path, raster::raster)) %>%
         ensurer::ensure_that(raster::compareRaster(.$dif_raster,
                                                    stopiffalse = FALSE),
-                             err_desc = "Spatial missmatch between rasters.")
+                             err_desc = "Spatial missmatch between rasters.") %>%
+        dplyr::mutate(
+            is_prodes = purrr::map(.$dif_raster, function(x){return(x == 0)})
+            )
 
-    # Compare the rasters.
-    for(r_id in seq_along(algorithms)){
-        sub_dt$dif_raster[[r_id]] <- sub_dt$dif_raster[[r_id]] == 0
-    }
-    res <-  sub_dt$dif_raster[[1]]
-    for(r_id in seq_along(algorithms)){
-        if (r_id > 1) {
-            res <- res & sub_dt$dif_raster[[r_id]]
-        }
-    }
+    res <-  Reduce(`&`, sub_dt$is_prodes, sub_dt$is_prodes[[1]], accumulate = FALSE)
     return(res)
 }
 
-tests <- tests %>% 
+tests <- tests %>%
     dplyr::mutate(common_confusion = purrr::pmap(., compute_confusion, data_tb = diff_files),
-                  filename = file.path(in_dir, "confusion_dl_rf_svm", 
+                  filename = file.path(in_dir, "confusion_dl_rf_svm",
                       paste0(paste(t_experiment, t_scene, t_pyear, t_smooth, sep = "_"), ".tif")))
 
 tests %>% dplyr::select(common_confusion, filename) %>%
