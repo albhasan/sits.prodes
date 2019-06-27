@@ -14,6 +14,22 @@
 NULL
 
 
+#---- expert_samples ----
+#' @title Samples collected by experts.
+#'
+#' @description Set of sample points classified by hand by an expert (Ana
+#' Rorato) using MOD13Q1 images. 
+#'
+#' @docType data
+#' @keywords datasets
+#' @name expert_samples
+#' @usage data(expert_samples)
+#'
+#' @format An sf object with 39980 rows and 8 colmns including, for each sample,
+#' coordinates, start and end dates, labels, coverage names and time series.
+NULL
+
+
 #---- expert_validation ----
 #' @title Validation samples collected by experts.
 #'
@@ -26,7 +42,7 @@ NULL
 #' @name expert_validation
 #' @usage data(expert_validation)
 #'
-#' @format An sf object with 450 rows and 9 colmns inclusing Identification,
+#' @format An sf object with 450 rows and 9 colmns including Identification,
 #' Landsat tile, and the labels from 2014 to 2017.
 NULL
 
