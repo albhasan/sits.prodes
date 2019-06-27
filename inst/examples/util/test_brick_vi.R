@@ -52,3 +52,4 @@ brick_ts <- lapply(brick_ls, function(brick_paths){
 
 # print the results
 lapply(brick_ts,  as.data.frame)
+
