@@ -180,24 +180,24 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
         maximum_values <- sits_conf$RASTER_maximum_value
 
     # get metadata from brick's name
-    pathrow <- cpath %>% basename() %>% stringr::str_extract("_[0-9]{3}_[0-9]{3}_") %>%
-        strsplit(split = '_', fixed = TRUE) %>% unlist() %>%
+    pathrow <- cpath %>% basename() %>%
+        stringr::str_extract("_[0-9]{3}_[0-9]{3}_") %>%
+        strsplit(split = '_', fixed = TRUE) %>%
+        unlist() %>%
         paste(collapse = '')
-    start_date <- cpath %>% basename() %>% stringr::str_extract("[0-9]{4}-[0-9]{2}-[0-9]{2}")
-    if (class(try(as.Date(start_date))) == "try-error" || is.na(try(as.Date(start_date))))
+    csv_start_date <- cpath %>% basename() %>%
+        stringr::str_extract("[0-9]{4}-[0-9]{2}-[0-9]{2}")
+    if (class(try(as.Date(csv_start_date))) == "try-error" || is.na(try(as.Date(csv_start_date))))
         stop("Invalid start_date in file name ", cpath)
 
     # build a data.frame of bricks' metadata
     brick_tb <- path_bricks %>% 
         list.files(pattern = paste0(brick_prefix, pathrow, '_*'), 
                    full.names = TRUE) %>% 
-        tibble::enframe(name = NULL) %>%
-        dplyr::rename(path = value) %>%
+        get_brick_md() %>%
+        dplyr::as_tibble() %>%
         dplyr::mutate(
-            pathrow = stringr::str_extract(basename(path), "[0-9]{6}"),
-            year = stringr::str_extract(basename(path), "[0-9]{4}-[0-9]{2}-[0-9]{2}"),
-            band = stringr::str_sub(stringr::str_extract(basename(path), "_[a-z]+[0-9]?_"), 2, -2),
-            dif_time = abs(as.numeric(difftime(as.Date(year), as.Date(start_date), units = 'days')))
+            dif_time = abs(as.numeric(difftime(as.Date(start_date), as.Date(csv_start_date), units = 'days')))
         ) %>%
         dplyr::filter(pathrow == pathrow, dif_time < max_time_diff, band %in% class_bands) %>%
         ensurer::ensure_that(all(as.numeric(pathrow) > 200000 && as.numeric(pathrow < 300000)))
@@ -208,8 +208,10 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
     }
 
     # A brick should contain one year worth of images  of a single path/row of a single band
-    time_line <- brick_tb %>% dplyr::pull(year) %>% unique() %>%
-        ensurer::ensure_that(length(.) == 1) %>% as.Date() %>%
+    time_line <- brick_tb %>% dplyr::pull(start_date) %>%
+        unique() %>%
+        ensurer::ensure_that(length(.) == 1) %>%
+        lubridate::date() %>%
         seq(by = time_by, length.out = time_len)
 
     # get a sits coverage

@@ -33,9 +33,9 @@ prodes2raster <- function(file_pd, file_rt, raster_path, tile, year_pd, prodes_l
     key_label_pt <- unique_label_pt %>%
         dplyr::pull(label_pd) %>%
         as.list()
-    key_id_pd <- unique_id_pd
-        %>% dplyr::pull(id_pd)
-        %>% as.list()
+    key_id_pd <- unique_id_pd %>%
+        dplyr::pull(id_pd) %>%
+        as.list()
     names(key_label_pt) <- unique_label_pt %>% dplyr::pull(label_pd_pt)
     names(key_id_pd) <-    unique_id_pd    %>% dplyr::pull(label_pd)
  
