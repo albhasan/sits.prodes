@@ -64,6 +64,14 @@ Source: Machine Learning — Andrew Ng, Stanford University [FULL COURSE]
 
 
 
+```{r brick_desc, echo=FALSE}
+brick_description %>% 
+    knitr::kable(digits = 2, row.names = TRUE, full_width = FALSE) %>% 
+    kableExtra::kable_styling()
+```
+
+
+
 # Training
 
 ## Experiment summary

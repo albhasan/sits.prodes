@@ -21,6 +21,15 @@ stopifnot(file.exists(system.file("extdata/accuracy_ls.Rdata", package = "sits.p
 
 ```
 
+
+```{r brick_desc, echo=FALSE}
+brick_description %>% 
+    knitr::kable(digits = 2, row.names = TRUE, full_width = FALSE) %>% 
+    kableExtra::kable_styling()
+```
+
+
+
 * Description of the samples used for classification.
 * The samples math the same points, howver, the time series are taken from 
 different bricks.

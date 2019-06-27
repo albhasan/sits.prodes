@@ -93,6 +93,14 @@ pa_acc_tb <- acc_pr %>%
 
 
 
+```{r brick_desc, echo=FALSE}
+brick_description %>% 
+    knitr::kable(digits = 2, row.names = TRUE, full_width = FALSE) %>% 
+    kableExtra::kable_styling()
+```
+
+
+
 ## Accuracy
 
 It is a decomposition of the accuracy, originally proposed by Story and Congalton [@Story:1986].

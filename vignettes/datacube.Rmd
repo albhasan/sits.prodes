@@ -87,6 +87,14 @@ print(map_bz)
 ## Data
 
 
+```{r brick_desc, echo=FALSE}
+brick_description %>% 
+    knitr::kable(digits = 2, row.names = TRUE, full_width = FALSE) %>% 
+    kableExtra::kable_styling()
+```
+
+
+
 ```{r cloud_cover, echo=FALSE, fig.width=7, fig.height=4}
 cloud_cover <- BRICK_IMAGES %>% 
     dplyr::select(scene, img_date, cloud_cov, prodes_year) %>% 
