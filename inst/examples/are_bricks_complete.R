@@ -4,16 +4,11 @@
 library(dplyr)
 library(sits.prodes)
 
-#TODO: remove
-setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
-library(devtools)
-devtools::load_all()
-#----
-
 # Check that the files meet the scenes and prodes-year requirements.
 in_dir <- c("/home/alber/Documents/data/experiments/prodes_reproduction/data/raster/brick_interp", 
             "/home/alber/Documents/data/experiments/prodes_reproduction/data/raster/brick_mask_cloud", 
             "/home/alber/Documents/data/experiments/prodes_reproduction/data/raster/brick_raw", 
+            "/home/alber/Documents/data/experiments/prodes_reproduction/data/raster/brick_raw2", 
             "/home/alber/Documents/data/experiments/prodes_reproduction/data/raster/brick_simple", 
             "/home/alber/Documents/data/experiments/prodes_reproduction/data/raster/brick_starfm")
 
