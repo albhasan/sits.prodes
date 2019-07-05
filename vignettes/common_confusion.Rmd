@@ -1,0 +1,109 @@
+---
+title: "Common misclassification os DL RF SVM maps"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Common misclassification os DL RF SVM maps}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, include=FALSE}
+suppressMessages(library(dplyr))
+suppressMessages(library(ggplot2))
+suppressMessages(library(magrittr))
+suppressMessages(library(purrr))
+suppressMessages(library(raster))
+suppressMessages(library(sits.prodes))
+suppressMessages(library(stringr))
+```
+
+
+# Missclasification
++ Each classification result is compared to PRODES in a difference map.
++ The difference maps are compared to find the places where all the algorithms (DL, RF, SVM) predict the same label.
++ In the maps below, the label 1 represents where the algorithms agree (DL, RF, SVM).
+
+```{r get_data, include=FALSE}
+
+# Get maps
+in_dir <- "/home/alber/Documents/data/experiments/prodes_reproduction/03_classify/confusion_dl_rf_svm/byte"
+brick_raw_dir <- "/home/alber/shared/brick_raw"
+
+img_tb <- in_dir %>% list.files(pattern = "rep_prodes_[0-9]{2}_[0-9]{6}_[0-9]{4}_(smooth_3x3_n10|smooth_5x5_n10|smooth_7x7_n10|smooth_9x9_n10|smooth_11x11_n10|no_smooth).tif",
+                      full.names = TRUE) %>%
+    tibble::enframe(name = NULL) %>%
+    dplyr::rename(file_path = "value") %>%
+    dplyr::mutate(file_name = basename(file_path),
+                  experiment = stringr::str_extract(file_name, "rep_prodes_[0-9]{2}"),
+                  scene = stringr::str_extract(file_name, "_[0-9]{6}_") %>% stringr::str_sub(2, -2),
+                  pyear = stringr::str_extract(file_name, "_[0-9]{4}_") %>% stringr::str_sub(2, -2),
+                  smooth = stringr::str_extract(file_name, "smooth_[0-9]+x[0-9]+_n[0-9]+")) %>%
+    dplyr::mutate(smooth = ifelse(is.na(smooth), "no_smooth", smooth)) %>% 
+    dplyr::arrange(experiment, scene, smooth, pyear) %>% 
+    #
+    dplyr::filter(experiment == "rep_prodes_40",
+                  scene == "226064",
+                  smooth == "smooth_11x11_n10")
+
+# brick_raw_cloud <- brick_raw_dir %>% list.files(pattern = "LC8SR-RAW_[0-9]{6}_[0-9]{4}-[0-9]{2}-[0-9]{2}_cloud_STACK_BRICK.tif",
+#                                                 full.names = TRUE) %>%
+#     sits.prodes::get_brick_md()
+
+```
+
+
+
+
+```{r brick_desc, echo=FALSE}
+suppressWarnings(
+  brick_description %>% 
+    knitr::kable(digits = 2, row.names = TRUE, full_width = FALSE) %>% 
+    kableExtra::kable_styling()
+)
+```
+
+
+
+```{r echo=FALSE, , fig.height=4, fig.width=5, results='asis'}
+
+my_experiment <- ""
+my_scene <- ""
+my_pyear <- ""
+my_smooth <- ""
+
+for (rid in seq_along(img_tb$file_path)) {
+    if (img_tb$experiment[[rid]] != my_experiment) {
+        my_experiment <- img_tb$experiment[[rid]]
+        cat("\n\n") ; cat(paste0("## ", my_experiment), "\n")
+    }
+    if (img_tb$smooth[[rid]] != my_smooth) {
+        my_smooth <- img_tb$smooth[[rid]]
+        cat("\n\n") ; cat(paste0("### ", my_smooth), "\n")
+    }
+    if (img_tb$scene[[rid]] != my_scene) {
+        my_scene <- img_tb$scene[[rid]]
+        cat("\n\n") ; cat(paste0("#### ", my_scene), "\n")
+    }
+    if (img_tb$pyear[[rid]] != my_pyear) {
+        my_pyear <- img_tb$pyear[[rid]]
+        cat("\n\n") ; cat(paste0("##### ", my_pyear), "\n")
+    }
+
+    break_points <- seq(-0.5, 1.5)
+    colors <- c("red", "darkolivegreen4", "blue")
+    img_tb %>% 
+        dplyr::slice(rid) %>% 
+        dplyr::pull(file_path) %>% 
+        raster::raster() %>% 
+        plot(breaks = break_points, col = colors)
+}
+
+```
+
