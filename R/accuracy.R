@@ -115,10 +115,10 @@ confusion_raster <- function(r1_path, r2_path, key_ls){
 
     # match rasters
     if (!raster::compareRaster(r1, r2, extent = TRUE, rowcol = FALSE, crs = TRUE,
-                              stopiffalse = FALSE, showwarning = TRUE)) {
+                               stopiffalse = FALSE, showwarning = TRUE)) {
         tmp_fn <- r2_path %>% basename() %>% tools::file_path_sans_ext() %>%
             paste0('_') %>% tempfile(fileext = ".tif")
-        r2 <- raster::projectRaster(from = r2, to = r1, method = "ngb", 
+        r2 <- raster::projectRaster(from = r2, to = r1, method = "ngb",
                                     filename = tmp_fn)
     }
     data_df <- raster::stack(r1, r2, quick = FALSE)[] %>%

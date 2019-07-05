@@ -1,10 +1,3 @@
-# FUNCTIONS FOR SAMPLE PROCESSING
-# alber sanchez alber.ipia@inpe.br
-# Last update 2018-09-08
-# TODO:
-# NOTES:
-
-
 #' @title Load sample time series from Rdata files
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description Load (and filter) sample time series from Rdata files.
@@ -42,8 +35,13 @@ load_samples <- function(x, sat, expected_nrow){
     }else if (length(x) == 1) {
         samples.tb <- NULL
         load(x)
-        if (is.null(samples.tb)) return(NA)
+        if (is.null(samples.tb))
+            return(NA)
+        end_date <- label <- longitude <- latitude <- start_date <- time_series <- valid <- NULL
         res <- samples.tb %>%
+            ensurer::ensure_that(all(c("end_date", "label", "longitude",
+                                       "latitude", "start_date", "time_series") %in% colnames(.)),
+                                 err_desc = "Missing columns.") %>%
             dplyr::arrange(longitude, latitude, start_date, end_date, label) %>%
             dplyr::mutate(valid = purrr::map_lgl(time_series, is_ts_valid, expected_nrow)) %>%
             dplyr::filter(valid == TRUE) %>%
@@ -72,24 +70,31 @@ process_valid_shp <- function(shp_path, out_dir){
     # read shp, drop geometry, fix column names
     shp <- shp_path  %>% sf::st_read(quiet = TRUE, stringsAsFactors = FALSE)
     coords <- shp %>% sf::st_coordinates() %>% dplyr::as_tibble()
-    csv <- shp %>% dplyr::mutate(longitude = coords$X, latitude = coords$Y) %>%
+    time_serie <- NULL
+    csv <- shp %>%
+        ensurer::ensure_that(all(c("time_serie") %in% colnames(.))) %>%
+        dplyr::mutate(longitude = coords$X, latitude = coords$Y) %>%
         dplyr::rename(time_series = time_serie) %>%
-        sf::st_set_geometry(NULL) %>% dplyr::as_tibble()
+        sf::st_set_geometry(value = NULL) %>%
+        dplyr::as_tibble()
 
     # check for a valid id field
-    id_col <- csv %>% dplyr::select(tidyselect::starts_with('tmp_id'))
+    id_col <- csv %>%
+        dplyr::select(tidyselect::starts_with('tmp_id'))
     if (nrow(id_col) > 0 && ncol(id_col) > 0) {
-        id_col <- as.integer(as.vector(unlist(id_col[, ncol(id_col)]))) # take the last tmp_id used
+        # take the last tmp_id used
+        id_col <- as.integer(as.vector(unlist(id_col[, ncol(id_col)])))
         if (length(id_col) != length(unique(id_col)))
-            id_col <- 1:nrow(csv) # recompute id if it is not valid
+            # recompute id if it is invalid
+            id_col <- 1:nrow(csv)
     }else{
         id_col <- 1:nrow(csv)
     }
-    csv <- csv %>% dplyr::mutate(id = id_col) %>%
+    id <- NULL
+    csv <- csv %>%
+        dplyr::mutate(id = id_col) %>%
         dplyr::select(-tidyselect::starts_with("tmp_id")) %>%
         dplyr::select(id, tidyselect::everything())
-
-
 
     # update date ranges
     start_md <- "-08-01" # "-08-20"
@@ -97,8 +102,12 @@ process_valid_shp <- function(shp_path, out_dir){
 
     res <- csv[0,]
     for (y in 2013:2017) {
-        label_all_years <- c("FLORESTA", "NAO_FLORESTA", "NAO_FLORESTA2", "HIDROGRAFIA", paste0('d', y))
-        res <- csv %>% dplyr::filter(label %in% label_all_years) %>%
+        label_all_years <- c("FLORESTA", "NAO_FLORESTA", "NAO_FLORESTA2",
+                             "HIDROGRAFIA", paste0('d', y))
+        label <- NULL
+        res <- csv %>%
+            ensurer::ensure_that("label" %in% colnames(.)) %>%
+            dplyr::filter(label %in% label_all_years) %>%
             dplyr::mutate(start_date = paste0(y - 1, start_md)) %>%
             dplyr::mutate(end_date   = paste0(y,     end_md)) %>%
             dplyr::bind_rows(res)
@@ -130,8 +139,12 @@ process_valid_shp <- function(shp_path, out_dir){
     # write a file per year
     csv_files <- character()
     for (d in unique(res$start_date)) {
-        csv_d <- res %>% dplyr::filter(start_date == d)
-        fname <- file.path(out_dir, paste0(substr(basename(shp_path), 1, nchar(basename(shp_path)) - 4), '_', d, '.csv'))
+        start_date <- NULL
+        csv_d <- res %>%
+            dplyr::filter(start_date == d)
+        fname <- file.path(out_dir, paste0(substr(basename(shp_path), 1,
+                                                  nchar(basename(shp_path)) - 4),
+                                           '_', d, '.csv'))
         csv_files <- append(csv_files, fname)
         print(paste0("Writing ", nrow(csv_d), " samples to file ", fname))
         print(table(csv_d$label))
@@ -161,9 +174,9 @@ process_valid_shp <- function(shp_path, out_dir){
 #' @param time_by        A length-one inetger. The number of days between observations in the time line.
 #' @return               A vector of paths to Rdata files
 get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
-                           scale_factor = NULL, missing_values = NULL, 
+                           scale_factor = NULL, missing_values = NULL,
                            minimum_values = NULL, maximum_values = NULL,
-                           suffix = "", max_time_diff = 30, 
+                           suffix = "", max_time_diff = 30,
                            cov_name = "SITS coverage", time_len = 23,
                            time_by = 16){
     stopifnot(length(cpath) == 1)
@@ -180,22 +193,28 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
         maximum_values <- sits_conf$RASTER_maximum_value
 
     # get metadata from brick's name
-    pathrow <- cpath %>% basename() %>%
-        stringr::str_extract("_[0-9]{3}_[0-9]{3}_") %>%
+    pathrow <- cpath %>%
+        basename() %>%
+        stringr::str_extract(pattern = "_[0-9]{3}_[0-9]{3}_") %>%
         strsplit(split = '_', fixed = TRUE) %>%
         unlist() %>%
         paste(collapse = '')
-    csv_start_date <- cpath %>% basename() %>%
-        stringr::str_extract("[0-9]{4}-[0-9]{2}-[0-9]{2}")
-    if (class(try(as.Date(csv_start_date))) == "try-error" || is.na(try(as.Date(csv_start_date))))
+    csv_start_date <- cpath %>%
+        basename() %>%
+        stringr::str_extract(pattern = "[0-9]{4}-[0-9]{2}-[0-9]{2}")
+
+    if (class(try(as.Date(csv_start_date))) == "try-error" ||
+        is.na(try(as.Date(csv_start_date))))
         stop("Invalid start_date in file name ", cpath)
 
     # build a data.frame of bricks' metadata
-    brick_tb <- path_bricks %>% 
-        list.files(pattern = paste0(brick_prefix, pathrow, '_*'), 
-                   full.names = TRUE) %>% 
+    band <- dif_time <- start_date <- NULL
+    brick_tb <- path_bricks %>%
+        list.files(pattern = paste0(brick_prefix, pathrow, '_*'),
+                   full.names = TRUE) %>%
         get_brick_md() %>%
         dplyr::as_tibble() %>%
+        ensurer::ensure_that(c("band", "start_date") %in% colnames(.)) %>%
         dplyr::mutate(
             dif_time = abs(as.numeric(difftime(as.Date(start_date), as.Date(csv_start_date), units = 'days')))
         ) %>%
@@ -203,7 +222,7 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
         ensurer::ensure_that(all(as.numeric(pathrow) > 200000 && as.numeric(pathrow < 300000)))
 
     if (nrow(brick_tb) == 0) {
-        warning("No L8MOD brick found for scene ", pathrow, " and date ", start_date)
+        warning("No L8MOD brick found for scene ", pathrow, " and date ", csv_start_date)
         return(NA)
     }
 
@@ -215,17 +234,15 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
         seq(by = time_by, length.out = time_len)
 
     # get a sits coverage
-    raster_cov <- sits::sits_coverage(
-        service = "RASTER",
-        name = cov_name,
-        bands = brick_tb$band,
-        scale_factor = scale_factor,
-        missing_values = missing_values,
-        minimum_values = minimum_values,
-        maximum_values = maximum_values,
-        timeline = time_line,
-        files = brick_tb$path
-    )
+    raster_cov <- sits::sits_coverage(service = "RASTER",
+                                      name = cov_name,
+                                      bands = brick_tb$band,
+                                      scale_factor = scale_factor,
+                                      missing_values = missing_values,
+                                      minimum_values = minimum_values,
+                                      maximum_values = maximum_values,
+                                      timeline = time_line,
+                                      files = brick_tb$path)
 
     # get samples
     samples.tb <- sits::sits_get_data(file = cpath, coverage = raster_cov)

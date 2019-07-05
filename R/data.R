@@ -18,7 +18,7 @@ NULL
 #' @title Samples collected by experts.
 #'
 #' @description Set of sample points classified by hand by an expert (Ana
-#' Rorato) using MOD13Q1 images. 
+#' Rorato) using MOD13Q1 images.
 #'
 #' @docType data
 #' @keywords datasets
@@ -173,6 +173,27 @@ NULL
 #' @keywords datasets
 #' @name prodes_samples_mask_cloud
 #' @usage data(prodes_samples_mask_cloud)
+#'
+#' @format A tibble with 1 rows and 7 variables: (a) longitude: East-west coordinate of the time series sample (WGS 84);
+#'   latitude (North-south coordinate of the time series sample in WGS 84), start_date (initial date of the time series),
+#'   end_date (final date of the time series), label (the class label associated to the sample),
+#'   coverage (the name of the coverage associated with the data),
+#'   time_series (list containing a tibble with the values of the time series).
+NULL
+
+
+
+
+#---- prodes_samples_raw ----
+#' @title Sample time-series from LANSAT 8 images.
+#'
+#' @description A dataset containing a tibble with time series sampled on the
+#' brazilian Amazon. The time series come from Landsat 8 Collection images.
+#'
+#' @docType data
+#' @keywords datasets
+#' @name prodes_samples_raw
+#' @usage data(prodes_samples_raw)
 #'
 #' @format A tibble with 1 rows and 7 variables: (a) longitude: East-west coordinate of the time series sample (WGS 84);
 #'   latitude (North-south coordinate of the time series sample in WGS 84), start_date (initial date of the time series),
