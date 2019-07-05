@@ -13,10 +13,14 @@ devtools::load_all()
 
 # build a path to new taining
 get_new_train_name <- function(train_path){
-    train_path %>% list.dirs(recursive = FALSE) %>%
-        stringr::str_match(pattern = "train_[0-9]{2}") %>% .[!is.na(.)] %>%
-        stringr::str_extract(pattern = "[0-9]{2}") %>% dplyr::last() %>%
-        as.integer() %>% (function(x) x + 1)
+    train_path %>%
+        list.dirs(recursive = FALSE) %>%
+        stringr::str_match(pattern = "train_[0-9]{2}") %>%
+        .[!is.na(.)] %>%
+        stringr::str_extract(pattern = "[0-9]{2}") %>%
+        dplyr::last() %>%
+        as.integer() %>%
+        (function(x) x + 1)
 }
 
 # setup ----
@@ -63,6 +67,7 @@ message(Sys.time(), ' Scenes (experiment): ', paste0(experiment_scenes, collapse
 message(Sys.time(), ' Brick type (experiment): ', brick_type)
 
 # load samples
+prodes_samples_starfm <- prodes_samples_mask_cloud <- NULL
 if (brick_type == "l8mod_interp") {
     data(list = "prodes_samples_interpolated", package = "sits.prodes")
     prodes_samples <- prodes_samples_interpolated
@@ -78,29 +83,38 @@ if (brick_type == "l8mod_interp") {
 }else{
     stop("Unknown type of brick")
 }
-message(Sys.time(), ' Bands (samples): ', paste0(sits::sits_bands(prodes_samples), collapse = ", "))
+message(Sys.time(), ' Bands (samples): ',
+        paste0(sits::sits_bands(prodes_samples), collapse = ", "))
 
 # load scenes
+PR <- NULL
 scenes <- scene_shp %>%
     sf::read_sf(quiet = TRUE, stringsAsFactors = TRUE) %>%
+    ensurer::ensure_that("PR" %in% colnames(.)) %>%
     dplyr::filter(PR %in% experiment_scenes) %>%
     dplyr::select(PR) %>%
     sf::st_transform(crs = 4326)
 
 # TODO: use the clustered labels if available
-if (all(c("id_neuron", "neuron_label", "id_sample", "label2") %in% colnames(prodes_samples))) {
-    prodes_samples <- prodes_samples %>% dplyr::mutate(label = label2) %>%
+if (all(c("id_neuron", "neuron_label", "id_sample", "label2") %in%
+        colnames(prodes_samples))) {
+    id_neuron <- neuron_label <- id_sample <- label2 <- NULL
+    prodes_samples <- prodes_samples %>%
+        dplyr::mutate(label = label2) %>%
         dplyr::select(-c(id_neuron, neuron_label, id_sample, label2))
 }
 
 # restrain samples to certain bands, labels, and scenes
+longitude <- latitude <- start_date <- end_date <- label <- coverage <- time_series <- NULL
 prodes_samples <- prodes_samples %>%
+    ensurer::ensure_that(c("longitude", "latitude", "start_date", "end_date",
+                           "label", "coverage", "time_series") %in% colnames(.)) %>%
     sits::sits_select_bands_(bands = experiment_bands) %>%
     dplyr::filter(label %in% experiment_labels) %>%
     sf::st_as_sf(coords = c("longitude", "latitude"), crs = 4326,
                  remove = FALSE) %>%
     sf::st_intersection(scenes) %>%
-    sf::st_set_geometry(NULL) %>%
+    sf::st_set_geometry(value = NULL) %>%
     dplyr::select(longitude, latitude, start_date, end_date, label, coverage,
                   time_series)
 
