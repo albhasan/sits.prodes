@@ -14,7 +14,6 @@ prodes2raster <- function(file_pd, file_rt, raster_path, tile, year_pd, prodes_l
   id_pd <- label_pd_pt <- NULL
   label_pd <- NULL
   stopifnot(c("id_pd", "label_pd_pt") %in% colnames(prodes_lbl))
-  stopifnot("label_pd" %in% colnames(unique_label_pt))
   fname <- tools::file_path_sans_ext(basename(file_pd))
 
   # prepare labels for recoding and reclassification
@@ -27,6 +26,8 @@ prodes2raster <- function(file_pd, file_rt, raster_path, tile, year_pd, prodes_l
     dplyr::slice(1) %>%
     dplyr::ungroup()
   key_label_pt <- unique_label_pt %>%
+    ensurer::ensure_that("label_pd" %in% colnames(.),
+                         err_desc = "Missing field 'label_pd'.") %>%
     dplyr::pull(label_pd) %>%
     as.list()
   key_id_pd <- unique_id_pd %>%
@@ -35,13 +36,12 @@ prodes2raster <- function(file_pd, file_rt, raster_path, tile, year_pd, prodes_l
   names(key_label_pt) <- unique_label_pt %>% dplyr::pull(label_pd_pt)
   names(key_id_pd)    <- unique_id_pd    %>% dplyr::pull(label_pd)
 
-  # rasterization
+# rasterization
   mb_raster <- raster::raster(file_rt)
   class_name <- mainclass <- label <- label_id <- NULL
   sf::st_read(dsn = dirname(file_pd), layer = fname,
               stringsAsFactors = FALSE, quiet = TRUE) %>%
-    ensurer::ensure_that(all(c("class_name", "label", "label_id",
-                               "mainclass") %in% colnames(.))) %>%
+    ensurer::ensure_that(all(c("class_name", "mainclass") %in% colnames(.))) %>%
     dplyr::mutate(label    = dplyr::recode(mainclass, !!!key_label_pt),
                   label_id = dplyr::recode(label,     !!!key_id_pd)) %>%
     dplyr::filter(class_name %in% c(names(key_label_pt),
@@ -51,7 +51,8 @@ prodes2raster <- function(file_pd, file_rt, raster_path, tile, year_pd, prodes_l
     vector2raster(raster_r = mb_raster,
                   vector_field = "label_id",
                   raster_path = raster_path) %>%
-    attr("file") %>% attr("name") %>%
+    attr("file") %>%
+    attr("name") %>%
     return()
 }
 
