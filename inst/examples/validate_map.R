@@ -3,7 +3,6 @@
 # validate the result of a classification using PRODES
 
 suppressPackageStartupMessages(library(optparse))
-base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 
 # get arguments ----
 opt_parser <- list(
@@ -27,6 +26,7 @@ in_dir     <- opt$in_dir     # "/home/alber/Documents/data/experiments/prodes_re
 label_file <- opt$label_file # "/home/alber/Documents/data/experiments/prodes_reproduction/03_classify/rep_prodes_40/results_dl/int_labels.csv"
 out_dir    <- opt$out_dir    # "/home/alber/Documents/data/experiments/prodes_reproduction/03_classify/rep_prodes_40/results_dl/smooth_5x5_n10/validation"
 
+base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 if (!file.exists(label_file)) {
   print_help(opt_parser)
   stop("File not found!")
@@ -39,7 +39,6 @@ if (!all(vapply(c(in_dir, base_path), dir.exists, logical(1)))) {
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(ensurer))
 suppressPackageStartupMessages(library(sits.prodes))
-
 data(prodes_labels, package = "sits.prodes")
 
 print(sprintf("Starting to process %s using th labels at %s ", in_dir, label_file))
@@ -177,7 +176,8 @@ res_acc <- purrr::map(path_res_vec, function(res_file, out_dir = NULL){
   cov_res_masked <- raster::mask(cov_res, mask = cov_ref)
   water_mask <- water_masks[scene_file] %>%
     raster::raster()  %>%
-    cov_proj(proj4string = raster::crs(cov_res_masked, asText = TRUE)) %>%
+    raster::projectRaster(crs = raster::crs(cov_res_masked, asText = TRUE), 
+                          method = "ngb") %>%
     raster::resample(y = cov_res_masked, method = "ngb") %>%
     raster::crop(y = raster::extent(cov_res_masked))
   cov_res_masked <- raster::mask(cov_res_masked, mask = water_mask, maskvalue = 1)
@@ -229,6 +229,7 @@ res_acc <- purrr::map(path_res_vec, function(res_file, out_dir = NULL){
                                            stringr::str_replace(basename(res_file),
                                                                 ".tif",
                                                                 "_masked_confusion.tif")),
+                      datatype = "INT2S",
                       overwrite = TRUE)
 
   # computing confusion matrix
