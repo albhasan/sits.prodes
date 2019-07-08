@@ -1,20 +1,22 @@
 #!/usr/bin/Rscript
+
 # GET TIME SERIES FOR SAMPLE POINTS
 
+library(config)
 library(dplyr)
 library(sits)
+library(sits.prodes)
 library(parallel)
-library(config)
-library(devtools)
-setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
-devtools::load_all()
 
+base_path = "/home/alber/Documents/data/experiments/prodes_reproduction"
 cores <- floor(parallel::detectCores() * 3/4)
+no_data <- -9999 # Landsat no data value
 
 # get sample files
-csv_files <- list.files('/home/alber/Documents/data/experiments/prodes_reproduction/data/samples',
-                        pattern = 'validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}.csv',
-                        full.names = TRUE)
+csv_files <- base_path %>%
+    file.path("data", "samples") %>%
+    list.files(pattern = 'validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}.csv',
+               full.names = TRUE)
 err_msg <- validate_csv(csv_files)
 if (length(err_msg) > 0) {
     print(err_msg)
@@ -29,13 +31,13 @@ if (length(err_msg) > 0) {
 # brick_type = "interpolated_simple"
 # brick_type = "starfm_few_clouds"
 # brick_type = "simple"
-brick_type = "mask_cloud"
+# brick_type = "mask_cloud"
+brick_type = "raw"
 
-# class_bands <- c("blue", "ndvi", "nir", "red", "savi", "swir2")
-# class_bands <- c("ndvi", "nir", "red", "swir2", "dark", "substrate", "vegetation")
-class_bands <- c("ndvi", "nir", "red", "blue", "green", "swir1", "swir2", "dark", "substrate", "vegetation")
+class_bands <- c("ndvi", "nir", "red", "blue", "green", "swir1", "swir2",
+                  "dark", "substrate", "vegetation")
 
-no_data <- -9999 # Landsat no data value
+
 
 print(sprintf("Brick type: %s", brick_type))
 
@@ -94,17 +96,18 @@ if (brick_type == "starfm") {
                              suffix = paste0("_", brick_type),
                              mc.cores = cores)
 }else if (brick_type == "simple") {
-    # Bricks created by piling up  bands, vegetation indexes, and spectral mirxstures
+    # Bricks created by selecting the images with fewer clouds and piling up
+    # bands , vegetation indexes, and spectral mixstures
     path_bricks <- "/home/alber/shared/brick_simple"
     brick_prefix <- "LC8SR-SIMPLE_"
-
-    band_names <- c("ndvi", "evi", "red", "nir", "mir", "swir1", "swir2", "class", "dark", "substrate", "vegetation")
+    band_names <- c("ndvi", "evi", "red", "nir", "mir", "swir1", "swir2",
+                    "class", "dark", "substrate", "vegetation")
     scale_factor   <- as.list(rep(1/10000, length(band_names)))
     maximum_values <- as.list(rep(10000,   length(band_names)))
     minimum_values <- as.list(rep(0,       length(band_names)))
     missing_values <- rep(no_data, length(band_names))
     names(maximum_values) <- names(minimum_values) <- names(missing_values) <- names(scale_factor) <- band_names
-    maximum_values$substrate <- maximum_values$vegetation <- 50000
+    #maximum_values$substrate <- maximum_values$vegetation <- 50000
 
     fpaths <- parallel::mclapply(csv_files, get_timeseries,
                              path_bricks = path_bricks,
@@ -123,14 +126,14 @@ if (brick_type == "starfm") {
     # Bricks created by masking clouds and piling up bands, vegetation indexes, and spectral mixtures
     path_bricks <- "/home/alber/shared/brick_maskcloud"
     brick_prefix <- "LC8SR-MASKCLOUD_"
-    
+
     band_names <- c("ndvi", "evi", "blue", "green", "red", "nir", "mir", "swir1", "swir2", "class", "dark", "substrate", "vegetation")
     scale_factor   <- as.list(rep(1/10000, length(band_names)))
     maximum_values <- as.list(rep(10000,   length(band_names)))
     minimum_values <- as.list(rep(0,       length(band_names)))
     missing_values <- rep(no_data, length(band_names))
     names(maximum_values) <- names(minimum_values) <- names(missing_values) <- names(scale_factor) <- band_names
-    maximum_values$substrate <- maximum_values$vegetation <- 50000
+    #maximum_values$substrate <- maximum_values$vegetation <- 50000
 
     fpaths <- parallel::mclapply(csv_files, get_timeseries,
                              path_bricks = path_bricks,
@@ -145,6 +148,35 @@ if (brick_type == "starfm") {
                              time_len = 4,
                              time_by = ceiling(365/4),
                              mc.cores = cores)
+}else if (brick_type == "raw") {
+    # Bricks created by piling up raw images
+    path_bricks <- "/home/alber/shared/brick_raw"
+    brick_prefix <- "LC8SR-RAW_"
+
+    old_band_names <- c("ndvi", "evi", "blue", "green", "red", "nir", "mir", "swir1", "swir2", "dark", "substrate", "vegetation", "cloud")
+    band_names <- c("blue", "cloud", "dark", "ndvi", "nir", "red", "substrate", "swir2", "vegetation")
+    scale_factor   <- as.list(rep(1/10000, length(band_names)))
+    maximum_values <- as.list(rep(10000,   length(band_names)))
+    minimum_values <- as.list(rep(0,       length(band_names)))
+    missing_values <- rep(no_data, length(band_names))
+    names(maximum_values) <- names(minimum_values) <- names(missing_values) <- names(scale_factor) <- band_names
+
+    scale_factor$cloud   <- 1
+    maximum_values$cloud <- 1
+    fpaths <- parallel::mclapply(csv_files, sits.prodes:::get_timeseries,
+                             path_bricks = path_bricks,
+                             brick_prefix = brick_prefix,
+                             class_bands = band_names,
+                             scale_factor = scale_factor,
+                             missing_values  = missing_values,
+                             minimum_values  = minimum_values,
+                             maximum_values  = maximum_values,
+                             suffix = paste0("_", brick_type),
+                             cov_name = "Brick raw",
+                             time_len = 23,
+                             time_by = ceiling(365/23),
+                             mc.cores = cores)
+    print(fpaths)
 }else{
     stop("Unknown kind of brick")
 }
@@ -152,3 +184,4 @@ if (brick_type == "starfm") {
 print("Files created (samples & time series): ")
 print(fpaths)
 print("Done!")
+
