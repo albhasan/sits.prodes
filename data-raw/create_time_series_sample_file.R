@@ -14,7 +14,8 @@ library(ensurer)
 #classification_type <- "interpolated_few_clouds"
 #classification_type <- "starfm_few_clouds"
 #classification_type <- "simple"
-classification_type <- "mask_cloud"
+#classification_type <- "mask_cloud"
+classification_type <- "raw"
 
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 
@@ -24,14 +25,16 @@ samples_pattern <- c(interpolated            = "validated_prodes_[0-9]{3}_[0-9]{
                      starfm                  = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_starfm.Rdata",
                      starfm_few_clouds       = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_starfm_few_clouds.Rdata",
                      simple                  = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_simple.Rdata",
-                     mask_cloud              = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_mask_cloud.Rdata"
+                     mask_cloud              = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_mask_cloud.Rdata",
+                     raw                     = "validated_prodes_[0-9]{3}_[0-9]{3}_[0-9]{4}-[0-9]{2}-[0-9]{2}_raw.Rdata"
 )
 expected_rows <- c(interpolated            = 23,
                    interpolated_few_clouds = 4,
                    starfm                  = 23,
                    starfm_few_clouds       = 4,
                    simple                  = 4,
-                   mask_cloud              = 4)
+                   mask_cloud              = 4,
+                   raw                     = 23)
 stopifnot(names(samples_pattern) == names(expected_rows))
 stopifnot(dir.exists(samples_path))
 
@@ -40,13 +43,17 @@ file_samples_koh          <- tempfile(pattern = paste0("file_samples_koh_",     
 file_koh_evaluate_samples <- tempfile(pattern = paste0("file_koh_evaluate_samples_", classification_type, "_"), fileext = ".Rdata")
 
 # load & filter samples
-samples_tb <- samples_path %>%
+samples_original <- samples_path %>%
     list.files(pattern = samples_pattern[classification_type], full.names = TRUE) %>%
     load_samples(sat = NULL, expected_nrow = expected_rows[classification_type]) %>%
     dplyr::bind_rows() %>%
     sits::sits_prune() %>%
-    dplyr::filter(label %in% c("deforestation", "forest")) %>%
-    ensurer::ensure_that(nrow(.) > 0) %>%
+    #dplyr::filter(label %in% c("deforestation", "forest")) %>%
+    ensurer::ensure_that(nrow(.) > 0, err_desc = "No samples  found!") %>%
+    dplyr::mutate(id = dplyr::row_number())
+
+samples_tb <- samples_original %>%
+    sits::sits_select_bands(dark, substrate, vegetation) %>%
     dplyr::mutate(coverage = stringr::str_c("prodes_amazon_", classification_type))
 
 # Create cluster with Self-organizing maps (kohonen)
@@ -56,7 +63,7 @@ rl = 100
 stopifnot(xd * yd < nrow(samples_tb))
 time_series.ts <- samples_tb %>% sits::sits_values(format = "bands_cases_dates")
 samples_koh <- sits::sits_kohonen(data.tb = samples_tb,
-                                  time_series = time_series.ts,
+#                                  time_series = time_series.ts,
                                   grid_xdim = xd,
                                   grid_ydim = yd,
                                   rlen = rl,
@@ -65,7 +72,7 @@ samples_koh <- sits::sits_kohonen(data.tb = samples_tb,
                                   neighbourhood.fct = "gaussian")
 
 koh_evaluate_samples <- sits::sits_evaluate_samples(data.tb = samples_tb,
-                                                    time_series = time_series.ts,
+#                                                    time_series = time_series.ts,
                                                     grid_xdim = xd,
                                                     grid_ydim = yd,
                                                     rlen = rl,
@@ -178,6 +185,10 @@ if (classification_type == "interpolated") {
 }else if (classification_type == "mask_cloud") {
     prodes_samples_mask_cloud <- prodes_samples
     usethis::use_data(prodes_samples_mask_cloud, overwrite = TRUE)
+}else if (classification_type == "raw") {
+    prodes_samples_raw <- prodes_samples
+    usethis::use_data(prodes_samples_raw, overwrite = TRUE)
 }
+
 
 
