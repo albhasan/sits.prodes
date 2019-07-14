@@ -1,0 +1,123 @@
+---
+title: "Bricks"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Bricks}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, echo=FALSE}
+library(sits.prodes)
+```
+
+## Interpolated bricks (original).
+
+These bricks are made of Landsat 8 SR and MOD13Q1 images. The clouds in the 
+Landsat images were filled up using data bilinear interpolation of MXD13 
+images. For each image, vegetation indexes were computed and assembled into 
+bricks, which makes these bricks inconsistent with those computed directly from 
+the band bricks. 
+
+* Location: "cronos:/dados1/Repository/Brick/LC8/LC8SR-MOD13Q1-MYD13Q1"
+* Scenes: 221068, 221069, 221070, 225063, 226064, 232066, 233067.
+* Years: 2013, 2014, 2015, 2016.
+* Bands: blue, evi, ndvi, nir, red, swir2.
+* Bands per brick: 23.
+
+
+## Interpolated bricks (new).
+
+These bricks are made of Landsat 8 SR and MOD13Q1 images. The clouds in the 
+Landsat images were filled up using data bilinear interpolation of MXD13 
+images. The vegetation index bricks were computed from the band bricks, ensuring 
+consitency. Besides, dubious EVI bricks were removed do to inconsistencies on 
+vegetation index definition between Landsat and MODIS.
+
+* Location: "esensing-006:/disks/d6/shared/alber/brick_interp"
+* Scenes: 225063, 226064, 233067, .
+* Years: 2013, 2014, 2015, 2016.
+* Bands: ndvi, nir, red, swir2.
+* Bands per brick: 23.
+
+
+
+## StarFM bricks.
+
+These bricks are made of Landsat 8 SR and MOD13Q1 images. The clouds in the 
+Landsat8 images were filled up using the StarFM mixture model. The vegetation 
+index bricks were computed from the band bricks.
+
+* Location: "esensing-006:/disks/d6/shared/alber/brick"
+* Scenes: 225063, 226064, 233067, .
+* Years: 2013, 2014, 2015 (not for all), 2016.
+* Bands: ndvi, nir, red, swir2.
+* Bands per brick: 23.
+
+
+
+## StarFM bricks (few clouds).
+
+These bricks are made of Landsat 8 SR and MOD13Q1 images with the fewer clouds at 
+the start and end of the PRODES year (from August to July). The clouds in the 
+Landsat8 images were filled up using the StarFM mixture model. The vegetation 
+index bricks were computed from the band bricks.
+
+* Location: "esensing-006:/disks/d6/shared/alber/brick_interp_few_clouds"
+* Scenes: 225063.
+* Years: 2014, 2016 (incomplete).
+* Bands: blue, nir, red, swir2 (incomplete).
+* Bands per brick: 4.
+
+
+
+## Simple bricks.
+
+These bricks are made of Landsat 8 SR with the fewer clouds at the start and end 
+of the PRODES year (from August to July).
+
+* Location:  "esensing-006:/disks/d6/shared/alber/brick_simple"
+* Scenes: 225063, 226064, 233067, .
+* Years: 2013, 2014, 2015, 2016.
+* Bands: blue, dark, ndvi, nir, red, substrate, swir2, vegetation.
+* Bands per brick: 4.
+
+
+## Mask cloud bricks.
+
+These bricks are made of Landsat 8 SR with masked clouds. They include 
+vegetation indexes, and spectral mixture models.
+
+* Location: "esensing-006:/disks/d6/shared/alber/brick_maskcloud"
+* Scenes: 225063, 226064, 233067.
+* Years: 2013, 2014, 2015, 2016.
+* Bands: blue, green, nir, red, swir1, swir2, dark, substrate, vegetation, ndvi, cloud.
+* Bands per brick: 4.
+
+
+
+## Raw bricks.
+
+These bricks are made of Landsat 8 SR images.
+
+* Location: "esensing-006:/disks/d6/shared/alber/brick_raw"
+* Scenes: 225063, 226064, 233067.
+* Years: 2013, 2014, 2015, 2016.
+* Bands: blue, cloud, dark, ndvi, nir, red, substrate, swir2, vegetation.
+* Bands per brick: 23.
+
+
+
+## TODO
+
+* Missing StarFM bricks for some scenes in 2015.
+* brick_interp_few_clouds got the name wrong, it shoudl be brick_starfm_few_clouds.
+* Some MASK_CLOUD bricks are mixtured with SIMPLE.
+* /disks/d6/shared/alber/brick_maskcloud clouds' date is one day before the rest of the bricks. 

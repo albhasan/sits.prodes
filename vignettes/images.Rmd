@@ -1,0 +1,126 @@
+---
+title: "Satellite Images"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Satellite Images}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+```{r setup, echo = FALSE}
+
+# devtools::install_github("albhasan/sits.starfm")
+suppressMessages(library(dplyr))
+suppressMessages(library(ggplot2))
+suppressMessages(library(kableExtra))
+suppressMessages(library(purrr))
+suppressMessages(library(rnaturalearth))
+suppressMessages(library(rnaturalearthdata))
+suppressMessages(library(sits.prodes))
+suppressMessages(library(tidyr))
+
+BRICK_IMAGES <- cloud_cov <- prodes_doy <- NULL
+data("BRICK_IMAGES", package = "sits.starfm")
+
+```
+
+
+* Landsat 8 surface reflectance.
+* Located in three of the most deforestad areas during 2017.
+* Scenes:
+  + 225063
+  + 226064
+  + 233067
+* Dates:
+  + From: 2013-08-01
+  + To:   2017-07-28
+ 
+ 
+ 
+## Spatial coverage
+
+```{r maps, echo=FALSE, fig.width=7, fig.height=4}
+
+img_extent <- BRICK_IMAGES %>% 
+  dplyr::select(scene, img_extent) %>% 
+  dplyr::group_by(scene) %>% 
+  dplyr::slice(dplyr::n()) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::pull(img_extent)
+map_bz <- ggplot2::ggplot(data = rnaturalearth::ne_countries(scale = "small", 
+                                                             returnclass = "sf")) +
+  ggplot2::geom_sf() +
+  ggplot2::coord_sf(xlim = c(-74, -34), ylim = c(-34, 6), expand = FALSE)
+for (i_ext in img_extent) {
+  map_bz <- map_bz + ggplot2::geom_rect(xmin = i_ext["xmin"], 
+                                        xmax = i_ext["xmax"], 
+                                        ymin = i_ext["ymin"], 
+                                        ymax = i_ext["ymax"], 
+                                        fill = NA, colour = "black", size = 1.0)
+}
+print(map_bz)
+
+```
+
+## Time coverage.
+
+```{r temporal_coverage, echo=FALSE}
+
+suppressWarnings(
+  BRICK_IMAGES %>% 
+    dplyr::select(scene, year) %>% 
+    table() %>% 
+    knitr::kable(digits = 0, row.names = TRUE, full_width = TRUE, 
+                 caption = "Number of Landsat images per scene and year.") %>% 
+    kableExtra::kable_styling()
+)  
+
+suppressWarnings(
+  BRICK_IMAGES %>% 
+    dplyr::select(scene, prodes_year) %>% 
+    table() %>% 
+    knitr::kable(digits = 0, row.names = TRUE, full_width = TRUE, 
+                 caption = "Number of Landsat images per scene and PRODES year.") %>% 
+    kableExtra::kable_styling()
+)
+
+```
+
+## Cloud coverage.
+
+```{r cloud_cover, echo=FALSE, fig.width=7, fig.height=4}
+
+cloud_cover <- BRICK_IMAGES %>% 
+    dplyr::select(scene, img_date, cloud_cov, prodes_year) %>% 
+    dplyr::mutate(doy = lubridate::yday(img_date),
+                  prodes_doy = ifelse(doy > 214, doy - 214, doy)) %>% 
+    dplyr::arrange(scene, prodes_year, prodes_doy) %>% 
+  ggplot2::ggplot(ggplot2::aes(x = prodes_doy, y = cloud_cov)) + 
+  ggplot2::ylim(0, 1) +
+  ggplot2::geom_line() +
+  ggplot2::facet_grid(prodes_year ~ scene) +
+  ggplot2::geom_smooth(se = FALSE, method = 'loess', formula = 'y ~ x') + 
+  ggplot2::labs(title = "Cloud covearge", subtitle = "As reported by the images' metadata.") + 
+  ggplot2::xlab("PRODES day of the year") + 
+  ggplot2::ylab("Cloud coverage")
+suppressWarnings(print(cloud_cover))
+
+```
+
+
+
+### TODO
+
+* Add MOD13Q1.
+* Add Samples.
+* Add Methods.
+* Add Results and discussion
+* Add RODES vs. Mapbiomas

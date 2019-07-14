@@ -10,11 +10,13 @@ suppressPackageStartupMessages(library(sits.prodes))
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 
 # get arguments ----
-sourced <- FALSE 
+
+#TODO: set to FALSE to use as OS script.
+sourced <- TRUE
 if (sourced) {
   in_dir     <- "/home/alber/Documents/data/experiments/prodes_reproduction/03_classify/rep_prodes_40/results_dl/smooth_5x5_n10"
   label_file <- "/home/alber/Documents/data/experiments/prodes_reproduction/03_classify/rep_prodes_40/results_dl/int_labels.csv"
-  out_dir    <- "/home/alber/Documents/data/experiments/prodes_reproduction/03_classify/rep_prodes_40/results_dl/smooth_5x5_n10/validation"
+  out_dir    <- "/home/alber/Documents/data/experiments/prodes_reproduction/03_classify/rep_prodes_40/results_dl/smooth_5x5_n10/validation2"
 } else {
   opt_parser <- list(
     make_option("--in_dir", type = "character", default = NULL,
@@ -46,7 +48,21 @@ if (sourced) {
 }
 
 data(prodes_labels, package = "sits.prodes")
-print(sprintf("Starting to process %s using th labels at %s ", in_dir, label_file))
+print(sprintf("Starting to process %s using the labels at %s ", in_dir, label_file))
+
+# Check if gdalinfo is able to open the raster file.
+is_raster_valid <- function(file_path){
+  if (length(file_path) == 1) {
+    res <- TRUE
+    tool <- "gdalinfo"
+    if (any(stringr::str_detect(system(paste(tool, file_path), intern = TRUE), "error|Error|ERROR|failure|Failure|FAILURE")))
+      res <- FALSE
+    return(res)
+  } else if (length(file_path) > 1) {
+    return(vapply(file_path, is_raster_valid, logical(1)))
+  }
+  return(FALSE)
+}
 
 # key for encoding PRODES's SHP into a TIF
 prodes_labels_ls <- prodes_labels %>%
@@ -116,6 +132,7 @@ key_tb %>%
 water_masks <- base_path %>% 
   file.path("data", "raster", "mascaras", "surface_water-Pekel_et_al_2016", "tiled") %>%
   list.files(pattern = "extent_[0-9]{6}[.]tif$", full.names = TRUE) %>%
+  ensurer::ensure_that(all(is_raster_valid(.)), err_desc = "Invalid water masks.") %>%
   tibble::enframe(name = NULL) %>%
   dplyr::rename(file_path = "value") %>%
   dplyr::mutate(scene = file_path %>% 
@@ -127,6 +144,7 @@ water_masks <- base_path %>%
 corner_masks <- base_path %>% 
   file.path("data", "raster", "mask_l8_corner") %>%
   list.files(pattern = "LC08_CORNERMASK_[0-9]{6}.tif", full.names = TRUE) %>%
+  ensurer::ensure_that(all(is_raster_valid(.)), err_desc = "Invalid corner masks.") %>%
   tibble::enframe(name = NULL) %>%
   dplyr::rename(file_path = "value") %>%
   dplyr::mutate(scene = file_path %>%
@@ -138,6 +156,7 @@ corner_masks <- base_path %>%
 quantile_maps <- base_path %>% 
   file.path("data", "raster", "cloud_count") %>%
   list.files(pattern = "*quantiles.tif", full.names = TRUE) %>%
+  ensurer::ensure_that(all(is_raster_valid(.)), err_desc = "Invalid quantile maps.") %>%
   tibble::enframe(name = NULL) %>%
   dplyr::rename(file_path = "value") %>%
   dplyr::mutate(scene = file_path %>%
@@ -186,6 +205,10 @@ validation_tb <- in_dir %>%
   dplyr::left_join(water_masks, by = "scene", suffix = c("", "_water")) %>%
   dplyr::left_join(corner_masks, by = "scene", suffix = c("", "_corner")) %>%
   dplyr::left_join(quantile_maps, by = c("scene", "pyear"), suffix = c("_res", "_quantile")) %>%
+#------------------------------------
+#TODO: remove
+#dplyr::slice(3:6) %>%
+#------------------------------------
   # Rasterize PRODES to match the result map.
   dplyr::mutate(r_prodes = purrr::pmap(
     dplyr::select(., 
@@ -198,13 +221,14 @@ validation_tb <- in_dir %>%
     prodes_lbl = prodes_labels %>% dplyr::filter(label_pd %in% names(int_labels)))) %>%
   # Mask the result map using PRODES
   dplyr::mutate(res_masked_prodes = purrr::pmap(dplyr::select(., r_res, r_prodes), function(r_res, r_prodes){
-    r_res %>%
-      raster::mask(mask = r_prodes) %>%
+    print("Masking results using PRODES...")
+    raster::mask(is.na(r_res), mask = r_prodes, maskvalue = 1) %>%
       raster::writeRaster(filename = tempfile(pattern = "res_masked_prodes_", fileext = ".tif")) %>%
       return()
   })) %>%
   # Project and resample the water masks.
   dplyr::mutate(r_water = purrr::pmap(dplyr::select(., file_path_water, res_masked_prodes), function(file_path_water, res_masked_prodes){
+    print("Processing WATER masks...")
     file_path_water %>%
       raster::raster() %>%
       raster::projectRaster(crs = raster::crs(res_masked_prodes, asText = TRUE), method = "ngb") %>%
@@ -215,6 +239,7 @@ validation_tb <- in_dir %>%
   })) %>%
   # Mask the results using water maps.
   dplyr::mutate(res_masked_water = purrr::pmap(dplyr::select(., res_masked_prodes, r_water), function(res_masked_prodes, r_water){
+    print("Masking results using WATER masks...")
     res_masked_prodes %>%
       raster::mask(mask = r_water, maskvalue = 1) %>%
       raster::writeRaster(filename = tempfile(pattern = "res_masked_water_", fileext = ".tif")) %>%
@@ -240,6 +265,7 @@ validation_tb <- in_dir %>%
   #})) %>% 
   # Save results to disk.
   dplyr::mutate(out_res = purrr::pmap(dplyr::select(., res_masked_water, file_path_res), function(res_masked_water, file_path_res, out_dir){
+    print("Saving masked results to disc...")
     raster::writeRaster(res_masked_water, 
                         filename = file.path(out_dir, 
                                              stringr::str_replace(basename(file_path_res), 
@@ -264,7 +290,7 @@ validation_tb <- in_dir %>%
     r %>% raster::writeRaster(filename = file.path(out_dir, 
                                                    stringr::str_replace(basename(out_res@file@name), 
                                                                         ".tif", 
-                                                                        "_masked_confusion.tif")),
+                                                                        "_confusion.tif")),
                               datatype = "INT2S",
                               overwrite = TRUE)
   }, out_dir = out_dir)) %>%
@@ -346,119 +372,4 @@ validation_tb %>%
   saveRDS(file = res_file)
 
 print("Finished!")
-
-
-
-
-# loop each file resulting from classification or smoothing
-#res_acc <- purrr::map(path_res_vec, function(res_file, out_dir = NULL){
-
-#  # rasterize PRODES
-#  cov_ref <- prodes2raster(file_pd = prodes_maps[scene_file],
-#                           file_rt = slot(cov_res@file, "name"),
-#                           raster_path = tempfile(pattern = "prodes2raster_",
-#                                                  fileext = ".tif"),
-#                           tile = scene_file,
-#                           year_pd = pyear,
-#                           prodes_lbl = dplyr::filter(prodes_labels,
-#                                                      label_pd %in% names(int_labels))) %>%
-#    raster::raster() %>%
-#    ensurer::ensure_that(!is.null(.), err_desc = "Rasterization failed!")
-
-  # masking and storing results
-#  cov_res_masked <- raster::mask(cov_res, mask = cov_ref)
-#  water_mask <- water_masks[scene_file] %>%
-#    raster::raster()  %>%
-#    raster::projectRaster(crs = raster::crs(cov_res_masked, asText = TRUE), 
-#                          method = "ngb") %>%
-#    raster::resample(y = cov_res_masked, method = "ngb") %>%
-#    raster::crop(y = raster::extent(cov_res_masked))
-#  cov_res_masked <- raster::mask(cov_res_masked, mask = water_mask, maskvalue = 1)
-#  corner_mask <- corner_masks %>%
-#    dplyr::filter(scene == scene_file) %>%
-#    ensurer::ensure_that(nrow(.) == 1, err_desc = "dplyr::filter failed") %>%
-#    dplyr::pull(file_path) %>%
-#    cov_read() %>%
-#    cov_proj(proj4string = raster::crs(cov_res_masked, asText = TRUE)) %>%
-#    raster::resample(y = cov_res_masked, method = "ngb") %>%
-#    raster::crop(y = raster::extent(cov_res_masked))
-
-#  # NOTE: the masks are failing to return
-#  fuck_u_R <- raster::mask(cov_res_masked, mask = corner_mask)
-#  if (!is.na(mean(fuck_u_R[], na.rm = TRUE)))
-#    cov_res_masked <- fuck_u_R
-  #cov_res_masked <- raster::mask(cov_res_masked, mask = corner_mask) %>%
-  #    ensurer::ensure_that(is.nan(mean(.[], na.rm = TRUE) ==  FALSE),
-  #                         err_desc = "Masking failed, probably because R is a motherfucking piece of shit!")
-#  raster::writeRaster(cov_res_masked,
-#                      filename = file.path(out_dir,
-#                                           stringr::str_replace(basename(res_file),
-#                                                                ".tif",
-#                                                                "_masked.tif")),
-#                      overwrite = TRUE)
-
-#  # build reference-result data.frame
-#  ref_res_df <- raster::stack(cov_ref, cov_res_masked, quick = FALSE)[] %>%
-#    as.data.frame() %>%
-#    tidyr::drop_na() %>%
-#    dplyr::rename("lab_ref_num" = !!names(.[1]), "lab_res_num" = !!names(.[2])) %>%
-#    dplyr::mutate(lab_ref = dplyr::recode(lab_ref_num, !!!key_labels),
-#                  lab_res = dplyr::recode(lab_res_num, !!!key_labels)) %>%
-#    dplyr::filter(lab_res %in% unlist(prodes_labels_ls))
-
-  # computing and storing reference-result differences
-#  cov_diff <- cov_ref - cov_res_masked
-#  raster::writeRaster(cov_diff,
-#                      filename = file.path(out_dir, stringr::str_replace(basename(res_file),
-#                                                                         ".tif",
-#                                                                         "_masked_refdiff.tif")),
-#                      overwrite = TRUE)
-
-  # Computing a confusion raster ranged from 0100 t0 9999. The most significant 
-  # digits (one or two) are the referece id while the two least significant are 
-  # the result id.
-#  cov_confusion <- (cov_ref * 100) + cov_res_masked
-#  raster::writeRaster(cov_confusion,
-#                      filename = file.path(out_dir,
-#                                           stringr::str_replace(basename(res_file),
-#                                                                ".tif",
-#                                                                "_masked_confusion.tif")),
-#                      datatype = "INT2S",
-#                      overwrite = TRUE)
-
-  # Create confusion matrices for each cloud_quantile.
-#  cov_confusion
-
-  # computing confusion matrix
-  # Error in confusionMatrix.default(data = factor(ref_res_df[["lab_res"]],  :
-  #  The data must contain some levels that overlap the reference.
-
-#  flevels <- ref_res_df %>%
-#    dplyr::select(lab_ref, lab_res) %>%
-#    unlist() %>% unique()
-#  con_mat <- caret::confusionMatrix(data = factor(ref_res_df[["lab_res"]],
-#                                                  flevels),
-#                                    reference = factor(ref_res_df[["lab_ref"]],
-#                                                       flevels))
-
-#  # computing reference areas
-#  lab_ref <- NULL
-#  cov_areas <- cov_get_areas(cov_ref, label = lab_ref) %>%
-#    dplyr::mutate(lab_ref = dplyr::recode(label, !!!key_labels)) %>%
-#    tidyr::drop_na()
-
-  # asses accuracy
-#  class_areas <- as.vector(cov_areas$area)
-#  names(class_areas) <- cov_areas$lab_ref
-#
-#  return(asses_accuracy_area(error_matrix = as.matrix(as.data.frame.matrix(con_mat$table)),
-#                             class_areas))
-#}, out_dir = out_dir)
-#names(res_acc) <- path_res_vec
-
-# storing accuracy results
-#res_file <- file.path(out_dir, "accuracy.rds")
-#saveRDS(res_acc, file = res_file)
-#print(sprintf("Saving results to %s", res_file))
-#print("Finished!")
 
