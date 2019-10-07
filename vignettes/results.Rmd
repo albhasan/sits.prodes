@@ -121,7 +121,9 @@ is the probability that a reference sample is correctly classified.
 
 
 ```{r, out.width = "600px", echo = FALSE}
+
 knitr::include_graphics("./img/user_producer_accuracy_example.png")
+
 ```
 
 
@@ -152,9 +154,7 @@ plot_acc_by_alg_smt <- function(data_tb, my_algorithm, my_smooth){
                                 shape = variable
             )) +
             ggplot2::geom_point() +
-            ggplot2::coord_fixed() +
-            ggplot2::xlim(0, 1) +
-            ggplot2::ylim(0, 1) +
+            ggplot2::coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
             ggplot2::facet_wrap(scene ~ pyear) +
             ggplot2::labs(title = sprintf("%s %s", my_algorithm, my_smooth),
                           x = "Producer accuracy",
@@ -193,10 +193,8 @@ plot_acc_by_alg_xp <- function(data_tb, my_label, my_experiment){
                           shape = algorithm)) +
       ggplot2::geom_point() +
       ggplot2::coord_fixed() +
-      #ggplot2::xlim(0, 1) +
-      #ggplot2::ylim(0, 1) +
       ggplot2::facet_wrap(scene ~ pyear) +
-      labs(title = sprintf("Whole validation %s %s", my_label, my_experiment),
+      ggplot2::labs(title = sprintf("Whole validation %s %s", my_label, my_experiment),
            x = "Producer accuracy",
            y = "User accuracy") +
       ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1))
@@ -217,36 +215,138 @@ for (my_label in c("deforestation", "forest")) {
 
 
 
-
-
 ### Confusion matrices
 
 
 ```{r confusion_matrix, echo=FALSE, results='asis'}
 
-if (nrow(accuracy_tb) > 0) {
-    for (i in 1:nrow(accuracy_tb)) {
-        cap <- sprintf("Confusion matrix %s %s %s %s %s ",
-                       unlist(accuracy_tb[i, "experiment"]),
-                       unlist(accuracy_tb[i, "scene"]),
-                       unlist(accuracy_tb[i, "pyear"]),
-                       unlist(accuracy_tb[i, "algorithm"]),
-                       unlist(accuracy_tb[i, "smooth"]))
-        cat(paste0("### ", cap), "\n")
-        p_conmat <- suppressMessages(suppressWarnings(accuracy_tb$up_acc3[[i]] %>%
-                                                          apply(2, function(x){x/1}) %>%
-                                                          tibble::as_tibble(rownames = NA, caption = cap) %>%
-                                                          knitr::kable(digits = 2, row.names = TRUE, full_width = FALSE) %>%
-                                                          kableExtra::kable_styling()))
-        print(p_conmat)
-        cat("\n\n")
-    }
-}
+# if (nrow(accuracy_tb) > 0) {
+#     for (i in 1:nrow(accuracy_tb)) {
+#         cap <- sprintf("Confusion matrix %s %s %s %s %s ",
+#                        unlist(accuracy_tb[i, "experiment"]),
+#                        unlist(accuracy_tb[i, "scene"]),
+#                        unlist(accuracy_tb[i, "pyear"]),
+#                        unlist(accuracy_tb[i, "algorithm"]),
+#                        unlist(accuracy_tb[i, "smooth"]))
+#         cat(paste0("### ", cap), "\n")
+#         p_conmat <- suppressMessages(suppressWarnings(accuracy_tb$up_acc3[[i]] %>%
+#                                                           apply(2, function(x){x/1}) %>%
+#                                                           tibble::as_tibble(rownames = NA, caption = cap) %>%
+#                                                           knitr::kable(digits = 2, row.names = TRUE, full_width = FALSE) %>%
+#                                                           kableExtra::kable_styling()))
+#         print(p_conmat)
+#         cat("\n\n")
+#     }
+# }
 
 ```
 
 
 
+### Accuracy and amount of clouds
+
+#### Overall accuracy
+
+
+```{r overall_clouds, echo=FALSE, fig.height=7, fig.width=9, results='asis'}
+
+#  Helper function to get the overall accuracy from a list column.
+get_overall <- function(x, qt_n){
+  if (any(is.na(x)))
+    return(NA)
+  if (!(qt_n %in% paste("quantile", 1:4, sep = '_')))
+    stop("Quantile not found.")
+  return(x[[qt_n]][["overall"]])
+}
+
+algorithm <- q1_overall <- q4_overall <- NULL
+validation_tb %>%
+  dplyr::select(experiment, algorithm, smooth, scene, pyear, r_quantile) %>%
+  dplyr::filter(is.na(smooth)) %>% 
+  dplyr::mutate(q1_overall = purrr::map_dbl(.$r_quantile, get_overall, qt_n = "quantile_1"),
+                q4_overall = purrr::map_dbl(.$r_quantile, get_overall, qt_n = "quantile_4")) %>% 
+  ggplot2::ggplot() + 
+  ggplot2::geom_point(ggplot2::aes(x = q1_overall, y = q4_overall, 
+                                  color = experiment, shape = algorithm)) +
+  ggplot2::facet_wrap(scene ~ pyear) +
+  ggplot2::coord_fixed(xlim = c(0.25, 1), ylim = c(0.25, 1)) + 
+  ggplot2::geom_abline(slope = 1) + 
+  ggplot2::labs(title = "Cloud effect on overall accuracy",
+                subtitle = "No smoothing",
+                x = "Overall accuracy Q1 clouded observations",
+                y = "Overall accuracy Q4 clouded observations")
+
+
+```
+
+
+#### User accuracy
+
+
+```{r user_clouds, echo=FALSE, fig.height=7, fig.width=9, results='asis'}
+
+#  Helper function to get the user-producer accuracies from a list column.
+get_accuracy <- function(x, qt_n, qt_type, c_names){
+    if (!(qt_n %in% paste("quantile", 1:4, sep = '_')))
+        stop("Quantile not found.")
+    if (!(qt_type %in% c("user", "producer")))
+        stop("Quantile type not found.")
+    if (length(x) == 1 && is.na(x)) {
+          res <- rep(NA, times = length(c_names))
+          names(res) <- paste(qt_type, qt_n, c_names,  sep = '_')
+          return(tibble::as_tibble(t(res)))
+    }
+    res <- as_tibble(t(x[[qt_n]][[qt_type]]))
+    names(res) <- paste(qt_type, qt_n, names(res),  sep = '_')
+    return(res)
+}
+
+
+c_names <- names(validation_tb$r_quantile[[1]]$quantile_1$user) %>% 
+  ensurer::ensure_that(length(.) > 0, err_desc = "Missing names.")
+up_14 <- validation_tb %>% 
+  dplyr::mutate(user_q1 = purrr::map(.$r_quantile, get_accuracy, 
+                                     qt_n = "quantile_1", 
+                                     qt_type = "user", 
+                                     c_names = c_names),
+                user_q4 = purrr::map(.$r_quantile, get_accuracy, 
+                                     qt_n = "quantile_4", 
+                                     qt_type = "user", 
+                                     c_names = c_names), 
+                prod_q1 = purrr::map(.$r_quantile, get_accuracy, 
+                                     qt_n = "quantile_1", 
+                                     qt_type = "producer", 
+                                     c_names = c_names),
+                prod_q4 = purrr::map(.$r_quantile, get_accuracy, 
+                                     qt_n = "quantile_4", 
+                                     qt_type = "producer",
+                                     c_names = c_names))
+
+# up_14 %>%
+#     dplyr::bind_cols(dplyr::bind_rows(up_14$user_q1),
+#                      dplyr::bind_rows(up_14$user_q4),
+#                      dplyr::bind_rows(up_14$prod_q1),
+#                      dplyr::bind_rows(up_14$prod_q4)) %>%
+#     dplyr::select(experiment, algorithm, smooth, scene, pyear,
+#                   user_quantile_1_deforestation, user_quantile_1_forest,
+#                   user_quantile_4_deforestation, user_quantile_4_forest,
+#                   producer_quantile_1_deforestation, producer_quantile_1_forest,
+#                   producer_quantile_4_deforestation, producer_quantile_4_forest) %>%
+#   ggplot2::ggplot() +
+#   ggplot2::geom_point(ggplot2::aes(x = q1_overall, y = q4_overall,
+#                                   color = experiment, shape = algorithm)) +
+#   ggplot2::facet_wrap(scene ~ pyear) +
+#   ggplot2::coord_fixed(xlim = c(0.25, 1), ylim = c(0.25, 1)) +
+#   ggplot2::geom_abline(slope = 1) +
+#   ggplot2::labs(title = "Cloud effect on overall accuracy",
+#                 subtitle = "No smoothing",
+#                 x = "Overall accuracy Q1 clouded observations",
+#                 y = "Overall accuracy Q4 clouded observations")
+
+
+```
+
+#### Producer accuracy
 
 
 

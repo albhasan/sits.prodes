@@ -1,7 +1,10 @@
 
+stop("Deprecated. The use of _masked_refdiff.tif maps is discouraged. Use instead _confusion.tif")
+
 # combine the missclassification maps of each algorithm for the same year
 library(dplyr)
 library(raster)
+
 
 in_dir <- "/home/alber/Documents/data/experiments/prodes_reproduction/03_classify"
 alg_dirs <- c("results_dl", "results_rf", "results_svm", "results_vote")

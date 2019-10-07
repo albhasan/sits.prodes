@@ -1,6 +1,6 @@
 Package: sits.prodes
 Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9019
+Version: 0.0.0.9020
 Author: c(person('Alber', 'Sanchez', role = c('aut', 'cre'), email = 'alber.sanchez@inpe.br'))
 Maintainer: Alber Sánchez <alber.sanchez@inpe.br>
 Description: What the package does (one paragraph).
@@ -20,6 +20,7 @@ Imports:
  proxy,
  purrr,
  raster,
+ rasterVis,
  sf,
  sits,
  stringr,
@@ -32,10 +33,13 @@ Suggests:
     ggplot2,
     kableExtra,
     knitr,
+    lubridate,
     rgeos,
+    rgdal,
     rmarkdown,
     rnaturalearth,
     rnaturalearthdata,
+    RColorBrewer,
     sits.starfm,
     testthat,
     vctrs,

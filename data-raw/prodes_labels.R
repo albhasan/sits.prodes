@@ -1,8 +1,9 @@
 #!/usr/bin/Rscript
 
-# SET THE PRODES LABELS AND THEIR MAPPINGS BETWEEN PORTUGUESE AND ENGLISH
-library(tibble)
-library(devtools)
+print("Setting the PRODES' mapping between portuguese and english labels...")
+
+suppressPackageStartupMessages(library(tibble))
+suppressPackageStartupMessages(library(devtools))
 
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes"
 setwd(base_path)

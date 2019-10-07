@@ -1,0 +1,140 @@
+---
+title: "Harmonized Landsat8-Sentinel2 images"
+output: rmarkdown::html_vignette
+bibliography: references.bib
+vignette: >
+  %\VignetteIndexEntry{hls_images}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, echo=FALSE}
+
+suppressMessages(library(dplyr))
+suppressMessages(library(raster))
+suppressMessages(library(rgdal))
+suppressMessages(library(sits.prodes))
+suppressMessages(library(sits.starfm))
+
+base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
+
+```
+
+
+```{r get_data, echo=FALSE}
+
+#data("BRICK_HLS_IMAGES", package = "sits.starfm")
+BRICK_HLS_IMAGES <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/raster/harmonized_landsat_sentinel2/data/hls" %>%
+    sits.starfm::build_hls_tibble(pattern = "*hdf$", 
+                                  prodes_year_start = "-08-01")
+
+```
+
+
+## Image documentation.
+
+* [@Claverie:2018].
+* [@Skakun:2018].
+
+
+## Spatial extent
+
+```{r plot_aoi, echo=FALSE, fig.width=7, fig.height=5}
+
+img_extent <- BRICK_HLS_IMAGES %>% 
+    dplyr::group_by(product, tile) %>% 
+    dplyr::slice(1) %>% 
+    dplyr::pull(img_extent)
+map_bz <- ggplot2::ggplot(data = rnaturalearth::ne_countries(scale = "small", 
+                                                             returnclass = "sf")) +
+    ggplot2::geom_sf() +
+    ggplot2::coord_sf(xlim = c(-74, -34), ylim = c(-34, 6), expand = FALSE) +
+    ggplot2::labs(title = "HLS images.")
+for (i_ext in img_extent) {
+  map_bz <- map_bz + ggplot2::geom_rect(xmin = i_ext[["xmin"]], 
+                                        xmax = i_ext[["xmax"]], 
+                                        ymin = i_ext[["ymin"]], 
+                                        ymax = i_ext[["ymax"]], 
+                                        fill = NA, colour = "black", size = 1.0)
+}
+print(map_bz)
+
+```
+
+
+## Temporal extent
+
+```{r plot_time_series_1, echo=FALSE, fig.width=7, fig.height=14}
+img_date <- pdoy <- product <- sensing_date <- tile_id <- tile_product <- NULL
+
+id_tb <- BRICK_HLS_IMAGES %>% 
+    dplyr::select(tile, product) %>% 
+    dplyr::distinct() %>% 
+    dplyr::mutate(tile_id = as.integer(1:n()),
+                  tile_product = paste(tile, product, sep = "_"))
+
+sits.starfm:::BRICK_HLS_IMAGES %>% 
+#dplyr::filter(product == "S30", tile == "T19LFJ", pyear == 2017) %>%
+#View()    
+    dplyr::left_join(id_tb, by = c("product", "tile")) %>% 
+    dplyr::mutate(start_pyear = as.Date(paste(pyear - 1, "08", "01", sep = "-")), 
+                  pdoy = as.integer(img_date - start_pyear)) %>% 
+    dplyr::arrange(img_date) %>% 
+    ggplot2::ggplot(ggplot2::aes(x = pdoy, y = tile_id, 
+                                 color = product)) + 
+    ggplot2::geom_point(size = 0.5) +
+    ggplot2::labs(x = "Day of the PRODES year", y = "") +
+    ggplot2::theme(axis.title.y = ggplot2::element_blank(),
+                   axis.text.y = ggplot2::element_blank(),
+                   axis.ticks.y = ggplot2::element_blank(), 
+                   axis.text.x = ggplot2::element_text(angle = 90, hjust = 1)) + 
+    ggplot2::facet_grid(tile ~ pyear) + 
+    ggplot2::ggtitle("Number of HLS images")
+
+```
+
+
+```{r plot_time_series_2, echo=FALSE, fig.width=7, fig.height=21}
+
+# BRICK_HLS_IMAGES %>% 
+#     dplyr::left_join(id_tb, by = c("product", "tile")) %>% 
+#     dplyr::arrange(img_date) %>% 
+#     ggplot2::ggplot(ggplot2::aes(x = img_date, y = tile_id, 
+#                                  color = tile_product)) + 
+#     ggplot2::geom_point() +
+#     ggplot2::labs(x = "Image date", y = "") +
+#     ggplot2::theme(axis.title.y = ggplot2::element_blank(),
+#                    axis.text.y = ggplot2::element_blank(),
+#                    axis.ticks.y = ggplot2::element_blank(), 
+#                    axis.text.x = ggplot2::element_text(angle = 90, hjust = 1)) + 
+#     ggplot2::facet_grid(tile_product ~ 1) + 
+#     ggplot2::ggtitle("Number of HLS images")
+
+```
+
+
+## Number of images
+
+```{r n_images, echo=FALSE}
+
+suppressWarnings(
+    BRICK_HLS_IMAGES %>% 
+        dplyr::group_by(product, tile, pyear) %>% 
+        dplyr::summarise(n_imgs = n()) %>% 
+        knitr::kable(digits = 0, row.names = TRUE, full_width = TRUE, 
+                     caption = "Number of HLS images per PRODES year.") %>% 
+        kableExtra::kable_styling()
+)
+
+```
+
+
+# References.
+

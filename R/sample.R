@@ -67,9 +67,13 @@ load_samples <- function(x, sat, expected_nrow){
 #' @param out_dir  A length-one character. Path to a folder.
 #' @return         A vector of paths to CSV files
 process_valid_shp <- function(shp_path, out_dir){
+
     # read shp, drop geometry, fix column names
-    shp <- shp_path  %>% sf::st_read(quiet = TRUE, stringsAsFactors = FALSE)
-    coords <- shp %>% sf::st_coordinates() %>% dplyr::as_tibble()
+    shp <- shp_path  %>% 
+        sf::st_read(quiet = TRUE, stringsAsFactors = FALSE)
+    coords <- shp %>% 
+        sf::st_coordinates() %>% 
+        dplyr::as_tibble()
     time_serie <- NULL
     csv <- shp %>%
         ensurer::ensure_that(all(c("time_serie") %in% colnames(.))) %>%
@@ -121,20 +125,21 @@ process_valid_shp <- function(shp_path, out_dir){
     }
 
     # re-label
-    res <- res %>%  dplyr::mutate(label = dplyr::recode(label,
-                                                        "FLORESTA" = "forest" ,
-                                                        "NAO_FLORESTA" = "no forest",
-                                                        "NAO_FLORESTA2" = "no forest 2",
-                                                        "HIDROGRAFIA" = "water",
-                                                        "d2012" = 'deforestation',
-                                                        "d2013" = 'deforestation',
-                                                        "d2014" = 'deforestation',
-                                                        "d2015" = 'deforestation',
-                                                        "d2016" = 'deforestation',
-                                                        "d2017" = 'deforestation',
-                                                        "d2018" = 'deforestation',
-                                                        "flood" = "flood"
-    ))
+    res <- res %>% 
+        dplyr::mutate(label = dplyr::recode(label,
+                                            "FLORESTA" = "forest" ,
+                                            "NAO_FLORESTA" = "no forest",
+                                            "NAO_FLORESTA2" = "no forest 2",
+                                            "HIDROGRAFIA" = "water",
+                                            "DESMATAMENTO" = 'deforestation',
+                                            "d2012" = 'deforestation',
+                                            "d2013" = 'deforestation',
+                                            "d2014" = 'deforestation',
+                                            "d2015" = 'deforestation',
+                                            "d2016" = 'deforestation',
+                                            "d2017" = 'deforestation',
+                                            "d2018" = 'deforestation',
+                                            "flood" = "flood"))
 
     # write a file per year
     csv_files <- character()
@@ -154,7 +159,7 @@ process_valid_shp <- function(shp_path, out_dir){
 }
 
 
-#' @title Get time series for validated sample points.
+#' @title Get time series of sample points from SITS' bricks.
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description Get validated PRODES samples (from a CSV file) and retrieve time
 #' series for each one
@@ -180,6 +185,8 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
                            cov_name = "SITS coverage", time_len = 23,
                            time_by = 16){
     stopifnot(length(cpath) == 1)
+    prodes_year_start <- "-08-01"
+
 
     # SITS default parameteres
     sits_conf <- config::get(file = system.file("extdata", "config.yml", package = "sits"))
@@ -202,8 +209,7 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
     csv_start_date <- cpath %>%
         basename() %>%
         stringr::str_extract(pattern = "[0-9]{4}-[0-9]{2}-[0-9]{2}")
-
-    if (class(try(as.Date(csv_start_date))) == "try-error" ||
+        if (class(try(as.Date(csv_start_date))) == "try-error" ||
         is.na(try(as.Date(csv_start_date))))
         stop("Invalid start_date in file name ", cpath)
 
@@ -214,23 +220,26 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
                    full.names = TRUE) %>%
         get_brick_md() %>%
         dplyr::as_tibble() %>%
-        ensurer::ensure_that(c("band", "start_date") %in% colnames(.)) %>%
-        dplyr::mutate(
-            dif_time = abs(as.numeric(difftime(as.Date(start_date), as.Date(csv_start_date), units = 'days')))
-        ) %>%
-        dplyr::filter(pathrow == pathrow, dif_time < max_time_diff, band %in% class_bands) %>%
-        ensurer::ensure_that(all(as.numeric(pathrow) > 200000 && as.numeric(pathrow < 300000)))
-
-    if (nrow(brick_tb) == 0) {
-        warning("No L8MOD brick found for scene ", pathrow, " and date ", csv_start_date)
-        return(NA)
-    }
+        ensurer::ensure_that(all(c("band", "year", "start_date") %in% colnames(.)), 
+                             err_desc = "Missing bands") %>%
+        dplyr::mutate(dif_time = abs(as.numeric(difftime(as.Date(start_date),
+                                     as.Date(csv_start_date), units = 'days')))) %>%
+        dplyr::filter(pathrow == pathrow, 
+                      dif_time < max_time_diff, 
+                      band %in% class_bands) %>%
+        ensurer::ensure_that(nrow(brick_tb) > 0, 
+                             err_desc = sprintf("No brick found for scene %s and date %s.", 
+                                                pathrow, csv_start_date))
 
     # A brick should contain one year worth of images  of a single path/row of a single band
-    time_line <- brick_tb %>% dplyr::pull(start_date) %>%
+    time_line <- brick_tb %>% 
+        dplyr::pull(start_date) %>%
         unique() %>%
         ensurer::ensure_that(length(.) == 1) %>%
-        lubridate::date() %>%
+        # These motherfuckers throw a WARNING:
+        #      lubridate::date()
+        #      lubridate::as_date()
+        as.Date() %>%
         seq(by = time_by, length.out = time_len)
 
     # get a sits coverage
@@ -245,8 +254,12 @@ get_timeseries <- function(cpath, path_bricks, brick_prefix, class_bands,
                                       files = brick_tb$path)
 
     # get samples
+    #------------------------------------------------------------------------------
+    # NOTE: workaround for testing
+    # samples_csv <- process_valid_shp(shp_path = cpath, out_dir = tempdir())
+    # samples.tb <- sits::sits_get_data(file = samples_csv[1], coverage = raster_cov)
+    #------------------------------------------------------------------------------
     samples.tb <- sits::sits_get_data(file = cpath, coverage = raster_cov)
-
     fp <- file.path(dirname(cpath),
                     paste0(basename(tools::file_path_sans_ext(cpath)), suffix,
                            ".Rdata"))

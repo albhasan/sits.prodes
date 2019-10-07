@@ -6,8 +6,10 @@ output: rmarkdown::html_vignette
 bibliography: references.bib
 vignette: >
   %\VignetteIndexEntry{Samples}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include = FALSE}
@@ -16,24 +18,253 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+library(sits.prodes)
+library(sits.starfm)
 
-stopifnot(file.exists(system.file("extdata/accuracy_ls.Rdata", package = "sits.prodes")))
+stopifnot(file.exists(system.file("extdata/accuracy_ls.Rdata", 
+                                  package = "sits.prodes")))
 
 ```
 
 
-```{r brick_desc, echo=FALSE}
-brick_description %>% 
-    knitr::kable(digits = 2, row.names = TRUE, full_width = FALSE) %>% 
+
+## Interpolated samples.
+
+A dataset containing a tibble with time series sampled on the brazilian Amazon. The time series come from Landsat 8 Collection images. The clouds in the images are filled in using billinear resampled MODIS images (MOD13Q1 and MYD13Q1) of the closest in terms of place and date. 
+
+```{r echo=FALSE, fig.height=5, fig.width=5}
+data(prodes_samples_interpolated)
+
+p_samples <- prodes_samples_interpolated
+suppressWarnings(
+  p_samples %>% 
+    dplyr::mutate(pyear = lubridate::year(end_date)) %>% 
+    dplyr::select(pyear, label) %>% 
+    table() %>% 
+    knitr::kable(digits = 0, row.names = TRUE, full_width = TRUE, 
+                 caption = "Number of samples per PRODES year.") %>% 
     kableExtra::kable_styling()
+)
+p_samples %>% 
+  dplyr::sample_frac(0.05) %>% 
+  sits::sits_select_bands(ndvi) %>% 
+  sits::sits_plot()
+
 ```
 
 
 
-* Description of the samples used for classification.
-* The samples math the same points, howver, the time series are taken from 
-different bricks.
+## Interpolated samples (few clouds).
 
-# Samples
+A dataset containing a tibble with time series sampled on the brazilian Amazon. The time series come from Landsat 8 Collection images with the fewest cluods on each PRODES year. The clouds in the images are filled in using billinear resampled MODIS images (MOD13Q1 and MYD13Q1) of the closest in terms of place and date. 
+
+```{r echo=FALSE, fig.height=5, fig.width=5}
+data(prodes_samples_interpolated_few_clouds)
+
+p_samples <- prodes_samples_interpolated_few_clouds
+suppressWarnings(
+  p_samples %>% 
+    dplyr::mutate(pyear = lubridate::year(end_date)) %>% 
+    dplyr::select(pyear, label) %>% 
+    table() %>% 
+    knitr::kable(digits = 0, row.names = TRUE, full_width = TRUE, 
+                 caption = "Number of samples per PRODES year.") %>% 
+    kableExtra::kable_styling()
+)
+p_samples %>% 
+  dplyr::sample_frac(0.05) %>% 
+  sits::sits_select_bands(ndvi) %>% 
+  sits::sits_plot()
+
+```
 
 
+
+## Cloud-masked samples.
+
+A dataset containing a tibble with time series sampled on the brazilian Amazon. The time series come from Landsat 8 Collection images in which the clouds have been replaced with a no-data value (-9999). 
+
+```{r echo=FALSE, fig.height=5, fig.width=5}
+data(prodes_samples_mask_cloud)
+
+p_samples <- prodes_samples_mask_cloud
+suppressWarnings(
+  p_samples %>% 
+    dplyr::mutate(pyear = lubridate::year(end_date)) %>% 
+    dplyr::select(pyear, label) %>% 
+    table() %>% 
+    knitr::kable(digits = 0, row.names = TRUE, full_width = TRUE, 
+                 caption = "Number of samples per PRODES year.") %>% 
+    kableExtra::kable_styling()
+)
+p_samples %>% 
+  dplyr::sample_frac(0.05) %>% 
+  sits::sits_select_bands(ndvi) %>% 
+  sits::sits_plot()
+
+```
+
+
+
+## RAW samples
+
+A dataset containing a tibble with time series sampled on the brazilian Amazon. 
+The time series come from Landsat 8 Collection images. 
+
+```{r echo=FALSE, fig.height=5, fig.width=5}
+
+data(prodes_samples_raw)
+
+suppressWarnings(
+  prodes_samples_raw %>% 
+    dplyr::mutate(pyear = lubridate::year(end_date)) %>% 
+    dplyr::select(pyear, label) %>% 
+    table() %>% 
+    knitr::kable(digits = 0, row.names = TRUE, full_width = TRUE, 
+                 caption = "Number of raw samples per PRODES year.") %>% 
+    kableExtra::kable_styling()
+)
+
+prodes_samples_raw %>% 
+  dplyr::sample_frac(0.01) %>% 
+  sits::sits_select_bands(ndvi) %>% 
+  sits::sits_plot()
+
+cloud <- n_clouds <- NULL
+prodes_samples_raw %>% 
+    dplyr::sample_frac(0.1) %>% 
+    dplyr::mutate(n_clouds = purrr::map_int(.$time_series, function(x){
+        x %>% 
+            dplyr::select(cloud) %>% 
+            sum() %>% 
+            as.integer() %>% 
+            return()
+    })) %>% 
+    ggplot2::ggplot(ggplot2::aes(n_clouds)) + 
+    ggplot2::geom_histogram(breaks = 0:23) + 
+    ggplot2::labs(title = "Clouded samples (prodes_samples_raw)") +
+    ggplot2::xlab("Number of clouded pixels") +
+    ggplot2::ylab("Count")
+
+print(sprintf("Number of samples %s", nrow(prodes_samples_raw)))
+
+```
+
+
+
+## Simple samples
+
+A dataset containing a tibble with time series sampled on the brazilian Amazon. The time series come from Landsat 8 Collection images. 
+
+```{r echo=FALSE, fig.height=5, fig.width=5}
+data(prodes_samples_simple)
+
+p_samples <- prodes_samples_simple
+suppressWarnings(
+  p_samples %>% 
+    dplyr::mutate(pyear = lubridate::year(end_date)) %>% 
+    dplyr::select(pyear, label) %>% 
+    table() %>% 
+    knitr::kable(digits = 0, row.names = TRUE, full_width = TRUE, 
+                 caption = "Number of samples per PRODES year.") %>% 
+    kableExtra::kable_styling()
+)
+p_samples %>% 
+  dplyr::sample_frac(0.05) %>% 
+  sits::sits_select_bands(ndvi) %>% 
+  sits::sits_plot()
+
+```
+
+
+
+## StarFM samples
+
+A dataset containing a tibble with time series sampled on the brazilian Amazon. The time series come from Landsat 8 Collection images. The clouds in the images are filled in using the StarFM image fusion model. StarFM builds a statistical model between MODIS and LANDSAT images at time t1 which is later applied to MODIS images at time t0. The result is a prediction of a Landsat 8 image at t0.
+
+```{r echo=FALSE, fig.height=5, fig.width=5}
+data(prodes_samples_starfm)
+
+p_samples <- prodes_samples_starfm
+suppressWarnings(
+  p_samples %>% 
+    dplyr::mutate(pyear = lubridate::year(end_date)) %>% 
+    dplyr::select(pyear, label) %>% 
+    table() %>% 
+    knitr::kable(digits = 0, row.names = TRUE, full_width = TRUE, 
+                 caption = "Number of samples per PRODES year.") %>% 
+    kableExtra::kable_styling()
+)
+p_samples %>% 
+  dplyr::sample_frac(0.05) %>% 
+  sits::sits_select_bands(ndvi) %>% 
+  sits::sits_plot()
+
+```
+
+
+
+## StarFM samples(few clouds)
+
+A dataset containing a tibble with time series sampled on the brazilian Amazon. The time series come from Landsat 8 Collection images. The clouds in the images are filled in using the StarFM image fusion model. StarFM builds a statistical model between MODIS and LANDSAT images at time t1 which is later applied to MODIS images at time t0. The result is a prediction of a Landsat 8 image at t0. These time series are the best four time steps of the samples in prodes_samples_starfm. 
+
+```{r echo=FALSE, fig.height=5, fig.width=5}
+data(prodes_samples_starfm_few_clouds)
+
+p_samples <- prodes_samples_starfm_few_clouds
+suppressWarnings(
+  p_samples %>% 
+    dplyr::mutate(pyear = lubridate::year(end_date)) %>% 
+    dplyr::select(pyear, label) %>% 
+    table() %>% 
+    knitr::kable(digits = 0, row.names = TRUE, full_width = TRUE, 
+                 caption = "Number of samples per PRODES year.") %>% 
+    kableExtra::kable_styling()
+)
+p_samples %>% 
+  dplyr::sample_frac(0.05) %>% 
+  sits::sits_select_bands(ndvi) %>% 
+  sits::sits_plot()
+
+```
+
+
+
+
+```{r, echo=FALSE}
+#?sits.prodes::prodes_samples_interpolated
+#?sits.prodes::prodes_samples_interpolated_few_clouds
+#?sits.prodes::prodes_samples_mask_cloud
+#?sits.prodes::prodes_samples_raw
+#?sits.prodes::prodes_samples_simple
+#?sits.prodes::prodes_samples_starfm
+#?sits.prodes::prodes_samples_starfm_few_clouds
+```
+
+
+
+```{r, echo=FALSE}
+sample_description <- tibble::tribble(
+    ~Sample_type, ~Obs_year, ~Description,
+    #--------------------|----------|--------------------|
+    "interpolated",       23,        "The samples were taken from the bricks of Landsat 8 where the clouds were filled up by interpolation of MXD13 data. The vegetation indexes were recalculated from the bricks of the corresponding bands.",
+    "starfm",             23,        "The samples were taken from the bricks of Landsat 8 where the clouds were filled up by the StarFM mixture model (Landsat 8 - MOD13Q1 mixture model).",
+    "simple",             4,         "The samples were taken from the bricks of the best 4 Landsat 8 images of a year.",
+    "mask_clouds",        4,         "The samples were taken from the bricks of the best 4 Landsat 8 images of a year and the clouds were masked as 'no_data'."
+)
+
+suppressWarnings(
+    sample_description %>% 
+        knitr::kable(digits = 2, row.names = TRUE, full_width = FALSE) %>% 
+        kableExtra::kable_styling()
+)
+
+```
+
+# TODO
+
+* Synchronize the descriptions here and those in the package's documentation.
+* Add scene to samples 

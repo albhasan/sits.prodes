@@ -54,7 +54,8 @@ samples_original <- samples_path %>%
 
 samples_tb <- samples_original %>%
     sits::sits_select_bands(dark, substrate, vegetation) %>%
-    dplyr::mutate(coverage = stringr::str_c("prodes_amazon_", classification_type))
+    dplyr::mutate(coverage = stringr::str_c("prodes_amazon_", classification_type), 
+                  id_sample = 1:dplyr::n())
 
 # Create cluster with Self-organizing maps (kohonen)
 xd <- 25
@@ -78,7 +79,7 @@ koh_evaluate_samples <- sits::sits_evaluate_samples(data.tb = samples_tb,
                                                     rlen = rl,
                                                     distance = "euclidean",
                                                     mode = "pbatch",
-                                                    iteration = 100)
+                                                    iteration = 50)
 
 # save partial results
 save(samples_koh, file = file_samples_koh)

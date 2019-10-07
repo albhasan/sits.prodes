@@ -1,11 +1,14 @@
 ---
 title: "Satellite Images"
 output: rmarkdown::html_vignette
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+author: Alber Sánchez
 vignette: >
   %\VignetteIndexEntry{Satellite Images}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
+
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -22,12 +25,15 @@ suppressMessages(library(dplyr))
 suppressMessages(library(ggplot2))
 suppressMessages(library(kableExtra))
 suppressMessages(library(purrr))
+suppressMessages(library(raster))
+suppressMessages(library(rasterVis))
 suppressMessages(library(rnaturalearth))
 suppressMessages(library(rnaturalearthdata))
 suppressMessages(library(sits.prodes))
 suppressMessages(library(tidyr))
 
 BRICK_IMAGES <- cloud_cov <- prodes_doy <- NULL
+img_date <- sat_image <- scene <- scene_tier <- scene_tier_id <- tier <- NULL
 data("BRICK_IMAGES", package = "sits.starfm")
 
 ```
@@ -42,9 +48,9 @@ data("BRICK_IMAGES", package = "sits.starfm")
 * Dates:
   + From: 2013-08-01
   + To:   2017-07-28
- 
- 
- 
+
+
+
 ## Spatial coverage
 
 ```{r maps, echo=FALSE, fig.width=7, fig.height=4}
@@ -58,7 +64,8 @@ img_extent <- BRICK_IMAGES %>%
 map_bz <- ggplot2::ggplot(data = rnaturalearth::ne_countries(scale = "small", 
                                                              returnclass = "sf")) +
   ggplot2::geom_sf() +
-  ggplot2::coord_sf(xlim = c(-74, -34), ylim = c(-34, 6), expand = FALSE)
+  ggplot2::coord_sf(xlim = c(-74, -34), ylim = c(-34, 6), expand = FALSE) +
+  ggplot2::labs(title = "Area of interest.")
 for (i_ext in img_extent) {
   map_bz <- map_bz + ggplot2::geom_rect(xmin = i_ext["xmin"], 
                                         xmax = i_ext["xmax"], 
@@ -70,10 +77,40 @@ print(map_bz)
 
 ```
 
+
+
+```{r tier_time_series, echo=FALSE, fig.width=7, fig.height=4}
+
+BRICK_IMAGES <- BRICK_IMAGES %>% 
+  dplyr::mutate(tier = stringr::str_sub(sat_image, -2), 
+                scene_tier = paste(scene, tier, sep = '_'))
+
+id_scene_tier <- BRICK_IMAGES %>% 
+  dplyr::distinct(scene, tier) %>% 
+  dplyr::arrange(scene, tier) %>% 
+  dplyr::mutate(scene_tier_id = 1:n())
+
+BRICK_IMAGES %>% 
+  dplyr::select(sat_image, scene, img_date, tier, scene_tier) %>% 
+  dplyr::left_join(id_scene_tier, by = c("scene", "tier")) %>% 
+  ggplot2::ggplot(ggplot2::aes(x = img_date, y = scene_tier_id)) + 
+  ggplot2::geom_line(ggplot2::aes(color = scene, group = scene)) +
+  ggplot2::geom_point(ggplot2::aes(shape = tier), size = 2) +
+  ggplot2::labs(x = "Image date", y = "") +
+  ggplot2::labs(title = "Image's spatial accuracy.") +
+  ggplot2::theme(axis.title.y = ggplot2::element_blank(),
+                 axis.text.y = ggplot2::element_blank(),
+                 axis.ticks.y = ggplot2::element_blank())
+
+```
+
+
+
 ## Time coverage.
 
 ```{r temporal_coverage, echo=FALSE}
 
+prodes_year <- scene <- year <- NULL
 suppressWarnings(
   BRICK_IMAGES %>% 
     dplyr::select(scene, year) %>% 
@@ -98,18 +135,18 @@ suppressWarnings(
 
 ```{r cloud_cover, echo=FALSE, fig.width=7, fig.height=4}
 
+img_date <- NULL
 cloud_cover <- BRICK_IMAGES %>% 
     dplyr::select(scene, img_date, cloud_cov, prodes_year) %>% 
-    dplyr::mutate(doy = lubridate::yday(img_date),
-                  prodes_doy = ifelse(doy > 214, doy - 214, doy)) %>% 
-    dplyr::arrange(scene, prodes_year, prodes_doy) %>% 
+  dplyr::mutate(doy = lubridate::yday(img_date),
+                prodes_doy = (doy + 365 - 214) %% 365 + 1) %>% 
+  dplyr::arrange(scene, prodes_year, prodes_doy) %>% 
   ggplot2::ggplot(ggplot2::aes(x = prodes_doy, y = cloud_cov)) + 
   ggplot2::ylim(0, 1) +
   ggplot2::geom_line() +
   ggplot2::facet_grid(prodes_year ~ scene) +
   ggplot2::geom_smooth(se = FALSE, method = 'loess', formula = 'y ~ x') + 
-  ggplot2::labs(title = "Cloud covearge", subtitle = "As reported by the images' metadata.") + 
-  ggplot2::xlab("PRODES day of the year") + 
+  ggplot2::labs(title = "Cloud covearge", subtitle = "As reported by the images' metadata.") +   ggplot2::xlab("PRODES day of the year") + 
   ggplot2::ylab("Cloud coverage")
 suppressWarnings(print(cloud_cover))
 
@@ -117,10 +154,96 @@ suppressWarnings(print(cloud_cover))
 
 
 
+### Cloud quantity
+
+```{r plot_cloud_quantity, echo=FALSE, fig.width=7, fig.height=4}
+base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
+
+cloud_maps <- base_path %>%
+  file.path("data", "raster", "cloud_count") %>% 
+  list.files(pattern = "*201[0-9].tif", full.names = TRUE) %>%
+  tibble::enframe(name = NULL) %>%
+  dplyr::rename(file_path = "value") %>%
+  dplyr::mutate(scene = file_path %>%
+                  basename() %>%
+                  stringr::str_extract(pattern = "_[0-9]{6}_") %>%
+                  stringr::str_sub(2, -2),
+                pyear = file_path %>%
+                  basename() %>%
+                  stringr::str_extract(pattern = "_[0-9]{4}[.]") %>%
+                  stringr::str_sub(2, -2)) %>%
+  ensurer::ensure_that(nrow(.) > 0, err_desc = "Quantile maps not found.") %>% 
+  dplyr::mutate(r = purrr::map(file_path, raster::raster)) %>% 
+  dplyr::arrange(scene, pyear)
+
+colr <- suppressWarnings(grDevices::colorRampPalette(RColorBrewer::brewer.pal(24, "RdYlBu")))
+#cloud_maps_ls <- list()
+for (rid in 1:nrow(cloud_maps)) {
+  r <- cloud_maps$r[[rid]]
+  #cloud_maps_ls[[rid]] <- 
+  rasterVis::levelplot(r, margin = FALSE,
+                       colorkey = list(space = "bottom",
+                                       labels = list(at = 0:23, font = 4)), 
+                       par.settings = list(axis.line = list(col = "transparent")),
+                       #scales = list(draw = FALSE),
+                       col.regions = colr,
+                       at = seq(0, 23, len = 24),
+                       main = sprintf("Cloud sum %s %s", 
+                                      cloud_maps$scene[[rid]], 
+                                      cloud_maps$pyear[[rid]])) %>% 
+    plot()
+    
+}
+#gridExtra::grid.arrange(cloud_maps_ls)
+  
+```
+
+### Quantiles
+
+```{r plot_cloud_quantiles, echo=FALSE, fig.width=7, fig.height=4}
+
+quantile_maps <- base_path %>%
+  file.path("data", "raster", "cloud_count") %>%
+  list.files(pattern = "*quantiles.tif", full.names = TRUE) %>%
+  tibble::enframe(name = NULL) %>%
+  dplyr::rename(file_path = "value") %>%
+  dplyr::mutate(scene = file_path %>%
+                  basename() %>%
+                  stringr::str_extract(pattern = "_[0-9]{6}_") %>%
+                  stringr::str_sub(2, -2),
+                pyear = file_path %>%
+                  basename() %>%
+                  stringr::str_extract(pattern = "_[0-9]{4}_") %>%
+                  stringr::str_sub(2, -2)) %>%
+  ensurer::ensure_that(nrow(.) > 0, err_desc = "Quantile maps not found.") %>% 
+  #dplyr::filter(pyear == "2014") %>% 
+  dplyr::mutate(r = purrr::map(file_path, raster::raster)) %>% 
+  dplyr::arrange(scene, pyear)
+
+colr <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(5, "RdYlBu"))
+for (rid in 1:nrow(quantile_maps)) {
+  r <- quantile_maps$r[[rid]]
+  rasterVis::levelplot(r, margin = FALSE,
+                       colorkey = list(space = "bottom",
+                                       labels = list(at = -5:5, font = 4)), 
+                       par.settings = list(axis.line = list(col = "transparent")),
+                       #scales = list(draw = FALSE),
+                       col.regions = colr,
+                       at = seq(0, 4, len = 5), 
+                       main = sprintf("Cloud quantile %s %s", 
+                                      quantile_maps$scene[[rid]], 
+                                      quantile_maps$pyear[[rid]])) %>% 
+    plot()
+}
+
+```
+
+
+
+
+
 ### TODO
 
 * Add MOD13Q1.
-* Add Samples.
 * Add Methods.
 * Add Results and discussion
-* Add RODES vs. Mapbiomas

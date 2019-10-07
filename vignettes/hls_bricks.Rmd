@@ -1,0 +1,88 @@
+---
+title: "Harmonized Landsat8-Sentinel2 bricks"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{hls_bricks}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, echo=FALSE}
+
+suppressMessages(library(dplyr))
+suppressMessages(library(raster))
+suppressMessages(library(rgdal))
+suppressMessages(library(sits.prodes))
+suppressMessages(library(sits.starfm))
+
+base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
+
+```
+
+```{r get_data, echo=FALSE}
+
+brick_tb <- base_path %>% 
+    file.path("data", "raster", "brick_hls_raw") %>% 
+    list.files(pattern = "*tif$", full.names = TRUE) %>% 
+    tibble::enframe(name = NULL) %>% 
+    dplyr::rename(file_path = "value") %>% 
+    dplyr::mutate(file_name = basename(file_path),
+                  product = stringr::str_sub(basename(file_path), 4, 6),
+                  tile = stringr::str_sub(basename(file_path), 12, 17),
+                  start_date = lubridate::as_date(stringr::str_sub(basename(file_path),
+                                                                   19, 28)), 
+                  pyear = dplyr::if_else(lubridate::month(start_date) <  8, 
+                                         lubridate::year(start_date), 
+                                         lubridate::year(start_date) + 1),
+                  band = purrr::map_chr(basename(.$file_path), function(x){
+                      x %>% 
+                          stringr::str_split("_") %>% 
+                          vapply(function(x){x[[4]]}, character(1)) %>% 
+                          return()
+                  }))
+
+```
+
+
+
+```{r echo=FALSE}
+
+# Helper funtion to summarize a column as a single character.
+collapse_var <- function(x, var){
+    var_values <- x %>% 
+        dplyr::pull(.data[[var]]) %>% 
+        unique() %>% 
+        sort() %>% 
+        paste(., collapse = ", ")
+    x %>% 
+        dplyr::slice(1) %>% 
+        dplyr::select(-.data[[var]]) %>% 
+        dplyr::mutate(!!var := var_values) %>% 
+        return()
+}
+
+file_path <- file_name <- start_date <- NULL
+suppressWarnings(
+    brick_tb %>%
+        dplyr::select(-c(file_path, file_name, start_date)) %>%
+        dplyr::arrange(product, tile) %>%
+        dplyr::group_by(product, tile, pyear) %>%
+        dplyr::group_map(~ collapse_var(.x, "band"), keep = TRUE) %>%
+        dplyr::bind_rows() %>%
+        dplyr::group_by(product, tile) %>%
+        dplyr::group_map(~ collapse_var(.x, "pyear"), keep = TRUE) %>%
+        dplyr::bind_rows() %>%
+        knitr::kable(digits = 0, row.names = TRUE, full_width = TRUE,
+                     caption = "Summary of HLS bricks.") %>%
+        kableExtra::kable_styling()
+)
+
+```
+

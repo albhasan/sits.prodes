@@ -1,9 +1,9 @@
 #!/usr/bin/Rscript
 
-# CREATE THE LABELS OF MAPBIOMAS COLLECTION 3 AND THEIR MAPPINGS TO PRODES
+print("Setting the mapping between PRODES and MAPBIOMAS...")
 
-library(tibble)
-library(devtools)
+suppressPackageStartupMessages(library(tibble))
+suppressPackageStartupMessages(library(devtools))
 
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes"
 setwd(base_path)

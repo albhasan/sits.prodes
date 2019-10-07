@@ -1,0 +1,557 @@
+---
+title: "geoinfo2019"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{geoinfo2019}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r pre_setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, echo=FALSE}
+suppressMessages(library(dplyr))
+suppressMessages(library(ggplot2))
+suppressMessages(library(kableExtra))
+suppressMessages(library(purrr))
+suppressMessages(library(raster))
+suppressMessages(library(rasterVis))
+suppressMessages(library(rnaturalearth))
+suppressMessages(library(rnaturalearthdata))
+suppressMessages(library(sits.prodes))
+suppressMessages(library(tidyr))
+
+selected_scenes <- "226064"
+selected_pyears <- 2013:2017
+selected_experiments <- c("rep_prodes_40", "rep_prodes_41", "rep_prodes_42")
+
+data("BRICK_IMAGES", package = "sits.starfm")
+BRICK_IMAGES <- BRICK_IMAGES %>%
+  dplyr::filter(scene %in% selected_scenes, prodes_year %in% selected_pyears)
+
+utils::data("expert_validation", package = "sits.prodes")
+
+# Get the accuracies out of a confusionMatrix object. 
+# 
+# @param  x A confusionMatrix object (see caret::confusionMatrix).
+# @return A list of numeric. The overall, user, and producer accuracies.
+.get_accuracies <- function(x){
+    if (length(x) == 1 && is.na(x)) 
+        return(tibble::tibble(NA))
+    res <- sits.prodes::asses_accuracy_simple(x$table)
+    c(res$user, res$producer) %>%
+        tibble::enframe(name = NULL) %>%
+        dplyr::bind_cols(cname =  c(paste0("ua_", names(res$user)),
+                                    paste0("pa_", names(res$producer)))) %>%
+        tidyr::spread("cname", "value") %>%
+        return()
+}
+
+
+
+
+
+
+
+```
+
+
+## Spatial coverage
+
+```{r maps, echo=FALSE, fig.width=7, fig.height=4}
+
+img_extent <- BRICK_IMAGES %>% 
+  dplyr::select(scene, img_extent) %>% 
+  dplyr::group_by(scene) %>% 
+  dplyr::slice(dplyr::n()) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::pull(img_extent)
+map_bz <- ggplot2::ggplot(data = rnaturalearth::ne_countries(scale = "small", 
+                                                             returnclass = "sf")) +
+  ggplot2::geom_sf() +
+  #ggplot2::labs(title = "Area of interest.") +
+  ggplot2::coord_sf(xlim = c(-74, -34), ylim = c(-34, 6), expand = FALSE)
+for (i_ext in img_extent) {
+  map_bz <- map_bz + ggplot2::geom_rect(xmin = i_ext["xmin"], 
+                                        xmax = i_ext["xmax"], 
+                                        ymin = i_ext["ymin"], 
+                                        ymax = i_ext["ymax"], 
+                                        fill = NA, colour = "black", size = 1.0)
+}
+print(map_bz)
+
+```
+
+
+
+```{r tier_time_series, echo=FALSE, fig.width=7, fig.height=4}
+
+BRICK_IMAGES <- BRICK_IMAGES %>% 
+  dplyr::mutate(tier = stringr::str_sub(sat_image, -2), 
+                scene_tier = paste(scene, tier, sep = '_'))
+
+id_scene_tier <- BRICK_IMAGES %>% 
+  dplyr::distinct(scene, tier) %>% 
+  dplyr::arrange(scene, tier) %>% 
+  dplyr::mutate(scene_tier_id = 1:n())
+
+BRICK_IMAGES %>% 
+  dplyr::select(sat_image, scene, img_date, tier, scene_tier) %>% 
+  dplyr::left_join(id_scene_tier, by = c("scene", "tier")) %>% 
+  ggplot2::ggplot(ggplot2::aes(x = img_date, y = scene_tier_id)) + 
+  ggplot2::geom_line(ggplot2::aes(color = scene, group = scene)) +
+  ggplot2::geom_point(ggplot2::aes(shape = tier), size = 2) +
+  ggplot2::labs(x = "Image date", y = "") +
+  #ggplot2::labs(title = "Image's spatial accuracy.") +
+  ggplot2::theme(axis.title.y = ggplot2::element_blank(),
+                 axis.text.y = ggplot2::element_blank(),
+                 axis.ticks.y = ggplot2::element_blank())
+
+```
+
+
+
+
+## Cloud coverage.
+
+```{r cloud_cover, echo=FALSE, fig.width=7, fig.height=7}
+
+img_date <- NULL
+cloud_cover <- BRICK_IMAGES %>% 
+    dplyr::select(scene, img_date, cloud_cov, prodes_year) %>% 
+    dplyr::mutate(doy = lubridate::yday(img_date),
+                  prodes_doy = (doy + 365 - 214) %% 365 + 1) %>% 
+    dplyr::arrange(scene, prodes_year, prodes_doy) %>%
+    ggplot2::ggplot(ggplot2::aes(x = prodes_doy, y = cloud_cov)) + 
+    ggplot2::ylim(0, 1) +
+    ggplot2::geom_line() +
+    ggplot2::facet_grid(prodes_year ~ scene) +
+    ggplot2::geom_smooth(se = FALSE, method = 'loess', formula = 'y ~ x') + 
+    #ggplot2::labs(title = "Cloud covearge", subtitle = "As reported by the images' metadata.") +   
+    ggplot2::xlab("Image adquisition date ") + 
+    ggplot2::scale_x_continuous(breaks = c(1, 91, 181, 271, 365),
+                                label = c("August 1st", "November 1st", 
+                                          "February 1st", "May 1st", 
+                                          "July 31st")) + 
+    ggplot2::ylab("Cloud coverage")
+suppressWarnings(print(cloud_cover))
+
+
+```
+
+
+
+### Cloud quantity
+
+```{r plot_cloud_quantity, echo=FALSE, fig.width=7, fig.height=4}
+
+base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
+
+cloud_maps <- base_path %>%
+  file.path("data", "raster", "cloud_count") %>% 
+  list.files(pattern = "*201[0-9].tif", full.names = TRUE) %>%
+  tibble::enframe(name = NULL) %>%
+  dplyr::rename(file_path = "value") %>%
+  dplyr::mutate(scene = file_path %>%
+                  basename() %>%
+                  stringr::str_extract(pattern = "_[0-9]{6}_") %>%
+                  stringr::str_sub(2, -2),
+                pyear = file_path %>%
+                  basename() %>%
+                  stringr::str_extract(pattern = "_[0-9]{4}[.]") %>%
+                  stringr::str_sub(2, -2)) %>%
+  ensurer::ensure_that(nrow(.) > 0, err_desc = "Quantile maps not found.") %>% 
+  dplyr::mutate(r = purrr::map(file_path, raster::raster)) %>% 
+  dplyr::arrange(scene, pyear) %>%
+  dplyr::filter(scene %in% selected_scenes, pyear %in% selected_pyears)
+
+colr <- suppressWarnings(grDevices::colorRampPalette(RColorBrewer::brewer.pal(24, "RdYlBu")))
+
+
+
+
+
+for (rid in 1:nrow(cloud_maps)) {
+  r <- cloud_maps$r[[rid]]
+  #cloud_maps_ls[[rid]] <- 
+  rasterVis::levelplot(r, margin = FALSE,
+                       colorkey = list(space = "bottom",
+                                       labels = list(at = 0:23, font = 4)), 
+                       par.settings = list(axis.line = list(col = "transparent")),
+                       #scales = list(draw = FALSE),
+                       col.regions = colr,
+                       main = sprintf("Clouded observations %s %s", 
+                                      cloud_maps$scene[[rid]], 
+                                      cloud_maps$pyear[[rid]]),
+                       at = seq(0, 23, len = 24)) %>% 
+    plot()
+}
+
+# library(lattice)
+# h <- function(r, colr, scene, y, split, newpage){
+#   rasterVis::levelplot(r, margin = FALSE,
+#                        colorkey = list(space = "bottom",
+#                                        labels = list(at = 0:23, font = 4)), 
+#                        par.settings = list(axis.line = list(col = "transparent")),
+#                        col.regions = colr, at = seq(0, 23, len = 24),
+#                        main = sprintf("Clouded observations %s %s", scene, y),
+#                        split = split, newpage = newpage) 
+# }
+# m <- matrix(c(0.1, 0.2, 0.3, 0.4), 2, 2)
+# plot.new()
+# par(mfrow = c(2, 2), oma = c(2, 0, 2, 0))
+# print(h(r = cloud_maps$r[[1]], colr = colr, scene = "226064", y = 2013, split = c(1, 1, 2, 2), newpage = TRUE))
+# print(h(r = cloud_maps$r[[2]], colr = colr, scene = "226064", y = 2014, split = c(1, 2, 2, 2), newpage = FALSE))
+# print(h(r = cloud_maps$r[[3]], colr = colr, scene = "226064", y = 2015, split = c(2, 1, 2, 2), newpage = FALSE))
+# print(h(r = cloud_maps$r[[4]], colr = colr, scene = "226064", y = 2016, split = c(2, 2, 2, 2), newpage = FALSE))
+# title("Centered Overall Title", outer=TRUE)
+# mtext(side=1, "Centered Subtitle", outer=TRUE)
+
+
+
+```
+
+
+
+### Quantiles
+
+```{r plot_cloud_quantiles, echo=FALSE, fig.width=7, fig.height=4}
+
+quantile_maps <- base_path %>%
+  file.path("data", "raster", "cloud_count") %>%
+  list.files(pattern = "*quantiles.tif", full.names = TRUE) %>%
+  tibble::enframe(name = NULL) %>%
+  dplyr::rename(file_path = "value") %>%
+  dplyr::mutate(scene = file_path %>%
+                  basename() %>%
+                  stringr::str_extract(pattern = "_[0-9]{6}_") %>%
+                  stringr::str_sub(2, -2),
+                pyear = file_path %>%
+                  basename() %>%
+                  stringr::str_extract(pattern = "_[0-9]{4}_") %>%
+                  stringr::str_sub(2, -2)) %>%
+  ensurer::ensure_that(nrow(.) > 0, err_desc = "Quantile maps not found.") %>% 
+  #dplyr::filter(pyear == "2014") %>% 
+  dplyr::mutate(r = purrr::map(file_path, raster::raster)) %>% 
+  dplyr::arrange(scene, pyear) %>%
+  dplyr::filter(scene %in% selected_scenes, pyear %in% selected_pyears)
+
+colr <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(5, "RdYlBu"))
+for (rid in 1:nrow(quantile_maps)) {
+  r <- quantile_maps$r[[rid]]
+  rasterVis::levelplot(r, margin = FALSE,
+                       colorkey = list(space = "bottom",
+                                       labels = list(at = -5:5, font = 4)), 
+                       par.settings = list(axis.line = list(col = "transparent")),
+                       #scales = list(draw = FALSE),
+                       col.regions = colr,
+                       at = seq(0, 4, len = 5), 
+                       main = sprintf("Cloud quantile %s %s", 
+                                      quantile_maps$scene[[rid]], 
+                                      quantile_maps$pyear[[rid]])) %>% 
+    plot()
+}
+
+```
+
+
+## List of experiments.
+
+
+```{r experiment_summary_tb, echo=FALSE}
+
+data("training_logs", package = "sits.prodes")
+na_remover <- function(x){return(trimws(gsub("NA", "", x[!is.na(x)])))}
+Bands_experiment <- Bands__experiment <- Clasification_type <- Labels <- Labels_experiment <- setup <- Scenes_experiment <- NULL
+suppressWarnings(
+  training_logs %>% 
+    tidyr::unnest(setup) %>%
+    dplyr::filter(stringr::str_detect(.$experiment, "^rep_prodes_4")) %>%
+    dplyr::mutate(bands = na_remover(paste(Bands_experiment, Bands__experiment))) %>%
+    dplyr::mutate(labels = na_remover(paste(Labels, Labels_experiment))) %>%
+    dplyr::select(experiment, Clasification_type, labels, bands, Scenes_experiment) %>%
+    dplyr::mutate(experiment = paste0("rep_prodes_", stringr::str_extract(experiment, pattern = "[0-9]{2}"))) %>% 
+    dplyr::rename(Experiment = "experiment", Brick = "Clasification_type", 
+                  Label = "labels", Scene = "Scenes_experiment", Band = "bands") %>% 
+    knitr::kable() %>%
+    kableExtra::kable_styling(full_width = F)
+)
+
+```
+
+
+### PRODES mapping to English
+
+```{r print_prodes_labels, echo = FALSE}
+
+prodes_labels %>% 
+    dplyr::select(-id_pd) %>% 
+    knitr::kable() %>% 
+    kableExtra::kable_styling(full_width = F)
+
+```
+
+
+```{r plot_confusion_matrices_DL, results='asis', echo=FALSE, fig.height=5, fig.width=8}
+
+# get data for plots
+# Check if the confusion matrix's values are greater than zero. 
+# 
+# @param  x         A confusionMatrix object (see caret::confusionMatrix).
+# @param  label_vec A chatacter. Names of the labels to consider.
+# @return           A length-one logical.
+.is_mt_complete <- function(x, label_vec){
+    if (length(x) == 1 && is.na(x)) 
+        return(FALSE)
+    mt <- x$table %>% 
+        as.matrix()
+    if (any(colnames(mt) != rownames(mt)))
+        return(FALSE)
+    if (any(!(label_vec %in% colnames(mt))))
+        return(FALSE)
+    mt_lab <- mt[label_vec, label_vec]
+    if (any(is.na(mt_lab)))
+        return(FALSE)
+    #if (any(apply(mt_lab, 2, sum) == 0))
+    #    return(FALSE)
+    return(TRUE)
+}
+
+# -----
+library(devtools)
+setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
+devtools::load_all()
+# -----
+data("expert_validation", package = "sits.prodes")
+
+acc_tb <- expert_validation %>%
+   
+    
+    dplyr::mutate(
+        is_mt_complete = purrr::map_lgl(.$confusion_matrix, .is_mt_complete, 
+                                        label_vec = c("deforestation", "forest")),
+        up_acc2 = purrr::map(.$confusion_matrix, .get_accuracies)
+    ) %>%
+    dplyr::filter(is_mt_complete == TRUE) %>%
+    tidyr::drop_na(confusion_matrix) %>% 
+    dplyr::select(experiment, algorithm, smooth, scene, pyear, up_acc2) %>%
+    tidyr::unnest() %>%
+    dplyr::select(-tidyselect::ends_with(match = "no forest"), 
+                  -tidyselect::ends_with(match = "water")) %>%
+    tidyr::gather(tidyselect::starts_with("pa_"), tidyselect::starts_with("ua_"),
+                  key = "variable", value = "value") %>%
+    dplyr::mutate(acc_type = ifelse(stringr::str_sub(variable, 1, 3) == "ua_",
+                                    "user", "producer"),
+                  variable = stringr::str_sub(variable, 4)) %>% 
+    dplyr::filter(scene %in% selected_scenes, 
+                  pyear %in% selected_pyears, 
+                  experiment %in% selected_experiments, 
+                  algorithm == "results_dl", 
+                  smooth == "") %>%
+    #dplyr::distinct() %>%
+    dplyr::arrange(experiment, algorithm, smooth, scene, pyear, variable, acc_type)
+
+acc_pr <- acc_tb %>% 
+    dplyr::filter(acc_type == "producer") %>%
+    dplyr::rename(prod_acc = value) %>%
+    dplyr::select(-acc_type)
+acc_ur <- acc_tb %>% 
+    dplyr::filter(acc_type == "user") %>%
+    dplyr::rename(user_acc = value) %>%
+    dplyr::select(-acc_type)
+pa_acc_tb <- acc_pr %>%
+    dplyr::inner_join(acc_ur, by = c("experiment", "algorithm", "smooth", 
+                                     "scene", "pyear", "variable"))
+
+f_plot <- function(data_tb, my_algorithm, my_smooth){
+    
+   prodes_years <- data_tb %>% 
+       dplyr::pull(pyear) %>% 
+       unique() %>% 
+       sort() 
+    plot(
+        data_tb %>%
+            dplyr::filter(smooth == !!my_smooth, 
+                          algorithm == !!my_algorithm) %>% 
+#-----
+# TODO:
+dplyr::mutate(experiment = dplyr::recode(experiment, 
+                                         "rep_prodes_40" = "Bands", 
+                                         "rep_prodes_42" = "MM", 
+                                         "rep_prodes_41" = "Band_MM"))  %>%
+#------
+          ggplot2::ggplot(aes(x = prod_acc, y = user_acc,
+                                shape = variable, color = experiment)) +
+            ggplot2::geom_jitter(size = 2) +
+            ggplot2::coord_fixed() +
+            #ggplot2::xlim(0.0, 1) +
+            #ggplot2::ylim(0.5, 1) +
+            ggplot2::xlim(0.0, 1.01) +
+            ggplot2::ylim(0.0, 1.01) +
+            ggplot2::guides(shape = guide_legend(override.aes = list(size = 3))) +
+            ggplot2::facet_wrap(scene ~ pyear, ncol = length(prodes_years)) +
+            ggplot2::labs(title = sprintf("Expert validation %s %s", 
+                                          my_algorithm, my_smooth),
+                          x = "Producer accuracy",
+                          y = "User accuracy") + 
+            theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    )
+}
+
+for (my_algorithm in "results_dl") {
+    cat("\n\n")
+    cat(paste0("#### ", my_algorithm), "\n")
+    for (my_smooth in "") {
+        suppressWarnings(f_plot(data_tb = pa_acc_tb, my_algorithm, my_smooth))
+    }
+}
+
+```
+
+
+
+## RAW samples
+
+A dataset containing a tibble with time series sampled on the brazilian Amazon. 
+The time series come from Landsat 8 Collection images. 
+
+```{r echo=FALSE, fig.height=5, fig.width=5}
+
+data(prodes_samples_raw)
+
+suppressWarnings(
+  prodes_samples_raw %>% 
+    dplyr::mutate(pyear = lubridate::year(end_date)) %>% 
+    dplyr::select(pyear, label) %>% 
+    table() %>% 
+    knitr::kable(digits = 0, row.names = TRUE, full_width = TRUE, 
+                 caption = "Number of raw samples per PRODES year.") %>% 
+    kableExtra::kable_styling()
+)
+
+prodes_samples_raw %>% 
+  dplyr::sample_frac(0.01) %>% 
+  sits::sits_select_bands(ndvi) %>% 
+  sits::sits_plot()
+
+cloud <- n_clouds <- NULL
+prodes_samples_raw %>% 
+    dplyr::sample_frac(0.1) %>% 
+    dplyr::mutate(n_clouds = purrr::map_int(.$time_series, function(x){
+        x %>% 
+            dplyr::select(cloud) %>% 
+            sum() %>% 
+            as.integer() %>% 
+            return()
+    })) %>% 
+    ggplot2::ggplot(ggplot2::aes(n_clouds)) + 
+    ggplot2::geom_histogram(breaks = 0:23) + 
+    ggplot2::labs(title = "Clouded samples (prodes_samples_raw)") +
+    ggplot2::xlab("Number of clouded pixels") +
+    ggplot2::ylab("Count")
+
+print(sprintf("Number of samples %s", nrow(prodes_samples_raw)))
+
+```
+
+
+
+## Experiment summary
+
+```{r experiment_summary_data, echo=FALSE}
+
+data("training_logs", package = "sits.prodes")
+na_remover <- function(x){return(trimws(gsub("NA", "", x[!is.na(x)])))}
+training_logs %>% 
+    tidyr::unnest(setup) %>%
+    dplyr::filter(stringr::str_detect(experiment, pattern = "train_(4|5)")) %>%
+    dplyr::mutate(bands = na_remover(paste(Bands_experiment, Bands__experiment))) %>%
+    dplyr::mutate(labels = na_remover(paste(Labels, Labels_experiment))) %>%
+    dplyr::select(experiment, Clasification_type, labels, bands, Scenes_experiment) %>%
+    dplyr::filter(stringr::str_detect(experiment, "train_(4|5)")) %>%
+    dplyr::rename_all(list(~stringr::str_replace_all(stringr::str_to_title(.), '_', ' '))) %>%
+    knitr::kable() %>%
+    kableExtra::kable_styling(full_width = F)
+
+```
+
+
+```{r fig.width=7, fig.height=5, echo=FALSE}
+
+training_logs %>% 
+    tidyr::unnest(trains) %>%
+    dplyr::filter(model_name %in% c("train_40_model_17", "train_41_model_2",  
+                                    "train_42_model_2")) %>%
+    dplyr::select(experiment, activation, batch_size, dropout_rates, epochs, 
+                  optimizer, units, validation_split, path) %>%
+    dplyr::mutate(layers = purrr::map(.$dropout_rates, function(x){length(eval(x))}),
+                  dropout_rates = unique(dropout_rates)) %>%
+    dplyr::rename_all(list(~stringr::str_replace_all(stringr::str_to_title(.), '_', ' '))) %>%
+    knitr::kable() %>% 
+    kableExtra::kable_styling(full_width = F)
+
+plot_tb <- training_logs %>% 
+    tidyr::unnest(trains) %>% 
+    dplyr::select(experiment, model_name, acc, loss, val_acc, val_loss) %>%
+    dplyr::filter(model_name %in% c("train_40_model_17",
+                                    "train_41_model_2",
+                                    "train_42_model_2",
+                                    "train_50_model_2",
+                                    "train_51_model_14",
+                                    "train_52_model_13")) %>% 
+    dplyr::mutate(acc  = purrr::map(acc,  function(x) eval(parse(text = x))),
+                  loss = purrr::map(loss, function(x) eval(parse(text = x))),
+                  val_acc  = purrr::map(val_acc, function(x) eval(parse(text = x))),
+                  val_loss = purrr::map(val_loss, function(x) eval(parse(text = x))), 
+                  val_acc_mean = purrr::map_dbl(val_acc, mean)) 
+
+plot_ls <- lapply(unique(plot_tb$experiment), function(exp){
+    plot_tb %>% 
+        dplyr::filter(experiment %in% exp) %>% 
+        tidyr::unnest() %>%
+        dplyr::group_by(model_name) %>% 
+        dplyr::mutate(epoch = row_number()) %>%
+        ggplot2::ggplot() +
+        ggplot2::geom_path(aes(y = loss, x = epoch), colour = "blue") +
+        ggplot2::geom_path(ggplot2::aes(y = val_loss, x = epoch)) +
+        ggplot2::ggtitle(exp) +
+        ggplot2::ylim(0.0, 0.25) +
+        #ggplot2::theme(plot.title = element_text(size = 8)) +
+        ggplot2::labs(x = "Epochs", y = "Loss") +
+        ggplot2::facet_wrap(~ model_name, nrow = 5) 
+    
+#    %>%
+#        return()
+})
+
+
+
+#for(p in plot_ls){
+for(i in 1:length(plot_ls)){
+    print(i)
+    p <- plot_ls[[i]]
+    suppressWarnings(print(p))
+}
+
+```
+
+## selected trainings
+- train_20_model_1
+- train_21_model_12
+- train_30_model_18
+- train_31_model_5
+- train_32_model_10
+- train_33_model_19
+- train_34_model_6
+- train_35_model_8
+- train_40_model_17
+- train_41_model_2
+- train_42_model_2
+- train_50_model_2
+- train_51_model_14
+- train_52_model_13

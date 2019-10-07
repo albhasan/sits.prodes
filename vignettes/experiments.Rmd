@@ -1,5 +1,5 @@
 ---
-title: "experiments"
+title: "Experiments"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{experiments}
@@ -14,6 +14,29 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
+```{r setup, echo=FALSE}
 library(sits.prodes)
+```
+
+## List of experiments.
+
+
+```{r experiment_summary_tb, echo=FALSE}
+
+data("training_logs", package = "sits.prodes")
+na_remover <- function(x){return(trimws(gsub("NA", "", x[!is.na(x)])))}
+Bands_experiment <- Bands__experiment <- Clasification_type <- Labels <- Labels_experiment <- setup <- Scenes_experiment <- NULL
+suppressWarnings(
+  training_logs %>% 
+    tidyr::unnest(setup) %>%
+    dplyr::mutate(bands = na_remover(paste(Bands_experiment, Bands__experiment))) %>%
+    dplyr::mutate(labels = na_remover(paste(Labels, Labels_experiment))) %>%
+    dplyr::select(experiment, Clasification_type, labels, bands, Scenes_experiment) %>%
+    dplyr::mutate(experiment = paste0("rep_prodes_", stringr::str_extract(experiment, pattern = "[0-9]{2}"))) %>% 
+    dplyr::rename(Experiment = "experiment", Brick = "Clasification_type", 
+                  Label = "labels", Scene = "Scenes_experiment", Band = "bands") %>% 
+    knitr::kable() %>%
+    kableExtra::kable_styling(full_width = F)
+)
+
 ```

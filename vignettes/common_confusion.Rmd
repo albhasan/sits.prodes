@@ -28,7 +28,7 @@ suppressMessages(library(stringr))
 # Missclasification
 + Each classification result is compared to PRODES in a difference map.
 + The difference maps are compared to find the places where all the algorithms (DL, RF, SVM) predict the same label.
-+ In the maps below, the label 1 represents where the algorithms agree (DL, RF, SVM).
++ In the maps below, the label 1 represents where the algorithms agree (DL, RF, SVM) and 0 otherwise.
 
 ```{r get_data, include=FALSE}
 
@@ -52,23 +52,7 @@ img_tb <- in_dir %>% list.files(pattern = "rep_prodes_[0-9]{2}_[0-9]{6}_[0-9]{4}
                   scene == "226064",
                   smooth == "smooth_11x11_n10")
 
-# brick_raw_cloud <- brick_raw_dir %>% list.files(pattern = "LC8SR-RAW_[0-9]{6}_[0-9]{4}-[0-9]{2}-[0-9]{2}_cloud_STACK_BRICK.tif",
-#                                                 full.names = TRUE) %>%
-#     sits.prodes::get_brick_md()
-
 ```
-
-
-
-
-```{r brick_desc, echo=FALSE}
-suppressWarnings(
-  brick_description %>% 
-    knitr::kable(digits = 2, row.names = TRUE, full_width = FALSE) %>% 
-    kableExtra::kable_styling()
-)
-```
-
 
 
 ```{r echo=FALSE, , fig.height=4, fig.width=5, results='asis'}

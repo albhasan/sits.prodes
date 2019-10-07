@@ -8,6 +8,12 @@ library(sits)
 library(sits.prodes)
 library(parallel)
 
+#------
+# NOTE: Remove
+library(devtools)
+devtools::load_all()
+#------
+
 base_path = "/home/alber/Documents/data/experiments/prodes_reproduction"
 cores <- floor(parallel::detectCores() * 3/4)
 no_data <- -9999 # Landsat no data value
@@ -32,15 +38,13 @@ if (length(err_msg) > 0) {
 # brick_type = "starfm_few_clouds"
 # brick_type = "simple"
 # brick_type = "mask_cloud"
-brick_type = "raw"
+# brick_type = "raw"
+brick_type = "hls_raw"
 
 class_bands <- c("ndvi", "nir", "red", "blue", "green", "swir1", "swir2",
                   "dark", "substrate", "vegetation")
 
-
-
 print(sprintf("Brick type: %s", brick_type))
-
 
 if (brick_type == "starfm") {
     path_bricks  <- "/home/alber/shared/brick"
@@ -177,6 +181,65 @@ if (brick_type == "starfm") {
                              time_by = ceiling(365/23),
                              mc.cores = cores)
     print(fpaths)
+}else if(brick_type == "hls_raw") {
+    # Bricks created by piling up raw HLS images[V
+    band_names <- c("band01", "band02", "band03", "band04", "band05", 
+                     "band06", "band07", "band09", "band10", "band11", 
+                     "cloud", "evi2", "msavi", "nbr2", "nbr", "ndmi", 
+                     "ndvi","savi" )
+    path_bricks <- "/home/alber/shared/brick_hls_raw"
+    brick_prefix <- "HLSL30-RAW_"
+    scale_factor   <- as.list(rep(1/10000, length(band_names)))
+    maximum_values <- as.list(rep(10000,   length(band_names)))
+    minimum_values <- as.list(rep(0,       length(band_names)))
+    missing_values <- rep(no_data, length(band_names))
+    names(maximum_values) <- names(minimum_values) <- names(missing_values) <- names(scale_factor) <- band_names
+    scale_factor$cloud   <- 1
+    maximum_values$cloud <- 1
+    # NOTE: 
+    #    - NDVI's minimum value is 0. Shouldn't it be -10000?
+    #    - missing_values == no_data?
+    samples_csv <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/samples/hls" %>%
+        list.files(pattern = "shp$", full.names = TRUE) %>%
+        purrr::map(process_valid_shp, 
+		   out_dir = "/home/alber/Documents/data/experiments/prodes_reproduction/data/samples/hls/csv") %>%
+        unlist()
+    fpaths <- parallel::mclapply(samples_csv, sits.prodes:::get_timeseries,
+                                 path_bricks = path_bricks,
+                                 brick_prefix = brick_prefix,
+                                 class_bands = band_names,
+                                 scale_factor = scale_factor,
+                                 missing_values  = missing_values,
+                                 minimum_values  = minimum_values,
+                                 maximum_values  = maximum_values,
+                                 suffix = paste0("_", brick_type),
+                                 cov_name = "Brick HLS raw",
+                                 time_len = 23,
+                                 time_by = ceiling(365/23),
+                                 mc.cores = cores)
+
+#----
+# test
+#Error in sits.prodes:::get_timeseries(samples_csv[[1]], path_bricks = path_bricks,  :
+#  Invalid start_date in file name /tmp/Rtmpt9umzk/prodes_T19LGK_p2017_2016-08-01.csv
+#res <- sits.prodes:::get_timeseries(samples_csv[[1]], 
+#                                    path_bricks = path_bricks,
+#                                    brick_prefix = brick_prefix,
+#                                    class_bands = band_names,
+#                                    scale_factor = scale_factor,
+#                                    missing_values  = missing_values,
+#                                    minimum_values  = minimum_values,
+#                                    maximum_values  = maximum_values,
+#                                    suffix = paste0("_", brick_type),
+#                                    cov_name = "Brick HLS raw",
+#                                    time_len = 23,
+#                                    time_by = ceiling(365/23))
+#
+#----
+
+
+    print(fpaths)
+
 }else{
     stop("Unknown kind of brick")
 }

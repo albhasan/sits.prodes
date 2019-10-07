@@ -10,7 +10,7 @@ library(sits.prodes)
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 
 # get arguments ----
-opt_parser <- list(
+opt_parser <- optparse::OptionParser(option_list = list(
   make_option("--experiment", type = "character", default = NULL,
               help = "Name of an experiment e.g. 'rep_prodes_40'",
               metavar = "character"),
@@ -23,7 +23,7 @@ opt_parser <- list(
   make_option("--cores", type = "integer",   default = 1,
               help = "Number of cores for running in parallel [default %default]",
               metavar = "character")
-) %>% OptionParser()
+))
 opt <- parse_args(opt_parser)
 if (length(opt) != 5 || sum(sapply(opt, is.null)) != 0) {
   print_help(opt_parser)
@@ -74,8 +74,7 @@ raster_tb <- dl_dir %>% result_tb() %>%
 stack_ls <- purrr::pmap(list(as.list(raster_tb$dl_file),
                              as.list(raster_tb$rf_file),
                              as.list(raster_tb$svm_file)),
-                        raster::stack
-)
+                        raster::stack)
 
 # taken from https://stackoverflow.com/questions/26726028/how-to-pick-the-most-frequent-values-mode-from-a-raster-stack
 Mode <- function(x) {

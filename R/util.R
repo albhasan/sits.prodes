@@ -94,19 +94,27 @@ compute_indexes <- function(x, sat){
 #' @return            A character of path, pathrow, start_date, band, year (NA for MODIS).
 #' @export
 get_brick_md <- function(brick_paths){
-    # Get the number of bands in a file
-    # @param filepath A length-one character. A path to a file
-    # @return A length-one numeric. The number of bands
+    # @title Get the number of bands in a file.
+    # @author Alber Sanchez, \email{albequietr.ipia@@inpe.br}
+    # @description Get the number of bands in a file.
+    #
+    # @param filepath A character. Path to a file.
+    # @return         A numeric.
+    # Adapted from sits.starfm
     get_number_of_bands <- function(filepath) {
-        system2("gdalinfo", filepath, stdout = TRUE) %>%
-            stringr::str_subset(pattern = "Band") %>%
-            dplyr::last() %>%
-            stringr::str_split(pattern = " ") %>%
-            unlist() %>%
-            dplyr::nth(n = 2) %>%
-            as.numeric() %>%
-            return()
+        stopifnot(is.atomic(filepath))
+        if (is.na(filepath) || length(filepath) < 1) return(NA)
+        if (length(filepath) == 1) {
+            system2("gdalinfo", filepath, stdout = TRUE) %>%
+                stringr::str_subset("Band") %>% dplyr::last() %>%
+                stringr::str_split(" ") %>% unlist() %>% dplyr::nth(2) %>%
+                as.integer() %>%
+                return()
+        } else {
+            return(vapply(filepath, get_number_of_bands, integer(1)))
+        }
     }
+    #
     brick_df <- lapply(brick_paths, function(x){
         fn <- substr(basename(x), 1, nchar(basename(x)) - 4)
         fn_md <- strsplit(fn, split = '_')[[1]]
@@ -127,6 +135,15 @@ get_brick_md <- function(brick_paths){
                 start_date = "2000-01-01",
                 band = tolower(fn_md[7]),
                 year = 2000,
+                time_steps = get_number_of_bands(x)
+            )
+        } else if (stringr::str_detect(fn_md[[1]], "^HLS[L|S][0-9]{2}.+")) {
+            res <- c(
+                path = x,
+                pathrow = fn_md[2],
+                start_date = fn_md[3],
+                band = fn_md[4],
+                year = format(as.Date(fn_md[[3]]), '%Y'),
                 time_steps = get_number_of_bands(x)
             )
         }else{

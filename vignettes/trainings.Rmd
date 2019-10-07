@@ -10,8 +10,6 @@ vignette: >
   %\usepackage[utf8]{inputenc}
 ---
   
-  
-  
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
 collapse = TRUE,
@@ -28,6 +26,100 @@ library(sits.prodes)
 library(xtable)
 
 ```
+
+# Training
+
+## Experiment summary
+
+```{r experiment_summary_tb, echo=FALSE}
+
+data("training_logs", package = "sits.prodes")
+na_remover <- function(x){return(trimws(gsub("NA", "", x[!is.na(x)])))}
+training_logs %>% tidyr::unnest(setup) %>%
+    dplyr::mutate(bands = na_remover(paste(Bands_experiment, Bands__experiment))) %>%
+    dplyr::mutate(labels = na_remover(paste(Labels, Labels_experiment))) %>%
+    dplyr::select(experiment, Clasification_type, labels, bands, Scenes_experiment) %>%
+    knitr::kable() %>%
+    kableExtra::kable_styling(full_width = F)
+
+```
+
+## Training results
+
+- BLUE is accuracy
+- BLACK is validation accuracy
+
+
+```{r fig.width=7, fig.height=5, echo=FALSE}
+plot_tb <- training_logs %>% tidyr::unnest(trains) %>% 
+    dplyr::select(experiment, model_name, acc, loss, val_acc, val_loss) %>%
+    dplyr::mutate(acc  = purrr::map(acc,  function(x) eval(parse(text = x))),
+                  loss = purrr::map(loss, function(x) eval(parse(text = x))),
+                  val_acc  = purrr::map(val_acc, function(x) eval(parse(text = x))),
+                  val_loss = purrr::map(val_loss, function(x) eval(parse(text = x))), 
+                  val_acc_mean = purrr::map_dbl(val_acc, mean)) 
+
+#plot_tb %>% dplyr::select(experiment, model_name, val_acc_mean) %>%
+#    knitr::kable() %>% kableExtra::kable_styling(full_width = F)
+
+
+# plot_ls <- lapply(unique(plot_tb$experiment), function(exp){
+#   plot_tb %>% dplyr::filter(experiment %in% exp) %>% tidyr::unnest() %>%
+#     dplyr::group_by(model_name) %>% dplyr::mutate(epoch = row_number()) %>% 
+#     ggplot2::ggplot() +
+#     ggplot2::geom_path(aes(y = acc, x = epoch), colour = "blue") +
+#     ggplot2::geom_path(ggplot2::aes(y = val_acc, x = epoch)) +
+#     ggplot2::ggtitle(exp) +
+#     ggplot2::ylim(0.95, 1.0) +
+#     #ggplot2::theme(plot.title = element_text(size = 8)) +
+#     ggplot2::labs(x = "Epochs", y = "Accuracy") + 
+#     ggplot2::facet_wrap(~ model_name, nrow = 5) %>%
+#     return()
+# })
+
+
+plot_ls <- lapply(unique(plot_tb$experiment), function(exp){
+    plot_tb %>% 
+        dplyr::filter(experiment %in% exp) %>% 
+        tidyr::unnest() %>%
+        dplyr::group_by(model_name) %>% 
+        dplyr::mutate(epoch = row_number()) %>%
+        ggplot2::ggplot() +
+        ggplot2::geom_path(aes(y = loss, x = epoch), colour = "blue") +
+        ggplot2::geom_path(ggplot2::aes(y = val_loss, x = epoch)) +
+        ggplot2::ggtitle(exp) +
+        ggplot2::ylim(0.0, 0.25) +
+        #ggplot2::theme(plot.title = element_text(size = 8)) +
+        ggplot2::labs(x = "Epochs", y = "Loss") +
+        ggplot2::facet_wrap(~ model_name, nrow = 5) %>%
+        return()
+})
+
+
+
+for(p in plot_ls)
+    suppressWarnings(print(p))
+
+```
+
+## selected trainings
+- train_20_model_1
+- train_21_model_12
+- train_30_model_18
+- train_31_model_5
+- train_32_model_10
+- train_33_model_19
+- train_34_model_6
+- train_35_model_8
+- train_40_model_17
+- train_41_model_2
+- train_42_model_2
+- train_50_model_2
+- train_51_model_14
+- train_52_model_13
+
+
+
 
 
 # Bias and variance
@@ -63,19 +155,6 @@ library(xtable)
 Source: Machine Learning — Andrew Ng, Stanford University [FULL COURSE]
 
 
-
-```{r brick_desc, echo=FALSE}
-brick_description %>% 
-    knitr::kable(digits = 2, row.names = TRUE, full_width = FALSE) %>% 
-    kableExtra::kable_styling()
-```
-
-
-
-# Training
-
-## Experiment summary
-
 **The loss function takes the predictions of the network and the true target (what
 you wanted the network to output) and computes a distance score, capturing how well the
 network has done on this specific example.** - [@Chollet:2018]
@@ -86,95 +165,5 @@ data, and the accuracy of the network over the training data.** - [@Chollet:2018
 **[The] gap between training accuracy and test accuracy is an example of
 overfitting** - [@Chollet:2018]
 
-
-
-```{r echo=FALSE}
-
-data("brick_description", package = "sits.prodes")
-brick_description %>% 
-    knitr::kable() %>% 
-    kableExtra::kable_styling(full_width = FALSE) 
-
-data("training_logs", package = "sits.prodes")
-na_remover <- function(x){return(trimws(gsub("NA", "", x[!is.na(x)])))}
-training_logs %>% tidyr::unnest(setup) %>%
-    dplyr::mutate(bands = na_remover(paste(Bands_experiment, Bands__experiment))) %>%
-    dplyr::mutate(labels = na_remover(paste(Labels, Labels_experiment))) %>%
-    dplyr::select(experiment, Clasification_type, labels, bands, Scenes_experiment) %>%
-    knitr::kable() %>%
-    kableExtra::kable_styling(full_width = F)
-
-```
-
-## Training results
-
-- BLUE is accuracy
-- BLACK is validation accuracy
-
-
-```{r fig.width=9, fig.height=7, echo=FALSE}
-plot_tb <- training_logs %>% tidyr::unnest(trains) %>% 
-    dplyr::select(experiment, model_name, acc, loss, val_acc, val_loss) %>%
-    dplyr::mutate(acc  = purrr::map(acc,  function(x) eval(parse(text = x))),
-                  loss = purrr::map(loss, function(x) eval(parse(text = x))),
-                  val_acc  = purrr::map(val_acc, function(x) eval(parse(text = x))),
-                  val_loss = purrr::map(val_loss, function(x) eval(parse(text = x))), 
-                  val_acc_mean = purrr::map_dbl(val_acc, mean)) 
-
-#plot_tb %>% dplyr::select(experiment, model_name, val_acc_mean) %>%
-#    knitr::kable() %>% kableExtra::kable_styling(full_width = F)
-
-
-# plot_ls <- lapply(unique(plot_tb$experiment), function(exp){
-#   plot_tb %>% dplyr::filter(experiment %in% exp) %>% tidyr::unnest() %>%
-#     dplyr::group_by(model_name) %>% dplyr::mutate(epoch = row_number()) %>% 
-#     ggplot2::ggplot() +
-#     ggplot2::geom_path(aes(y = acc, x = epoch), colour = "blue") +
-#     ggplot2::geom_path(ggplot2::aes(y = val_acc, x = epoch)) +
-#     ggplot2::ggtitle(exp) +
-#     ggplot2::ylim(0.95, 1.0) +
-#     #ggplot2::theme(plot.title = element_text(size = 8)) +
-#     ggplot2::labs(x = "Epochs", y = "Accuracy") + 
-#     ggplot2::facet_wrap(~ model_name, nrow = 5) %>%
-#     return()
-# })
-
-
-plot_ls <- lapply(unique(plot_tb$experiment), function(exp){
-    plot_tb %>% dplyr::filter(experiment %in% exp) %>% tidyr::unnest() %>%
-        dplyr::group_by(model_name) %>% dplyr::mutate(epoch = row_number()) %>%
-        ggplot2::ggplot() +
-        ggplot2::geom_path(aes(y = loss, x = epoch), colour = "blue") +
-        ggplot2::geom_path(ggplot2::aes(y = val_loss, x = epoch)) +
-        ggplot2::ggtitle(exp) +
-        ggplot2::ylim(0.0, 0.25) +
-        #ggplot2::theme(plot.title = element_text(size = 8)) +
-        ggplot2::labs(x = "Epochs", y = "Loss") +
-        ggplot2::facet_wrap(~ model_name, nrow = 5) %>%
-        return()
-})
-
-
-
-for(p in plot_ls)
-    suppressWarnings(print(p))
-
-```
-
-## selected trainings
-- train_20_model_1
-- train_21_model_12
-- train_30_model_18
-- train_31_model_5
-- train_32_model_10
-- train_33_model_19
-- train_34_model_6
-- train_35_model_8
-- train_40_model_17
-- train_41_model_2
-- train_42_model_2
-- train_50_model_2
-- train_51_model_14
-- train_52_model_13
 
 # References

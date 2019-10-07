@@ -1,7 +1,6 @@
 #!/usr/bin/Rscript
 
-# PREPARE THE SAMPLES VALIDATED BY EXPERTS
-# VALIDATE CLASSIFICATION RESULTS USING THE SAMPLES PROVIDED BY THE EXPERTS
+print("Using the expert's samples to validate the classification results...")
 
 suppressMessages(library(caret))
 suppressMessages(library(dplyr))
@@ -36,22 +35,34 @@ shp <- lapply(shp_path, function(x){
 })
 
 # make sure the shps have the same fields
-shp_fields <- shp %>% sapply(colnames) %>% unlist() %>% unique()
-shp_proc <- shp %>% lapply(function(x, shp_fields){
-                          missing_names <- shp_fields[!(shp_fields %in% colnames(x))]
-                          for(mn in missing_names){
-                              x <- x %>% dplyr::mutate(!!mn := NA)
-                          }
-                          fn_sort <- sort(colnames(x)[!(colnames(x) %in% "geometry")])
-                          x %>% dplyr::select(.dots = !!!fn_sort) %>%
-                              return()
-                        }, shp_fields)
+shp_fields <- shp %>%
+    sapply(colnames) %>%
+	unlist() %>%
+    unique()
+shp_proc <- shp %>%
+    lapply(function(x, shp_fields){
+              missing_names <- shp_fields[!(shp_fields %in% colnames(x))]
+              for(mn in missing_names){
+                  x <- x %>%
+                      dplyr::mutate(!!mn := NA)
+              }
+              fn_sort <- sort(colnames(x)[!(colnames(x) %in% "geometry")])
+              x %>%
+                  # dplyr::select(.dots = !!!fn_sort) %>%
+                  dplyr::select(!!fn_sort) %>%
+                  return()
+            }, shp_fields)
 
 # merge shp into a single sf object
 validation_experts <- shp_proc[[1]]
 for (i in 2:length(shp_proc)) {
     validation_experts <- rbind(validation_experts, shp_proc[[i]])
 }
+tmp <- validation_experts %>%
+    dplyr::distinct() %>%
+    ensurer::ensure_that(nrow(.) == sum(vapply(shp_proc, nrow, integer(1))),
+                         err_des = "Duplicated rows in data!")
+rm(tmp)
 
 # check the labels
 recode_ls <- list(
@@ -101,40 +112,73 @@ results     <- c("results_dl", "results_rf", "results_svm", "results_vote")
 smooths     <- c("smooth_3x3_n10", "smooth_5x5_n10", "smooth_7x7_n10","smooth_9x9_n10","smooth_11x11_n10")
 
 # get a tibble of raster files
-expert_validation <- expand.grid(experiment = experiments, algorithm = results, smooth = smooths, stringsAsFactors = FALSE) %>%
+expert_validation <- expand.grid(experiment = experiments, algorithm = results,
+                                 smooth = c(smooths, ""),
+                                 stringsAsFactors = FALSE) %>%
     tibble::as_tibble() %>%
     # build paths from the combination of experiments, algorithms, and smooths
-    dplyr::mutate(file_path = purrr::pmap(., function(experiment, algorithm, smooth){
-        file.path(base_path, "03_classify", experiment, algorithm, smooth) %>%
-            list.files(pattern = "*_masked.tif$", recursive = TRUE, full.names = TRUE)
+    dplyr::mutate(dir = purrr::pmap_chr(., function(experiment, algorithm, smooth){
+        base_path %>% 
+            file.path("03_classify", experiment, algorithm, smooth) %>%
+            return()
     })) %>%
+    dplyr::mutate(file_path = purrr::map(dir, list.files, 
+                                         pattern = "*_masked.tif$", 
+                                         recursive = TRUE, full.names = TRUE)) %>%
+    # Re-fill the metadata because list.files is recursive and it is including 
+    # TIFFs with wrong metadata.
+    dplyr::select(-dir) %>%
     tidyr::unnest() %>%
+    dplyr::distinct(file_path, .keep_all = TRUE) %>%
+    dplyr::filter(stringr::str_detect(file_path, "validation_v2")) %>%
+    dplyr::mutate(algorithm = stringr::str_extract(file_path, "results_[a-z]+"),
+                  smooth = stringr::str_extract(file_path, 
+                                                "smooth_[0-9]+x[0-9]+_n[0-9]+")) %>%
+    tidyr::replace_na(list(smooth = "")) %>%
+    # ----
     dplyr::mutate(fname = basename(file_path)) %>%
+    ensurer::ensure_that(nrow(.) == nrow(dplyr::distinct(.)),
+                         err_desc = "Duplicated paths found.") %>%
     # get the year and scene of each image from its name
     dplyr::mutate(scene = purrr::map_chr(.$fname, function(x){
-                        x %>% stringr::str_extract(pattern = '_[]0-9]{6}_') %>%
-                            stringr::str_sub(start = 2, end = -2)
-                    }),
-                  pyear = purrr::map_chr(.$fname, function(x){
-                        x %>% stringr::str_extract_all(pattern = '_[]0-9]{4}_') %>%
-                            unlist() %>% tail(n = 1) %>%
-                            stringr::str_sub(start = 2, end = -2)
-                    }))
+        x %>%
+            stringr::str_extract(pattern = '_[]0-9]{6}_') %>%
+            stringr::str_sub(start = 2, end = -2)
+    }),
+    pyear = purrr::map_chr(.$fname, function(x){
+        x %>%
+            stringr::str_extract_all(pattern = '_[]0-9]{4}_') %>%
+            unlist() %>%
+            tail(n = 1) %>%
+            stringr::str_sub(start = 2, end = -2)
+    })) %>%
+    ensurer::ensure_that(all(file.exists(.$file_path)),
+                         err_desc = "Some validation files are missing.")
 
 # get values from the classified rasters using the sample points
-expert_validation$match_ref_res <- expert_validation %>% dplyr::select(file_path, scene) %>%
+expert_validation$match_ref_res <- expert_validation %>%
+    dplyr::select(file_path, scene) %>%
     purrr::pmap(function(file_path, scene){
         # build the recode table
-        lab_tb <- prodes_labels %>% dplyr::select(label_pd, id_pd) %>%
-            dplyr::distinct() %>% dplyr::arrange(id_pd)
-        lab <- lab_tb %>% dplyr::pull(label_pd) %>% as.list()
-        names(lab) <- lab_tb %>% dplyr::pull(id_pd)
+        lab_tb <- prodes_labels %>%
+            dplyr::select(label_pd, id_pd) %>%
+            dplyr::distinct() %>%
+            dplyr::arrange(id_pd)
+        lab <- lab_tb %>%
+            dplyr::pull(label_pd) %>%
+            as.list()
+        names(lab) <- lab_tb %>%
+            dplyr::pull(id_pd)
         # get values from the rasters
-        r <- file_path %>% raster::raster()
-        pts <- validation_experts %>% dplyr::filter(tile == scene) %>%
+        r <- file_path %>%
+            raster::raster()
+        pts <- validation_experts %>%
+            dplyr::filter(tile == scene) %>%
             sf::st_transform(crs = r@crs@projargs)
-        pts$raster_val <- r %>% raster::extract(y = as(pts, "Spatial"))
-        pts %>% dplyr::mutate(label_res = dplyr::recode(.$raster_val, !!!lab)) %>%
+        pts$raster_val <- r %>%
+            raster::extract(y = as(pts, "Spatial"))
+        pts %>%
+            dplyr::mutate(label_res = dplyr::recode(.$raster_val, !!!lab)) %>%
             return()
     })
 
@@ -146,7 +190,8 @@ compute_confusion_matrix <- function(match_ref_res, pyear, label_pd){
     cm_dat <- match_ref_res %>%
 	sf::st_set_geometry(NULL) %>%
 	tibble::as_tibble() %>%
-	ensurer::ensure_that(all(c(cname, "label_res") %in% colnames(.)), err_desc = sprintf("Missing filds in year %s", pyear)) %>%
+	ensurer::ensure_that(all(c(cname, "label_res") %in% colnames(.)),
+                         err_desc = sprintf("Missing filds in year %s", pyear)) %>%
 	dplyr::select(c(cname, "label_res")) %>%
 	tidyr::drop_na() %>%
 	dplyr::filter(.data[[cname]] %in% label_pd)
@@ -161,7 +206,10 @@ compute_confusion_matrix <- function(match_ref_res, pyear, label_pd){
 }
 
 expert_validation <- expert_validation %>%
-    dplyr::mutate(confusion_matrix = purrr::pmap(dplyr::select(., match_ref_res, pyear), compute_confusion_matrix, label_pd = sort(unique(prodes_labels$label_pd)))) %>%
+    dplyr::mutate(confusion_matrix = purrr::pmap(dplyr::select(., match_ref_res,
+                                                               pyear),
+                                                 compute_confusion_matrix,
+                                                 label_pd = sort(unique(prodes_labels$label_pd)))) %>%
     dplyr::select(-fname)
 
 # save

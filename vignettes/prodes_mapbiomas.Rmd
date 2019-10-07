@@ -1,5 +1,5 @@
 ---
-title: "prodes mapbiomas"
+title: " PRODES - Mapbiomas. A comparison"
 author: "Alber Sánchez"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -32,11 +32,27 @@ utils::data("mapbiomas_labels", package = "sits.prodes")
 
 ```
 
-# Comparison PRODES Mapbiomas
+
+## Mapbiomas
+- Their Landsat images' maximum cloud cover is 30%.
+- Their classification algorithm is random forest.
+- Their maps accuracy is unavailable (under construction).
+- Their maps have 6 (plus 'No information') classes (out of 27 for the whole Mapbiomas). 
+- They use 10 variables for classification:
+    - GVS Green Vegetation Shade (mean and sd).
+    - NFVI Normalized Fraction Difference Index (mean and sd).
+    - NPV Non-Photosynthetic Vegetation (mean and sd).
+    - Shade and Soil fractions (means and sds).
+- During training, they sampled TerraClass, GlobeLand30, PRODES, Global Forest Cover, ESA CCI (among others) using a majority rule.
+- They used postprocessing rules for improving their results.
+
 
 ## Label mappings
 
-### PRODES Portuguese to English
+
+
+
+### PRODES - Portuguese to English
 
 ```{r print_prodes_labels, echo = FALSE}
 prodes_labels %>% 
@@ -46,18 +62,7 @@ prodes_labels %>%
 ```
 
 
-## Mapbiomas
-- Their Landsat images' maximum cloud cover is 30% 
-- Their classification algorithm is random forest
-- Their maps accuracy is unavailable (under construction)
-- Their maps have 6 (plus 'No information') classes (out of 27 for the whole Mapbiomas). 
-- They use 10 variables for classification:
-    - GVS Green Vegetation Shade (mean and sd)
-    - NFVI Normalized Fraction Difference Index (mean and sd)
-    - NPV Non-Photosynthetic Vegetation (mean and sd)
-    - Shade and Soil fractions (means and sds)
-- During training, they sampled TerraClass, GlobeLand30, PRODES, Global Forest Cover, ESA CCI (among others) using a majority rule.
-- They used postprocessing rules for improving their results.
+
 
 ### Mapbiomas to PRODES
 
@@ -93,7 +98,7 @@ prodes_mapbiomas$up_acc <- add_upacc(prodes_mapbiomas$cm)
 
 
 
-```{r plot_confusion_matrices, results='asis', echo=FALSE, fig.height=9, fig.width=9}
+```{r plot_confusion_matrices, results='asis', echo=FALSE, fig.height=5, fig.width=7}
 
 # get data for plots
 acc_tb <- prodes_mapbiomas %>% 
@@ -123,17 +128,18 @@ pa_acc_tb <- acc_pr %>%
     dplyr::inner_join(acc_ur, by = c("tile", "year_pd", "variable"))
 prodes_years <- pa_acc_tb %>% dplyr::pull(year_pd) %>% unique()
 pa_acc_tb %>% 
-    ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
-                        shape = variable, color = variable)) +
-    ggplot2::geom_point(size = 3) +
-    ggplot2::coord_fixed() +
-    ggplot2::xlim(0, 1) +
-    ggplot2::ylim(0, 1) +
-    ggplot2::facet_wrap(tile ~ year_pd, ncol = length(prodes_years)) + 
-    ggplot2::guides(shape = guide_legend(override.aes = list(size = 4))) +
-    ggplot2::labs(title = "PRODES - Mapbiomas", 
-         x = "Producer accuracy", 
-         y = "User accuracy")
+  ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
+                      shape = variable, color = variable)) +
+  ggplot2::geom_point(size = 3) +
+  ggplot2::coord_fixed() +
+  ggplot2::xlim(0, 1) +
+  ggplot2::ylim(0, 1) +
+  ggplot2::facet_wrap(tile ~ year_pd, ncol = length(prodes_years)) + 
+  ggplot2::guides(shape = guide_legend(override.aes = list(size = 4))) +
+  ggplot2::labs(title = "PRODES - Mapbiomas", 
+                x = "Producer accuracy", 
+                y = "User accuracy") +
+  ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 ```
 
@@ -155,3 +161,8 @@ for (i in 1:nrow(prodes_mapbiomas)) {
 
 ```
 
+
+
+
+## TODO
+* Add PRODES description.

@@ -121,3 +121,4 @@ These bricks are made of Landsat 8 SR images.
 * brick_interp_few_clouds got the name wrong, it shoudl be brick_starfm_few_clouds.
 * Some MASK_CLOUD bricks are mixtured with SIMPLE.
 * /disks/d6/shared/alber/brick_maskcloud clouds' date is one day before the rest of the bricks. 
+

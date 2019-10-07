@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-# parse classification logs
+print("Parsing the logs of the classificatioins' trainings...")
 
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(sits.prodes))
@@ -26,7 +26,8 @@ parse_experiment <- function(x){
         return()
 }
 
-training_logs <- base_path %>% file.path("02_train_model") %>%
+training_logs <- base_path %>%
+    file.path("02_train_model") %>%
     list.files(pattern = log_pattern, full.names = TRUE, recursive = TRUE) %>%
     tibble::enframe(name = NULL) %>%
     dplyr::rename(path = value) %>%

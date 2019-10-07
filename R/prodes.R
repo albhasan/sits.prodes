@@ -1,6 +1,7 @@
-#' @title Match PRODES and MAPBIOMAS.
+
+#' @title Match PRODES to raster. 
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description Rasterize a PRODES vector map to match a reference raster resolution.
+#' @description Rasterize a PRODES vector to match a reference raster resolution.
 #'
 #' @param file_pd      A length-one character. Path to a PRODES map (a shapefile).
 #' @param file_rt      A length-one character. Path to raster of reference (a tif).
@@ -8,7 +9,7 @@
 #' @param tile         A length-one character. The Landsat scene id (6 numbers).
 #' @param year_pd      A integer. The years of deforestation to keep in the output.
 #' @param prodes_lbl   A tibble mapping the labels of PRODES from Portuguesse to English. It must contais the PRODES' labels in Portuguese (label_ld_pt, character) and english (label_pd, character), and its ID (id_pd, an integer that must have a one-to-one relationship to label_id).
-#' @return             A length-one character. The path to a raster file.
+#' @return             A raster object.
 #' @export
 prodes2raster <- function(file_pd, file_rt, raster_path, tile, year_pd, prodes_lbl){
   id_pd <- label_pd_pt <- NULL
@@ -41,12 +42,13 @@ prodes2raster <- function(file_pd, file_rt, raster_path, tile, year_pd, prodes_l
   class_name <- mainclass <- label <- label_id <- NULL
   sf::st_read(dsn = dirname(file_pd), layer = fname,
               stringsAsFactors = FALSE, quiet = TRUE) %>%
-    ensurer::ensure_that(all(c("class_name", "mainclass") %in% colnames(.))) %>%
-    dplyr::mutate(label    = dplyr::recode(mainclass, !!!key_label_pt),
-                  label_id = dplyr::recode(label,     !!!key_id_pd)) %>%
+    ensurer::ensure_that(all(c("class_name", "mainclass") %in% colnames(.)), 
+                         err_desc = "Columns not found.") %>%
     dplyr::filter(class_name %in% c(names(key_label_pt),
                                     apply(expand.grid(c('d', 'r'), year_pd), 1, paste0,
                                           collapse = ''))) %>%
+    dplyr::mutate(label    = dplyr::recode(mainclass, !!!key_label_pt),
+                  label_id = dplyr::recode(label,     !!!key_id_pd)) %>%
     dplyr::select(label_id) %>%
     vector2raster(raster_r = mb_raster,
                   vector_field = "label_id",

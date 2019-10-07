@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 # Apply the bayesian smoother
 suppressPackageStartupMessages(library(dplyr))
 library(optparse)

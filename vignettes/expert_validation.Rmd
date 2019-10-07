@@ -1,5 +1,5 @@
 ---
-title: "expert_validation"
+title: "Validation by experts"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{expert_validation}
@@ -68,10 +68,8 @@ utils::data("expert_validation", package = "sits.prodes")
 ```
 
 
-# Comparison PRODES to SITS classification results
 
-
-### PRODES Portuguese to English
+### PRODES mapping to English
 
 ```{r print_prodes_labels, echo = FALSE}
 
@@ -82,9 +80,11 @@ prodes_labels %>%
 
 ```
 
+
+
 ## Results
 
-* PRODES is the reference map (it is represented in the columns of th confusion
+* PRODES is the reference map (it is represented in the columns of the confusion
 matrices).
 * The data given in numer of pixels (except for user and producer accuracies).
 * Experts validation is a set of sample points for validating classification 
@@ -93,6 +93,8 @@ expert (Rodrigo Begotti) using Landsat mosaics from PRODES Digital.
 
 
 ```{r, echo = FALSE}
+
+
 
 # get data for plots
 acc_tb <- expert_validation %>%
@@ -112,6 +114,7 @@ acc_tb <- expert_validation %>%
     dplyr::mutate(acc_type = ifelse(stringr::str_sub(variable, 1, 3) == "ua_",
                                     "user", "producer"),
                   variable = stringr::str_sub(variable, 4))
+
 acc_pr <- acc_tb %>% dplyr::filter(acc_type == "producer") %>%
     dplyr::rename(prod_acc = value) %>%
     dplyr::select(-acc_type)
@@ -125,45 +128,50 @@ pa_acc_tb <- acc_pr %>%
 ```
 
 
-```{r plot_confusion_matrices_DL, results='asis', echo=FALSE, fig.height=9, fig.width=9}
+```{r plot_confusion_matrices_DL, results='asis', echo=FALSE, fig.height=6, fig.width=7}
 
 f_plot <- function(data_tb, my_algorithm, my_smooth){
-    
-   prodes_years <- data_tb %>% dplyr::pull(pyear) %>% unique() %>% sort() 
-    # TODO: ensure there is plot for all years && scenes
-    # make sure there is data for all
-    #data_tb %>% dplyr::select(experiment, algorithm , smooth, scene, pyear) %>% 
-        #dplyr::group_by(experiment, algorithm , smooth, scene, pyear) %>% 
-   #     dplyr::tally()
-    
-    
-    
-    
-    plot(
-        data_tb %>%
-            dplyr::filter(smooth == !!my_smooth, 
-                          algorithm == !!my_algorithm) %>% 
-            ggplot2::ggplot(aes(x = prod_acc, y = user_acc,
-                                shape = variable, color = experiment)) +
-            ggplot2::geom_point(size = 2) +
-            ggplot2::coord_fixed() +
-            ggplot2::xlim(0, 1) +
-            ggplot2::ylim(0, 1) +
-            ggplot2::guides(shape = guide_legend(override.aes = list(size = 3))) +
-            ggplot2::facet_wrap(scene ~ pyear, ncol = length(prodes_years)) +
-            ggplot2::labs(title = sprintf("Expert validation %s %s", 
-                                          my_algorithm, my_smooth),
-                          x = "Producer accuracy",
-                          y = "User accuracy")
-    )
+  prodes_years <- data_tb %>% 
+    dplyr::pull(pyear) %>% 
+    unique() %>% 
+    sort() 
+  data_tb <- data_tb %>%
+    dplyr::filter(smooth == !!my_smooth, 
+                  algorithm == !!my_algorithm)
+  if (nrow(data_tb) < 1 || ncol(data_tb) < 1) {
+    warning(sprintf("No data found for  %s %s", my_algorithm, my_smooth))
+    return()
+  }
+  plot(
+    data_tb %>% 
+      ggplot2::ggplot(aes(x = prod_acc, y = user_acc,
+                          shape = variable, color = experiment)) +
+      ggplot2::geom_point(size = 2) +
+      ggplot2::coord_fixed() +
+      ggplot2::xlim(0, 1) +
+      ggplot2::ylim(0, 1) +
+      ggplot2::guides(shape = guide_legend(override.aes = list(size = 3))) +
+      ggplot2::facet_wrap(scene ~ pyear, ncol = length(prodes_years)) +
+      ggplot2::labs(title = sprintf("Expert validation %s %s", 
+                                    my_algorithm, my_smooth),
+                    x = "Producer accuracy",
+                    y = "User accuracy")
+  )
 }
 
-for (my_algorithm in c("results_dl", "results_rf", "results_svm", 
-                       "results_vote")) {
+for (my_algorithm in unique(pa_acc_tb$algorithm)) {
     cat("\n\n")
     cat(paste0("#### ", my_algorithm), "\n")
-    for (my_smooth in c("smooth_3x3_n10","smooth_5x5_n10","smooth_7x7_n10",
-                        "smooth_9x9_n10","smooth_11x11_n10")) {
+    for (my_smooth in unique(pa_acc_tb$smooth)) {
+        print(paste(my_algorithm, my_smooth, sep = "-"))
+      #-----
+      #### results_vote 
+#[1] "results_vote-smooth_3x3_n10"
+#[1] "results_vote-smooth_5x5_n10"
+#[1] "results_vote-smooth_7x7_n10"
+#[1] "results_vote-smooth_9x9_n10"
+#[1] "results_vote-smooth_11x11_n10"
+#[1] "results_vote-"
         suppressWarnings(f_plot(data_tb = pa_acc_tb, my_algorithm, my_smooth))
     }
 }
