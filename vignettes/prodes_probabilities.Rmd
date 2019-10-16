@@ -1,0 +1,186 @@
+---
+title: "prodes versus classification probabities"
+output: rmarkdown::html_vignette
+vignette: >
+  %\vignetteindexentry{prodes versus classification probabities}
+  %\vignetteengine{knitr::rmarkdown}
+  %\vignetteencoding{utf-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, echo=FALSE}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(raster))
+suppressPackageStartupMessages(library(sits.prodes))
+suppressPackageStartupMessages(library(tibble))
+
+set.seed(666)
+data(prodes_labels, package = "sits.prodes")
+
+#----todo----
+# - remove
+suppressPackageStartupMessages(library(devtools))
+devtools::load_all()
+
+```
+
+ontem de noite ao ler o seu artigo tive uma ideia que pode ser interessante. até hoje não gosto muito da ideia de pegar a probabilidade mais alta e dizer que aquela é a classe do pixel. a ideia então é a seguinte: para cada ano das classificações, gostaria que voce fizesse um histograma. eixo x: intervalos 0.0 a 0.1, 0.1 a 0.2, etc, indicando as probabilidades dos pixels classificados. eixo y: duas contagens (1) quantidade de pixels classificados como desmatamento prodes e (2) quantidade de pixels classificados como floresta prodes.1
+
+é de se esperar que, quanto maior a probabilidade, maior a proporção de pixels classificados como desmatamento no prodes. a ideia seria verificar se teria algum corte na probabilidade de forma que a gente garanta que todo o desmatamento do prodes esteja la dentro. então o pessoal do prodes poderia receber esta mascara (pixels cuja probabilidade de desmatamento no sits seja maior do que um determinado limiar) e fazer a classificação visual apenas em cima dela. da mesma forma, poderia haver um corte no qual a gente garantiria que é desmatamento e o pessoal do prodes nao precisaria nem olhar. vejam figura em anexo. o que voces acham? se der certo, depois a gente pode usar esta ideia para trabalhar com outras classificações tambem.
+
+um abraço,
+
+pedro
+
+
+```{r get_data, results='asis', echo=FALSE}
+
+alg <- algorithm <- file_name <- in_file <- prodes_year <- tile <- NULL
+
+base_dir <- "/home/alber/Documents/data/experiments/prodes_reproduction/03_classify"
+experiments <- paste0("rep_prodes_", 40) # c(40:42, 50:52))
+tiles <- "226064"
+algorithms <- "dl"
+smooths <- ""
+
+in_files_tb <- base_dir %>% 
+  expand.grid(experiments, algorithms, smooths) %>% 
+  tibble::as_tibble() %>% 
+  dplyr::rename(base_dir = 1, experiment = 2, algorithm = 3, smooth = 4) %>% 
+  dplyr::mutate(in_dir = file.path(base_dir, experiment, 
+                                   paste0("results_", algorithm), smooth)) %>% 
+  dplyr::mutate(in_file = purrr::map(in_dir, 
+                                     pattern = "_probs_[0-9]{4}_[0-9]_[0-9]{4}_[0-9][.]tif$", 
+                                     list.files, full.names = TRUE)) %>% 
+  tidyr::unnest(cols = in_file) %>% 
+  dplyr::mutate(file_name = basename(in_file)) %>% 
+  tidyr::separate(file_name, sep = '_', into = c(NA, NA, "tile", NA, "alg", NA, 
+                                                 NA, NA, "prodes_year", NA)) %>% 
+  ensurer::ensure_that(all(file.exists(.$in_file)), 
+                       err_desc = "file not found!") %>% 
+  ensurer::ensure_that(all(.$algorithm == .$alg), 
+                       err_desc = "algorithm missmatch!") %>% 
+  dplyr::select(experiment, algorithm, smooth, tile, prodes_year, in_file, 
+                -base_dir, -in_dir, -alg) %>% 
+  dplyr::filter(tile %in% tiles)
+
+prodes_tb <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/vector/prodes/prodes_tiled" %>% 
+  list.files(pattern = "[.]shp$", full.names = TRUE) %>% 
+  tibble::enframe(name = NULL) %>% 
+  dplyr::rename(file_path = value) %>% 
+  dplyr::mutate(file_name = tools::file_path_sans_ext(basename(file_path))) %>% 
+  tidyr::separate(file_name, sep = '_', into = c(NA, NA, NA, "path", "row")) %>% 
+  dplyr::mutate(pathrow = stringr::str_c(path, row)) %>% 
+  dplyr::select(-c(path, row)) %>% 
+  ensurer::ensure_that(all(file.exists(.$file_path)), 
+                       err_desc = "file not found!") %>% 
+  dplyr::filter(pathrow %in% tiles)
+
+are_prodes_rasterized <- FALSE
+
+prodes_vec <- prodes_labels %>% 
+  dplyr::select(label_pd, id_pd) %>% 
+  dplyr::distinct() %>% 
+  dplyr::pull(label_pd)
+names(prodes_vec) <- prodes_labels %>% 
+  dplyr::select(label_pd, id_pd) %>% 
+  dplyr::distinct() %>% 
+  dplyr::pull(id_pd)
+
+```
+
+
+
+
+
+```{r echo=FALSE, results='asis', fig.height=5, fig.width=7}
+
+..count.. <- probability_deforestation <- probability_forest <- prodes <- NULL
+
+alg_names <- c(dl = "Deep Learning", rf = "Random Forest", 
+               svm = "Support Vector Machine")
+
+for (my_experiment in unique(in_files_tb$experiment)) {
+  for (my_algorithm in unique(in_files_tb$algorithm)) {
+    for (my_smooth in unique(in_files_tb$smooth)) {
+      for (my_pathrow in unique(prodes_tb$pathrow)) {
+        for (my_year in unique(in_files_tb$prodes_year)) {
+          for (my_prob_file in in_files_tb$in_file) {
+            
+            cat("\n\n")
+            cat(paste("#### ", my_experiment, sep  = ' '), "\n")
+            
+            prodes_raster <- prodes_tb %>% 
+              dplyr::filter(pathrow == my_pathrow) %>% 
+              dplyr::pull(file_path) %>% 
+              prodes2raster(file_rt = my_prob_file, year_pd = my_year, 
+                            prodes_lbl = prodes_labels) %>% 
+              raster::raster()
+            
+            #if (sum(is.na(prodes_raster[]))/length(prodes_raster[]) > 0.8) {
+            #  warning("prodes rasterization is missing too many pixels!")
+            #  next() 
+            #}
+            
+            classification_tb <- my_prob_file %>% 
+              raster::brick() %>% 
+              raster::addLayer(prodes_raster) %>% 
+              as.data.frame() %>% 
+              tibble::as_tibble() %>% 
+              tidyr::drop_na() %>% 
+              dplyr::rename(probability_deforestation = 1, probability_forest = 2, prodes = 3) %>% 
+              dplyr::mutate(probability_deforestation = probability_deforestation/10000, 
+                            probability_forest = probability_forest/10000,
+                            prodes = dplyr::recode(prodes, !!!prodes_vec)) %>% 
+              dplyr::filter(prodes %in% c("deforestation", "forest")) %>% 
+              # TODO: remove
+              dplyr::sample_frac(0.0005)
+            
+            print(sprintf("Taking %s samples out of %s pixels...",  
+                          nrow(classification_tb), 
+                          prodes_raster@ncols * prodes_raster@nrows))
+            
+            plot_forest <- classification_tb %>% 
+              ggplot2::ggplot() +
+              ggplot2::geom_histogram(ggplot2::aes(x = probability_forest, 
+                                                   #y = (..count..)/sum(..count..),
+                                                   y = log(..count..),
+                                                   fill = prodes), 
+                                      binwidth = 0.1, position = "stack") +
+              ggplot2::ggtitle(label = sprintf("%s %s %s %s", 
+                                               alg_names[my_algorithm], 
+                                               my_smooth, my_pathrow, my_year),
+                               subtitle = "Probabily of FOREST versus PRODES") +
+              ggplot2::xlab("Probability of forest")
+            
+            plot_deforestation <- classification_tb %>% 
+              ggplot2::ggplot() +
+              ggplot2::geom_histogram(ggplot2::aes(x = probability_deforestation, 
+                                                   #y = (..count..)/sum(..count..),
+                                                   y = log(..count..),
+                                                   fill = prodes), 
+                                      binwidth = 0.1, position = "stack") +
+              ggplot2::ggtitle(label = sprintf("%s %s %s %s", 
+                                               alg_names[my_algorithm], 
+                                               my_smooth, my_pathrow, my_year),
+                               subtitle = "Probabily of DEFORESTATION versus PRODES") +
+              ggplot2::xlab("Probability of deforestation")
+            
+            suppressWarnings(show(plot_forest ))
+            suppressWarnings(show(plot_deforestation))
+          }
+        }
+      }
+    }
+  }
+}
+
+```
+
