@@ -1,11 +1,11 @@
 #!/usr/bin/env Rscript
 
-print("Parsing the logs of the classificatioins' trainings...")
+print("Parsing the logs of the classifications' trainings...")
 
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(sits.prodes))
 
-base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
+base_path <- "~/Documents/data/experiments/prodes_reproduction"
 log_pattern <- "^train_[0-9]{2}_esensing"
 
 parse_header <- function(x){
@@ -38,5 +38,5 @@ training_logs <- base_path %>%
                   trains = purrr::map(.$parsed_log, parse_experiment)) %>%
     dplyr::select(-parsed_log)
 
-setwd(file.path(base_path, "Rpackage", "sits.prodes"))
+setwd("~/Documents/ghProjects/sits.prodes")
 usethis::use_data(training_logs, overwrite = TRUE)

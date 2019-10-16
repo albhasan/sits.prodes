@@ -5,7 +5,7 @@ print("Setting the PRODES' mapping between portuguese and english labels...")
 suppressPackageStartupMessages(library(tibble))
 suppressPackageStartupMessages(library(devtools))
 
-base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes"
+base_path <- "~/Documents/ghProjects/sits.prodes"
 setwd(base_path)
 
 prodes_labels <- tibble::tribble(

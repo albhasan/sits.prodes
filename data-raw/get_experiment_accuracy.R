@@ -3,8 +3,7 @@
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(purrr))
 
-setwd("/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes")
-base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
+base_path <- "~/Documents/data/experiments/prodes_reproduction"
 stopifnot(dir.exists(base_path))
 
 # collect accuracy data
@@ -27,6 +26,7 @@ validation_tb <- base_path %>%
                   res_masked_water, out_res, res_confusion, r_quantile, 
                   validation_data) 
 
+setwd("~/Documents/ghProjects/sits.prodes")
 fname <- file.path(getwd(), "inst", "extdata", "validation_tb.Rdata")
 if (file.exists(fname)) {
     file.remove(fname)

@@ -13,7 +13,7 @@ suppressMessages(library(stringr))
 suppressMessages(library(tibble))
 suppressMessages(library(tidyr))
 
-base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
+base_path <- "~/Documents/data/experiments/prodes_reproduction"
 setwd(base_path)
 
 data("prodes_labels", package = "sits.prodes")
@@ -213,6 +213,6 @@ expert_validation <- expert_validation %>%
     dplyr::select(-fname)
 
 # save
-setwd(file.path(base_path, "Rpackage", "sits.prodes"))
+setwd("~/Documents/ghProjects/sits.prodes"))
 usethis::use_data(expert_validation, overwrite = TRUE)
 

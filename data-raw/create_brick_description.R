@@ -3,8 +3,6 @@ library(devtools)
 
 print("Creating a table of descriptions of each brick...")
 
-base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
-
 brick_description <- tibble::tribble(
     ~Classification_type, ~Obs_year, ~Description,
     #--------------------|----------|--------------------|
@@ -14,6 +12,6 @@ brick_description <- tibble::tribble(
     "mask_clouds",        0,         "TODO"
 )
 
-setwd(file.path(base_path, "Rpackage", "sits.prodes"))
+setwd("~/Documents/ghProjects/sits.prodes")
 usethis::use_data(brick_description, overwrite = TRUE)
 

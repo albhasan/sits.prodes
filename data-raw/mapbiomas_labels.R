@@ -5,8 +5,7 @@ print("Setting the mapping between PRODES and MAPBIOMAS...")
 suppressPackageStartupMessages(library(tibble))
 suppressPackageStartupMessages(library(devtools))
 
-base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction/Rpackage/sits.prodes"
-setwd(base_path)
+setwd("~/Documents/ghProjects/sits.prodes")
 
 mapbiomas_labels <- tibble::tribble(
         ~label_mb,                                ~id_mb,   ~label_pd,
