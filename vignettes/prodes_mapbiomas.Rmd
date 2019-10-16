@@ -85,7 +85,8 @@ mapbiomas_labels %>%
 ```{r prepare_data, results='asis', echo=FALSE}
 
 # sort by scene-year
-prodes_mapbiomas <- prodes_mapbiomas %>% dplyr::arrange(tile, year_pd)
+prodes_mapbiomas <- prodes_mapbiomas %>% 
+  dplyr::arrange(tile, year_pd)
 
 # extract the confusion matrices
 prodes_mapbiomas$cm <- lapply(prodes_mapbiomas$conmat, function(x){
