@@ -1,0 +1,242 @@
+---
+title: "Deforestation probability and cloudy days"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Deforestation probability and cloudy days}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+
+```{r setup, echo=FALSE}
+
+suppressMessages(library(sits.prodes))
+
+base_dir <- "/home/alber/Documents/data/experiments/prodes_reproduction"
+experiments <- paste0("rep_prodes_", 40) # c(40:42, 50:52))
+tiles <- "226064"
+algorithms <- "dl"
+smooths <- ""
+
+selected_tiles <- "226064"
+selected_pyears <- 2014:2017
+selected_experiments <- c("rep_prodes_40", "rep_prodes_41", "rep_prodes_42")
+selected_algorithm  <- c("dl", "results_dl")
+selected_smooth <- c("", "no_smooth", NA)
+experiment_codes <- list("rep_prodes_40" = "Bands",  "rep_prodes_42" = "MM",  
+                         "rep_prodes_41" = "Band_MM")
+alg_names <- c(dl = "Deep Learning", rf = "Random Forest", 
+               svm = "Support Vector Machine")
+
+data("prodes_labels", package = "sits.prodes")
+
+
+#---- TODO ----
+# remove:
+library(devtools)
+setwd("/home/alber/Documents/ghProjects/sits.prodes")
+devtools::load_all()
+
+```
+
+### Cloud quantity
+
+```{r get_data, echo=FALSE}
+
+alg <- algorithm <- file_name <- file_path <- in_file <- path <- prodes_year <- sf <- tile <- value <- NULL
+
+prodes_map_tb <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/vector/prodes/prodes_tiled" %>% 
+  list.files(pattern = "[.]shp$", full.names = TRUE) %>% 
+  tibble::enframe(name = NULL) %>% 
+  dplyr::rename(file_path = value) %>% 
+  dplyr::mutate(file_name = tools::file_path_sans_ext(basename(file_path))) %>% 
+  tidyr::separate(file_name, sep = '_', into = c(NA, NA, NA, "path", "row")) %>% 
+  dplyr::mutate(tile = stringr::str_c(path, row)) %>% 
+  dplyr::select(-c(path, row)) %>% 
+  dplyr::filter(tile %in% selected_tiles)
+
+prodes_mask_tb <- base_dir %>% 
+  paste0("/data/vector/prodes/prodes_tiled/hand_dissolved") %>% 
+  list.files(pattern = "[.]shp$", full.names = TRUE) %>% 
+  tibble::enframe(name = NULL) %>% 
+  dplyr::rename(file_path = value) %>% 
+  dplyr::mutate(file_name = tools::file_path_sans_ext(basename(file_path))) %>% 
+  tidyr::separate(file_name, sep = '_', into = c(NA, NA, NA, "path", "row")) %>% 
+  tidyr::unite(col = "tile", path, row, sep = '', remove = TRUE) %>% 
+  dplyr::filter(tile %in% selected_tiles) %>% 
+  dplyr::mutate(sf = purrr::map(file_path, function(x){
+    x %>% 
+      sf::read_sf() %>% 
+      return()
+  })) %>% 
+  dplyr::select(-file_path)
+
+cloud_map_tb <- base_dir %>%
+  file.path("data", "raster", "cloud_count") %>% 
+  list.files(pattern = "*201[0-9].tif", full.names = TRUE) %>%
+  tibble::enframe(name = NULL) %>%
+  dplyr::rename(file_path = "value") %>%
+  dplyr::mutate(tile = file_path %>%
+                  basename() %>%
+                  stringr::str_extract(pattern = "_[0-9]{6}_") %>%
+                  stringr::str_sub(2, -2),
+                prodes_year = file_path %>%
+                  basename() %>%
+                  stringr::str_extract(pattern = "_[0-9]{4}[.]") %>%
+                  stringr::str_sub(2, -2)) %>%
+  dplyr::arrange(tile, prodes_year) %>%
+  dplyr::filter(tile %in% selected_tiles, prodes_year %in% selected_pyears) %>% 
+  ensurer::ensure_that(nrow(.) > 0, err_desc = "Quantile maps not found.") %>% 
+  dplyr::left_join(prodes_mask_tb, by = "tile") %>%  
+  dplyr::mutate(cloud_map = purrr::map2(file_path, sf, mask_raster)) %>% 
+  dplyr::select(-file_path)
+
+prob_map_tb <- base_dir %>% 
+  file.path("03_classify") %>% 
+  expand.grid(experiments, algorithms, smooths, stringsAsFactors = FALSE) %>% 
+  tibble::as_tibble() %>% 
+  dplyr::rename(base_dir = 1, experiment = 2, algorithm = 3, smooth = 4) %>% 
+  dplyr::mutate(in_dir = file.path(base_dir, experiment, 
+                                   paste0("results_", algorithm), smooth)) %>% 
+  ensurer::ensure_that(all(dir.exists(dplyr::pull(., in_dir))),
+                       err_desc = sprintf("Directory not found: %s", 
+                                          dplyr::pull(., in_dir))) %>% 
+  dplyr::mutate(in_file = purrr::map(in_dir, 
+                                     pattern = "_probs_[0-9]{4}_[0-9]_[0-9]{4}_[0-9][.]tif$", 
+                                     list.files, full.names = TRUE)) %>% 
+  tidyr::unnest(cols = in_file) %>% 
+  dplyr::mutate(file_name = basename(in_file)) %>% 
+  tidyr::separate(file_name, sep = '_', into = c(NA, NA, "tile", NA, "alg", NA, 
+                                                 NA, NA, "prodes_year", NA)) %>% 
+  ensurer::ensure_that(all(file.exists(.$in_file)), 
+                       err_desc = "file not found!") %>% 
+  ensurer::ensure_that(all(.$algorithm == .$alg), 
+                       err_desc = "algorithm missmatch!") %>% 
+  dplyr::select(experiment, algorithm, smooth, tile, prodes_year, in_file, 
+                -base_dir, -in_dir, -alg) %>% 
+  dplyr::filter(tile %in% tiles) %>% 
+  dplyr::inner_join(cloud_map_tb, by = c("tile", "prodes_year")) %>% 
+  # NOTE: Band 1 is the probability of deforestation
+  dplyr::mutate(prob_map = purrr::map2(in_file, sf, mask_raster, band = 1)) %>% 
+  dplyr::select(-c(in_file, sf))
+
+```
+
+
+
+```{r plot_cloud_quantity, results='asis', echo=FALSE, fig.width=7, fig.height=4}
+
+bin <- Frequency <- n_clouds <- NULL
+
+for (my_experiment          in unique(prob_map_tb$experiment)) {
+  for (my_smooth            in unique(prob_map_tb$smooth)) {
+    for (my_algorithm       in unique(prob_map_tb$algorithm)) {
+      for (my_tile          in unique(prob_map_tb$tile)) {
+        for (my_prodes_year in unique(prob_map_tb$prodes_year)) {
+
+          cat(paste("#### ", my_experiment, sep  = ' '), "\n")
+          my_title <- sprintf("%s %s %s %s",  alg_names[my_algorithm],  
+                              my_smooth, my_tile, my_prodes_year) 
+          print(my_title) 
+          
+          raster_row <- prob_map_tb %>% 
+            dplyr::filter(experiment == my_experiment,
+                          algorithm == my_algorithm,
+                          tile == my_tile,
+                          prodes_year == my_prodes_year)
+          
+          if (nrow(raster_row) != 1) {
+            warning(sprintf("No data found for %s %s %s %s", my_experiment, 
+                            my_algorithm, my_tile, my_prodes_year))
+            next()
+          }
+          
+          if (is.null(raster_row$prob_map[[1]]) || is.null(raster_row$cloud_map[[1]])) {
+            warning(sprintf("No map data found for %s %s %s %s", my_experiment, 
+                            my_algorithm, my_tile, my_prodes_year))
+            next
+          }
+         
+          prob_raster <- raster_row$prob_map[[1]]
+          deforestation_mask <- prodes_map_tb %>% 
+            dplyr::filter(tile == my_tile) %>% 
+            dplyr::pull(file_path) %>% 
+            prodes2raster(file_rt = prob_raster, 
+                          raster_path = tempfile(pattern = "prodes2raster", 
+                                                 fileext = ".tif"),
+                          year_pd = my_prodes_year, 
+                          prodes_lbl = prodes_labels) %>% 
+            raster::raster() %>% 
+            # NOTE: the code of deforestation is 1
+            raster::reclassify(rcl = as.matrix(expand.grid(2:5, NA)))
+          
+          prob_raster <- prob_raster@file@name %>% 
+            ensurer::ensure_that(file.exists(.)) %>% 
+            mask_raster(mask = deforestation_mask) %>% 
+            # NOTE: Group probabilities into bins.
+            raster::calc(fun = function(x){
+              ceiling(x/1000)
+            }, filename = tempfile(pattern = "rounded_", fileext = ".tif"))
+          cloud_raster <- raster_row$cloud_map[[1]]@file@name %>% 
+            ensurer::ensure_that(file.exists(.)) %>% 
+            mask_raster(mask = deforestation_mask) %>% 
+            raster::projectRaster(to = prob_raster, method = "ngb", 
+                                  filename = tempfile(pattern = "cloud_proj_", 
+                                                      fileext = ".tif"))
+          
+          comparison_matrix <- prob_raster@file@name %>% 
+            sits.validate::compareRasters(reference = cloud_raster@file@name)
+          
+          plot_data <- comparison_matrix %>% 
+            tibble::as_tibble() %>% 
+            # NOTE: There are 11 bins going from 0 to 10. Furhter rows were 
+            # introduced by compareRasters
+            dplyr::slice(1:11) %>% 
+            dplyr::rename() %>% 
+            # NOTE: Again, 11.
+            dplyr::mutate(bin = as.character(0:10/10)) %>% 
+            tidyr::pivot_longer(cols = tidyselect::num_range(prefix = '', 
+                                                             range = 0:23),
+                                names_to = "n_clouds", values_to = "Frequency") %>% 
+            dplyr::mutate(n_clouds = stringr::str_pad(n_clouds, width = 2, 
+                                                      pad = '0')) 
+          plot_deforestation <- plot_data %>% 
+            ggplot2::ggplot() +
+            ggplot2::geom_bar(mapping = ggplot2::aes(x = bin, 
+                                                     y = Frequency, 
+                                                     fill = n_clouds), 
+                     stat = "identity") +
+            ggplot2::ggtitle(label = my_title,
+                             subtitle = "Probabily of DEFORESTATION versus CLOUDED OBSERVATIONS") +
+            ggplot2::xlab("Probability of deforestation")  
+         plot(plot_deforestation) 
+         
+         
+          plot_deforestation_log <- plot_data %>% 
+            ggplot2::ggplot() +
+            ggplot2::geom_bar(mapping = ggplot2::aes(x = bin, 
+                                                     y = log(Frequency), 
+                                                     fill = n_clouds), 
+                     stat = "identity") +
+            ggplot2::ggtitle(label = my_title,
+                             subtitle = "Probabily of DEFORESTATION versus CLOUDED OBSERVATIONS (log)") +
+            ggplot2::xlab("Probability of deforestation")  
+         plot(plot_deforestation_log) 
+         
+
+        }
+      }
+    }
+  }
+}
+
+```
+
