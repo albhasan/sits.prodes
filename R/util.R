@@ -230,6 +230,39 @@ identify_missing_bricks <- function(in_dir, expected_scenes, expected_years,
 }
 
 
+#' @title Mask a raster.
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description Mask a raster using either a vector or another raster.
+#'
+#' @param file_path  A character. Path to a raster file.
+#' @param mask       Either an sf or raster object. A mask to be applied to the input.
+#' @param band       An integer. The band identifier in the input file.
+#' @param resampling A character. A resamplig method.
+#' @return           A raster object.
+mask_raster <- function(file_path, mask, band = 1, resampling = "ngb"){
+  if (is.null(mask) || (is.atomic(mask) && is.na(mask)))
+    return(NA)
+  r <- file_path %>%
+    raster::raster(band = band)
+
+  if (sum(class(mask) %in% c("sf")) > 0) {
+    my_mask <- mask %>%
+      sf::st_transform(crs = raster::crs(r)) %>%
+      sf::as_Spatial()
+  } else if (sum(class(mask) %in% c("RasterLayer")) > 0) {
+    my_mask <- mask %>%
+      raster::projectRaster(to = r, method = resampling)
+  } else {
+    stop(sprintf("Unknown type of mask: %s", class(mask)))
+  }
+
+  r %>%
+    raster::mask(mask = my_mask, filename = tempfile(pattern = "mask_raster_",
+                                                fileext = ".tif")) %>%
+    return()
+}
+
+
 #' @title Replace column values with random numbers.
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description   Replace the values of the columns (from the second one on) of a tibble uniform random numbers between 0 and 1
