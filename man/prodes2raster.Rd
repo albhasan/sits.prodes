@@ -4,20 +4,29 @@
 \alias{prodes2raster}
 \title{Match PRODES to raster.}
 \usage{
-prodes2raster(file_pd, file_rt, raster_path, tile, year_pd, prodes_lbl)
+prodes2raster(file_pd, file_rt, raster_path = tempfile(pattern =
+  "prodes2raster", fileext = ".tif"), tile, year_pd, prodes_lbl)
 }
 \arguments{
-\item{file_pd}{A length-one character. Path to a PRODES map (a shapefile).}
+\item{file_pd}{A length-one character. Path to a PRODES map (a
+shapefile).}
 
-\item{file_rt}{A length-one character. Path to raster of reference (a tif).}
+\item{file_rt}{A length-one character. Path to raster of reference (a
+tif).}
 
-\item{raster_path}{A length-one character. An optional file path to store the resulting raster.}
+\item{raster_path}{A length-one character. An optional file path to store
+the resulting raster.}
 
-\item{tile}{A length-one character. The Landsat scene id (6 numbers).}
+\item{tile}{DEPRECATED. A length-one character. The Landsat scene id
+(6 numbers).}
 
-\item{year_pd}{A integer. The years of deforestation to keep in the output.}
+\item{year_pd}{A integer. The years of deforestation to keep in the
+output.}
 
-\item{prodes_lbl}{A tibble mapping the labels of PRODES from Portuguesse to English. It must contais the PRODES' labels in Portuguese (label_ld_pt, character) and english (label_pd, character), and its ID (id_pd, an integer that must have a one-to-one relationship to label_id).}
+\item{prodes_lbl}{A tibble mapping the labels of PRODES from Portuguesse to
+English. It must contain the PRODES' labels in Portuguese (label_ld_pt,
+character) and english (label_pd, character), and its ID (id_pd, an integer
+that must have a one-to-one relationship to label_id).}
 }
 \value{
 A raster object.
