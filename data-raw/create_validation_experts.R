@@ -128,7 +128,7 @@ expert_validation <- expand.grid(experiment = experiments, algorithm = results,
     # Re-fill the metadata because list.files is recursive and it is including 
     # TIFFs with wrong metadata.
     dplyr::select(-dir) %>%
-    tidyr::unnest() %>%
+    tidyr::unnest(cols = c(file_path)) %>%
     dplyr::distinct(file_path, .keep_all = TRUE) %>%
     dplyr::filter(stringr::str_detect(file_path, "validation_v2")) %>%
     dplyr::mutate(algorithm = stringr::str_extract(file_path, "results_[a-z]+"),
@@ -213,6 +213,6 @@ expert_validation <- expert_validation %>%
     dplyr::select(-fname)
 
 # save
-setwd("~/Documents/ghProjects/sits.prodes"))
+setwd("~/Documents/ghProjects/sits.prodes")
 usethis::use_data(expert_validation, overwrite = TRUE)
 
