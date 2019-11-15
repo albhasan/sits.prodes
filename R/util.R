@@ -94,26 +94,6 @@ compute_indexes <- function(x, sat){
 #' @return            A character of path, pathrow, start_date, band, year (NA for MODIS).
 #' @export
 get_brick_md <- function(brick_paths){
-    # @title Get the number of bands in a file.
-    # @author Alber Sanchez, \email{albequietr.ipia@@inpe.br}
-    # @description Get the number of bands in a file.
-    #
-    # @param filepath A character. Path to a file.
-    # @return         A numeric.
-    # Adapted from sits.starfm
-    get_number_of_bands <- function(filepath) {
-        stopifnot(is.atomic(filepath))
-        if (is.na(filepath) || length(filepath) < 1) return(NA)
-        if (length(filepath) == 1) {
-            system2("gdalinfo", filepath, stdout = TRUE) %>%
-                stringr::str_subset("Band") %>% dplyr::last() %>%
-                stringr::str_split(" ") %>% unlist() %>% dplyr::nth(2) %>%
-                as.integer() %>%
-                return()
-        } else {
-            return(vapply(filepath, get_number_of_bands, integer(1)))
-        }
-    }
     #
     brick_df <- lapply(brick_paths, function(x){
         fn <- substr(basename(x), 1, nchar(basename(x)) - 4)
@@ -179,6 +159,28 @@ get_img_md <- function(img_path){
                 ncol = param_ncol, nrow = param_nrow, img_size = param_img_size,
                 pixel_size_x = param_pixel_size_x,
                 pixel_size_y = param_pixel_size_y))
+}
+
+
+#' @title Get the number of bands in a file.
+#' @author Alber Sanchez, \email{albequietr.ipia@@inpe.br}
+#' @description Get the number of bands in a file.
+#'
+#' @param filepath A character. Path to a file.
+#' @return         A numeric.
+#' @export
+get_number_of_bands <- function(filepath) {
+	stopifnot(is.atomic(filepath))
+	if (is.na(filepath) || length(filepath) < 1) return(NA)
+	if (length(filepath) == 1) {
+		system2("gdalinfo", filepath, stdout = TRUE) %>%
+			stringr::str_subset("Band") %>% dplyr::last() %>%
+			stringr::str_split(" ") %>% unlist() %>% dplyr::nth(2) %>%
+			as.integer() %>%
+			return()
+	} else {
+		return(vapply(filepath, get_number_of_bands, integer(1)))
+	}
 }
 
 
