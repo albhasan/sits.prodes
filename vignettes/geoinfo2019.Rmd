@@ -182,17 +182,37 @@ plot_expert_validation <- function(data_tb, my_algorithm, my_smooth){
       dplyr::mutate(experiment = dplyr::recode(experiment,  !!!experiment_codes)) %>%
       ggplot2::ggplot(aes(x = prod_acc, y = user_acc,
                           shape = variable, color = experiment)) +
-      ggplot2::geom_jitter(size = 2) +
+      ggplot2::geom_jitter(size = 3) +
       ggplot2::coord_fixed() +
       ggplot2::xlim(0.0, 1.01) +
       ggplot2::ylim(0.0, 1.01) +
       ggplot2::facet_wrap(scene ~ pyear, ncol = length(prodes_years)) +
       ggplot2::guides(shape = guide_legend(override.aes = list(size = 3))) +
-      ggplot2::labs(title = sprintf("Expert validation %s %s", 
-                                    my_algorithm, my_smooth),
+      ggplot2::labs(#title = sprintf("Expert validation %s %s",  my_algorithm, my_smooth),
                     x = "Producer accuracy",
                     y = "User accuracy") + 
-      theme(axis.text.x = element_text(angle = 90, hjust = 1))
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+      theme(legend.position = "bottom") + 
+      ggplot2::theme(#text = ggplot2::element_text(size = 22)
+        #plot.title          = ggplot2::element_text(size = 22),
+        #axis.title          = ggplot2::element_text(size = 22), 
+        axis.title.x        = ggplot2::element_text(size = 16), 
+        axis.title.y        = ggplot2::element_text(size = 16), 
+        #axis.title.x.top    = ggplot2::element_text(size = 22), 
+        #axis.title.x.bottom = ggplot2::element_text(size = 22), 
+        #axis.title.y.left   = ggplot2::element_text(size = 22), 
+        #axis.title.y.right  = ggplot2::element_text(size = 22),
+        #axis.text           = ggplot2::element_text(size = 22), 
+        axis.text.x         = ggplot2::element_text(size = 12), 
+        axis.text.y         = ggplot2::element_text(size = 12), 
+        #axis.text.x.top     = ggplot2::element_text(size = 22), 
+        #axis.text.x.bottom  = ggplot2::element_text(size = 22), 
+        #axis.text.y.left    = ggplot2::element_text(size = 22), 
+        #axis.text.y.right   = ggplot2::element_text(size = 22),
+        strip.text           = ggplot2::element_text(size = 14),
+        strip.text.x         = ggplot2::element_text(size = 14),
+        strip.text.y         = ggplot2::element_text(size = 14)
+      )
   )
 }
 
@@ -214,14 +234,35 @@ plot_prodes_validation <- function(data_tb, my_algorithm, my_smooth){
       dplyr::mutate(experiment = dplyr::recode(experiment, !!!experiment_codes)) %>%
       ggplot2::ggplot(aes(x = prod_acc, y = user_acc, color = experiment, 
                           shape = variable )) +
-      ggplot2::geom_point() +
+      ggplot2::geom_point(size = 3) +
       ggplot2::coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
       ggplot2::facet_wrap(scene ~ pyear, ncol = length(prodes_years)) +
       ggplot2::guides(shape = guide_legend(override.aes = list(size = 4))) +
       ggplot2::labs(x = "Producer accuracy", 
                     # title = sprintf("%s %s", my_algorithm, my_smooth),
                     y = "User accuracy") +
-      ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1))
+      ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+      ggplot2::theme(legend.position = "bottom") + 
+      ggplot2::theme(#text = ggplot2::element_text(size = 22)
+        #plot.title          = ggplot2::element_text(size = 22),
+        #axis.title          = ggplot2::element_text(size = 22), 
+        axis.title.x        = ggplot2::element_text(size = 16), 
+        axis.title.y        = ggplot2::element_text(size = 16), 
+        #axis.title.x.top    = ggplot2::element_text(size = 22), 
+        #axis.title.x.bottom = ggplot2::element_text(size = 22), 
+        #axis.title.y.left   = ggplot2::element_text(size = 22), 
+        #axis.title.y.right  = ggplot2::element_text(size = 22),
+        #axis.text           = ggplot2::element_text(size = 22), 
+        axis.text.x         = ggplot2::element_text(size = 12), 
+        axis.text.y         = ggplot2::element_text(size = 12), 
+        #axis.text.x.top     = ggplot2::element_text(size = 22), 
+        #axis.text.x.bottom  = ggplot2::element_text(size = 22), 
+        #axis.text.y.left    = ggplot2::element_text(size = 22), 
+        #axis.text.y.right   = ggplot2::element_text(size = 22),
+        strip.text           = ggplot2::element_text(size = 14),
+        strip.text.x         = ggplot2::element_text(size = 14),
+        strip.text.y         = ggplot2::element_text(size = 14)
+      )
   )
 }
 
@@ -235,14 +276,35 @@ plot_prodes_mapbiomas <- function(data_tb){
     data_tb %>% 
       ggplot2::ggplot(aes(x = prod_acc, y = user_acc, 
                           shape = variable, color = variable)) +
-      ggplot2::geom_point() +
+      ggplot2::geom_point(size = 3) +
       ggplot2::coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
       ggplot2::facet_wrap(tile ~ year_pd, ncol = length(prodes_years)) + 
       ggplot2::guides(shape = guide_legend(override.aes = list(size = 3))) +
       ggplot2::labs(x = "Producer accuracy", 
                     #title = "PRODES - Mapbiomas", 
                     y = "User accuracy") +
-      ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1))
+      ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+      ggplot2::theme(legend.position="bottom") + 
+      ggplot2::theme(#text = ggplot2::element_text(size = 22)
+        #plot.title          = ggplot2::element_text(size = 22),
+        #axis.title          = ggplot2::element_text(size = 22), 
+        axis.title.x        = ggplot2::element_text(size = 16), 
+        axis.title.y        = ggplot2::element_text(size = 16), 
+        #axis.title.x.top    = ggplot2::element_text(size = 22), 
+        #axis.title.x.bottom = ggplot2::element_text(size = 22), 
+        #axis.title.y.left   = ggplot2::element_text(size = 22), 
+        #axis.title.y.right  = ggplot2::element_text(size = 22),
+        #axis.text           = ggplot2::element_text(size = 22), 
+        axis.text.x         = ggplot2::element_text(size = 12), 
+        axis.text.y         = ggplot2::element_text(size = 12), 
+        #axis.text.x.top     = ggplot2::element_text(size = 22), 
+        #axis.text.x.bottom  = ggplot2::element_text(size = 22), 
+        #axis.text.y.left    = ggplot2::element_text(size = 22), 
+        #axis.text.y.right   = ggplot2::element_text(size = 22),
+        strip.text           = ggplot2::element_text(size = 14),
+        strip.text.x         = ggplot2::element_text(size = 14),
+        strip.text.y         = ggplot2::element_text(size = 14)
+      )
   )
 }
 
@@ -311,22 +373,42 @@ BRICK_IMAGES %>%
 cloud_cov <- prodes_year <- img_date <- prodes_doy <- NULL
 
 cloud_cover <- BRICK_IMAGES %>% 
-    dplyr::select(scene, img_date, cloud_cov, prodes_year) %>% 
-    dplyr::mutate(doy = lubridate::yday(img_date),
-                  prodes_doy = (doy + 365 - 214) %% 365 + 1) %>% 
-    dplyr::arrange(scene, prodes_year, prodes_doy) %>%
-    ggplot2::ggplot(ggplot2::aes(x = prodes_doy, y = cloud_cov)) + 
-    ggplot2::ylim(0, 1) +
-    ggplot2::geom_line() +
-    ggplot2::facet_grid(prodes_year ~ scene) +
-    ggplot2::geom_smooth(se = FALSE, method = 'loess', formula = 'y ~ x') + 
-    #ggplot2::labs(title = "Cloud covearge", subtitle = "As reported by the images' metadata.") +   
-    ggplot2::xlab("Image adquisition date ") + 
-    ggplot2::scale_x_continuous(breaks = c(1, 91, 181, 271, 365),
-                                label = c("August 1st", "November 1st", 
-                                          "February 1st", "May 1st", 
-                                          "July 31st")) + 
-    ggplot2::ylab("Cloud coverage")
+  dplyr::select(scene, img_date, cloud_cov, prodes_year) %>% 
+  dplyr::mutate(doy = lubridate::yday(img_date),
+                prodes_doy = (doy + 365 - 214) %% 365 + 1) %>% 
+  dplyr::arrange(scene, prodes_year, prodes_doy) %>%
+  ggplot2::ggplot(ggplot2::aes(x = prodes_doy, y = cloud_cov)) + 
+  ggplot2::ylim(0, 1) +
+  ggplot2::geom_line() +
+  ggplot2::facet_grid(prodes_year ~ scene) +
+  ggplot2::geom_smooth(se = FALSE, method = 'loess', formula = 'y ~ x') + 
+  #ggplot2::labs(title = "Cloud covearge", subtitle = "As reported by the images' metadata.") +   
+  ggplot2::xlab("Image adquisition date ") + 
+  ggplot2::scale_x_continuous(breaks = c(1, 91, 181, 271, 365),
+                              label = c("August 1st", "November 1st", 
+                                        "February 1st", "May 1st", 
+                                        "July 31st")) + 
+  ggplot2::ylab("Cloud coverage") + 
+  ggplot2::theme(#text = ggplot2::element_text(size = 22)
+                 #plot.title          = ggplot2::element_text(size = 22),
+                 #axis.title          = ggplot2::element_text(size = 22), 
+                 axis.title.x        = ggplot2::element_text(size = 20), 
+                 axis.title.y        = ggplot2::element_text(size = 20), 
+                 #axis.title.x.top    = ggplot2::element_text(size = 22), 
+                 #axis.title.x.bottom = ggplot2::element_text(size = 22), 
+                 #axis.title.y.left   = ggplot2::element_text(size = 22), 
+                 #axis.title.y.right  = ggplot2::element_text(size = 22),
+                 #axis.text           = ggplot2::element_text(size = 22), 
+                 axis.text.x         = ggplot2::element_text(size = 12), 
+                 axis.text.y         = ggplot2::element_text(size = 12), 
+                 #axis.text.x.top     = ggplot2::element_text(size = 22), 
+                 #axis.text.x.bottom  = ggplot2::element_text(size = 22), 
+                 #axis.text.y.left    = ggplot2::element_text(size = 22), 
+                 #axis.text.y.right   = ggplot2::element_text(size = 22),
+                 strip.text           = ggplot2::element_text(size = 16),
+                 strip.text.x         = ggplot2::element_text(size = 16),
+                 strip.text.y         = ggplot2::element_text(size = 16)
+                 )
 print(cloud_cover)
 
 ```
@@ -353,7 +435,7 @@ cloud_maps <- base_path %>%
   ensurer::ensure_that(nrow(.) > 0, err_desc = "Quantile maps not found.") %>% 
   dplyr::mutate(r = purrr::map(file_path, raster::raster)) %>% 
   dplyr::arrange(scene, pyear) %>%
-  dplyr::filter(scene %in% selected_scenes, pyear %in% selected_pyears)
+  dplyr::filter(scene %in% selected_scenes, pyear %in% c(2013, selected_pyears))
 
 colr <- suppressWarnings(grDevices::colorRampPalette(RColorBrewer::brewer.pal(24, "RdYlBu")))
 for (rid in 1:nrow(cloud_maps)) {
@@ -364,10 +446,14 @@ for (rid in 1:nrow(cloud_maps)) {
                        par.settings = list(axis.line = list(col = "transparent")),
                        #scales = list(draw = FALSE),
                        col.regions = colr,
-                       main = sprintf("Clouded observations %s %s", 
-                                      cloud_maps$scene[[rid]], 
+                       main = sprintf("%s ", 
+                                      #cloud_maps$scene[[rid]], 
                                       cloud_maps$pyear[[rid]]),
-                       at = seq(0, 23, len = 24)) %>% 
+                       at = seq(0, 23, len = 24),
+                       xlab = NULL,
+                       ylab = NULL,
+                       scales=list(draw = FALSE),
+                       labels = FALSE) %>% 
     plot()
 }
 
@@ -395,7 +481,7 @@ quantile_maps <- base_path %>%
   ensurer::ensure_that(nrow(.) > 0, err_desc = "Quantile maps not found.") %>% 
   dplyr::mutate(r = purrr::map(file_path, raster::raster)) %>% 
   dplyr::arrange(scene, pyear) %>%
-  dplyr::filter(scene %in% selected_scenes, pyear %in% selected_pyears)
+  dplyr::filter(scene %in% selected_scenes, pyear %in% c(2013, selected_pyears))
 
 colr <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(5, "RdYlBu"))
 for (rid in 1:nrow(quantile_maps)) {
@@ -452,7 +538,10 @@ prodes_labels %>%
 ```
 
 
-```{r plot_expert_validation, results='asis', echo=FALSE, fig.height=5, fig.width=8}
+### Results
+
+
+```{r plot_expert_validation, results='asis', echo=FALSE, fig.height=4, fig.width=7}
 
 acc_type <- algorithm <- prod_acc <- pyear <- user_acc <- up_acc2 <- variable <- NULL
 
@@ -492,8 +581,8 @@ pa_acc_tb <- acc_pr %>%
 
 for (my_algorithm in unique(dplyr::pull(pa_acc_tb, algorithm))) {
   cat("\n\n")
-  cat(paste0("#### ", my_algorithm), "\n")
   for (my_smooth in unique(dplyr::pull(pa_acc_tb, smooth))) {
+    cat(paste0("#### ", my_algorithm, " ", my_smooth), "\n")
     pa_acc_tb %>% 
       plot_expert_validation(my_algorithm, my_smooth)
   }

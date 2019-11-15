@@ -37,13 +37,52 @@ A dataset containing a tibble with time series sampled on the brazilian Amazon. 
 
 ```{r echo=FALSE, fig.height=5, fig.width=5}
 data(prodes_samples_interpolated)
-
 p_samples <- prodes_samples_interpolated
+
+# Helper function for getting the extent from a path to a shapefile.
+get_extent <- function(x){
+  x %>% 
+    sf::st_read(quiet = TRUE) %>%
+    sf::st_bbox() %>%
+    sf::st_as_sfc() %>%
+    return()
+}
+
+# Helper function for binding rows of sf objects.
+rbind_sf <- function(x){
+  do.call(rbind, x)
+}
+
+l8_extent_tb <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/vector/prodes/tiled" %>% 
+  list.files(pattern = "*[.]shp", full.names = TRUE) %>% 
+  tibble::enframe(name = NULL) %>% 
+  dplyr::rename(file_path = value) %>% 
+  dplyr::mutate(file_name = tools::file_path_sans_ext(basename(file_path))) %>% 
+  tidyr::separate(col = file_name, into = c(NA, NA, NA, "path", "row"), sep = '_') %>% 
+  dplyr::mutate(g = purrr::map(file_path, get_extent))
+extent_sf <- l8_extent_tb %>% 
+  dplyr::pull(g) %>% 
+  purrr::map(sf::st_as_sf) %>% 
+  rbind_sf() %>%
+  dplyr::bind_cols(l8_extent_tb) %>% 
+  dplyr::select(path, row) %>% 
+  sf::st_transform(4326)
+rm(l8_extent_tb) 
+
+
 suppressWarnings(
   p_samples %>% 
-    dplyr::mutate(pyear = lubridate::year(end_date)) %>% 
-    dplyr::select(pyear, label) %>% 
-    table() %>% 
+    sf::st_as_sf(coords = c("longitude", "latitude")) %>% 
+    sf::st_set_crs(4326) %>% 
+    sf::st_join(extent_sf) %>% 
+    sf::st_set_geometry(NULL) %>% 
+    dplyr::mutate(path_row = paste0(path, row),
+                  pyear = lubridate::year(end_date)) %>% 
+    dplyr::select(Scene = path_row, Prodes_year = pyear, Label = label) %>% 
+    dplyr::group_by(Scene, Prodes_year, Label) %>% 
+    dplyr::summarize(Frequency = n()) %>% 
+    tidyr::pivot_wider(names_from = Label, values_from = Frequency) %>% 
+    #table() %>% 
     knitr::kable(digits = 0, row.names = TRUE, full_width = TRUE, 
                  caption = "Number of samples per PRODES year.") %>% 
     kableExtra::kable_styling()
@@ -62,6 +101,7 @@ p_samples %>%
 A dataset containing a tibble with time series sampled on the brazilian Amazon. The time series come from Landsat 8 Collection images with the fewest cluods on each PRODES year. The clouds in the images are filled in using billinear resampled MODIS images (MOD13Q1 and MYD13Q1) of the closest in terms of place and date. 
 
 ```{r echo=FALSE, fig.height=5, fig.width=5}
+
 data(prodes_samples_interpolated_few_clouds)
 
 p_samples <- prodes_samples_interpolated_few_clouds

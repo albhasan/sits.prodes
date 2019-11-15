@@ -47,13 +47,15 @@ devtools::load_all()
 
 ```
 
+
+
 ### Cloud quantity
 
 ```{r get_data, echo=FALSE}
 
 alg <- algorithm <- file_name <- file_path <- in_file <- path <- prodes_year <- sf <- tile <- value <- NULL
 
-prodes_map_tb <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/vector/prodes/prodes_tiled" %>% 
+prodes_map_tb <- "/home/alber/Documents/data/experiments/prodes_reproduction/data/vector/prodes/tiled" %>% 
   list.files(pattern = "[.]shp$", full.names = TRUE) %>% 
   tibble::enframe(name = NULL) %>% 
   dplyr::rename(file_path = value) %>% 
@@ -64,7 +66,7 @@ prodes_map_tb <- "/home/alber/Documents/data/experiments/prodes_reproduction/dat
   dplyr::filter(tile %in% selected_tiles)
 
 prodes_mask_tb <- base_dir %>% 
-  paste0("/data/vector/prodes/prodes_tiled/hand_dissolved") %>% 
+  paste0("/data/vector/prodes/tiled/hand_dissolved") %>% 
   list.files(pattern = "[.]shp$", full.names = TRUE) %>% 
   tibble::enframe(name = NULL) %>% 
   dplyr::rename(file_path = value) %>% 
@@ -75,6 +77,8 @@ prodes_mask_tb <- base_dir %>%
   dplyr::mutate(sf = purrr::map(file_path, function(x){
     x %>% 
       sf::read_sf() %>% 
+      sf::st_bbox() %>%
+      sf::st_as_sfc() %>%
       return()
   })) %>% 
   dplyr::select(-file_path)
@@ -141,7 +145,6 @@ for (my_experiment          in unique(prob_map_tb$experiment)) {
     for (my_algorithm       in unique(prob_map_tb$algorithm)) {
       for (my_tile          in unique(prob_map_tb$tile)) {
         for (my_prodes_year in unique(prob_map_tb$prodes_year)) {
-
           cat(paste("#### ", my_experiment, sep  = ' '), "\n")
           my_title <- sprintf("%s %s %s %s",  alg_names[my_algorithm],  
                               my_smooth, my_tile, my_prodes_year) 
