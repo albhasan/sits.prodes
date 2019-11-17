@@ -27,12 +27,6 @@ suppressMessages(library(rnaturalearthdata))
 suppressMessages(library(sits.prodes))
 suppressMessages(library(tidyr))
 
-# ----- TODO: Delete ----
-#library(devtools)
-#setwd("/home/alber/Documents/ghProjects/sits.prodes")
-#devtools::load_all()
-# -----
-
 base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 selected_scenes <- "226064"
 selected_pyears <- 2014:2017

@@ -1,5 +1,4 @@
-library(tibble)
-library(devtools)
+#!/usr/bin/Rscript
 
 print("Creating a table of descriptions of each brick...")
 

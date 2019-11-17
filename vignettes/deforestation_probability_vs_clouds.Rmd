@@ -38,17 +38,6 @@ alg_names <- c(dl = "Deep Learning", rf = "Random Forest",
 
 data("prodes_labels", package = "sits.prodes")
 
-
-#---- TODO ----
-# remove:
-library(devtools)
-setwd("/home/alber/Documents/ghProjects/sits.prodes")
-devtools::load_all()
-
-```
-
-
-
 ### Cloud quantity
 
 ```{r get_data, echo=FALSE}
