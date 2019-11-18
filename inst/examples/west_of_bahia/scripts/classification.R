@@ -5,7 +5,7 @@
 #---- Configuration ----
 
 require(dplyr)
-# require(sits)
+#require(sits)
 devtools::load_all()
 require(sf)
 
@@ -75,10 +75,6 @@ shp %>%
                   id = 1:dplyr::n()) %>%
     dplyr::select(c("id", "longitude", "latitude", "start_date", 
                              "end_date", "label", "cube", "time_series")) %>%
-# TODO: Remove  -----
-#dplyr::group_by(label) %>%
-#dplyr::sample_n(10) %>%
-#--------------------
     utils::write.csv(file = csv_path, quote = FALSE, row.names = FALSE)
 
 # Get a sits coverage.
@@ -95,25 +91,34 @@ raster_cube <- sits::sits_cube( service = "BRICK",
                                 bands    = brick_tb$band, 
                                 files    = brick_tb$file_path)
 
-samples_tb <- sits::sits_get_data(raster_cube, file = csv_path) %>%
-    sits::sits_prune() %>%
-    ensurer::ensure_that(nrow(.) > 1, err_desc = "No valid samples found!")
+samples_file <- "/home/alber/Documents/ghProjects/sits.prodes/inst/examples/west_of_bahia/data/samples_tb.rds"
+if(file.exists(samples_file)) {
+    samples_tb <- readRDS(samples_file)
+} else {
+    samples_tb <- sits::sits_get_data(raster_cube, file = csv_path) %>%
+        sits::sits_prune() %>%
+        ensurer::ensure_that(nrow(.) > 1, err_desc = "No valid samples found!") %>%
+        saveRDS(file = samples_file)
+}
 
-ml_model <- sits::sits_train(samples_tb, sits::sits_svm())
+# NOTE: SVM erorrs in original sits
 #ml_model <- sits::sits_train(samples_tb)
 #Error in na.fail.default(list(`factor(reference)` = c(1L, 1L, 1L, 1L,  :
 #  missing values in object
 #ml_model <- sits::sits_train(samples_tb, sits::sits_rfor(num_trees = 3000))
 #Error: Missing data in columns: ndvi2, ndvi6.
 
+# NOTE: This only runs with the modifyed sits on alber@esensing-6
+ml_model <- sits::sits_train(samples_tb, sits::sits_svm())
+
+# NOTE: not working after changes
+#ml_model <- sits::sits_train(samples_tb, sits::sits_rfor(num_trees = 500))
+
 ml_probs <- sits::sits_classify(data = raster_cube, ml_model = ml_model)
-
+
 # label the classified image
 wbahia_label <- sits::sits_label_classification(ml_probs)
 
 # smooth the result with a bayesian filter
 wbahia_bayes <- sits_label_classification(ml_probs, smoothing = "bayesian")
-
-
-
 
