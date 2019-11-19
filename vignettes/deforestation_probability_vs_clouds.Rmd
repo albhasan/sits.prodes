@@ -38,6 +38,17 @@ alg_names <- c(dl = "Deep Learning", rf = "Random Forest",
 
 data("prodes_labels", package = "sits.prodes")
 
+
+#---- TODO ----
+# remove:
+library(devtools)
+setwd("/home/alber/Documents/ghProjects/sits.prodes")
+devtools::load_all()
+
+```
+
+
+
 ### Cloud quantity
 
 ```{r get_data, echo=FALSE}
@@ -55,7 +66,7 @@ prodes_map_tb <- "/home/alber/Documents/data/experiments/prodes_reproduction/dat
   dplyr::filter(tile %in% selected_tiles)
 
 prodes_mask_tb <- base_dir %>% 
-  paste0("/data/vector/prodes/tiled/hand_dissolved") %>% 
+  paste0("/data/vector/prodes/tiled") %>% 
   list.files(pattern = "[.]shp$", full.names = TRUE) %>% 
   tibble::enframe(name = NULL) %>% 
   dplyr::rename(file_path = value) %>% 
