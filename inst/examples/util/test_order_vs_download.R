@@ -15,7 +15,7 @@ stopifnot(dir.exists(base_path))
 images_tb <- base_path %>%
     file.path("orders") %>%
     ensurer::ensure_that(file.exists(.), err_desc = "Directory not found!") %>%
-    list.files(pattern = "[.]tar[.]gz$", full.names = TRUE) %>%
+    list.files(pattern = "[.]tar[.]gz$", recursive = TRUE, full.names = TRUE) %>%
     ensurer::ensure_that(length(.) > 0, err_desc = "No files found!") %>%
     tibble::enframe(name = NULL)  %>%
     dplyr::rename(image_path = value) %>%
@@ -42,6 +42,7 @@ orders_tb <- base_path %>%
                                        "collection", "tier")) %>%
     dplyr::left_join(images_tb, by = c("satellite", "path_row", 
                                        "img_acquisition", "collection", "tier"))
+
 print("Missing images from orders: ")
 orders_tb %>%
     dplyr::filter(is.na(image_path)) %>%
