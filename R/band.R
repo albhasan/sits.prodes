@@ -18,7 +18,7 @@ compose_bands_s2 <- function(band_tb, out_dir = tempdir()) {
         "hea_veg",    "Helthy vegetation",       c("B08", "B11", "B02"),
         "lan_wat",    "Land/water",              c("B08", "B11", "B04"),
         "nat_cor",    "Natural color",           c("B04", "B03", "B02"),
-        "nat_no_atm", "Natural color with atmospheric removel", c("B12", "B08", "B03"),
+        "nat_no_atm", "Natural color with atmospheric removal", c("B12", "B08", "B03"),
         "sho_ir",     "Short infrared",          c("B12", "B08", "B04"),
         "veg",        "Vegetation analysis",     c("B11", "B08", "B04")
     )
