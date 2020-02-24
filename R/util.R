@@ -86,55 +86,6 @@ compute_indexes <- function(x, sat){
 }
 
 
-#' @title Get metadata from a Brick filename
-#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
-#' @description Get metadata from a Brick's file name.
-#'
-#' @param brick_paths A character. Path to brick files.
-#' @return            A character of path, pathrow, start_date, band, year (NA for MODIS).
-#' @export
-get_brick_md <- function(brick_paths){
-    #
-    brick_df <- lapply(brick_paths, function(x){
-        fn <- substr(basename(x), 1, nchar(basename(x)) - 4)
-        fn_md <- strsplit(fn, split = '_')[[1]]
-        res <- NULL
-        if (stringr::str_detect(fn_md[[1]], "^LC8SR.+")) {
-            res <- c(
-                path = x,
-                pathrow = fn_md[2],
-                start_date = fn_md[3],
-                band = fn_md[4],
-                year = format(as.Date(fn_md[[3]]), '%Y'),
-                time_steps = get_number_of_bands(x)
-            )
-        } else if (fn_md[[1]] == "MOD13Q1") {
-            res <- c(
-                path = x,
-                pathrow = tolower(fn_md[2]),
-                start_date = "2000-01-01",
-                band = tolower(fn_md[7]),
-                year = 2000,
-                time_steps = get_number_of_bands(x)
-            )
-        } else if (stringr::str_detect(fn_md[[1]], "^HLS[L|S][0-9]{2}.+")) {
-            res <- c(
-                path = x,
-                pathrow = fn_md[2],
-                start_date = fn_md[3],
-                band = fn_md[4],
-                year = format(as.Date(fn_md[[3]]), '%Y'),
-                time_steps = get_number_of_bands(x)
-            )
-        }else{
-            stop("Cannot identify the bricks' type!")
-        }
-        return(res)
-    })
-    return(as.data.frame(do.call(rbind, brick_df), stringsAsFactors = FALSE))
-}
-
-
 #' @title Get metadata from an image.
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description   Get metadata from a image's path.
@@ -247,7 +198,7 @@ mask_raster <- function(file_path, mask, band = 1, resampling = "ngb"){
   r <- file_path %>%
     raster::raster(band = band)
 
-  if (sum(class(mask) %in% c("sf")) > 0) {
+  if (sum(class(mask) %in% c("sf", "sfc")) > 0) {
     my_mask <- mask %>%
       sf::st_transform(crs = raster::crs(r)) %>%
       sf::as_Spatial()
