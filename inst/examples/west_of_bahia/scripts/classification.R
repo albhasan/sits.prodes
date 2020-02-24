@@ -1,4 +1,4 @@
-#!/usr/bin/env Rscript 
+#!/usr/bin/env Rscript
 
 # GET TIME SERIES FROM A POING SHAPEFILE AND A SITS BRICK.
 
@@ -43,7 +43,7 @@ brick_tb <- brick_path %>%
                   n_bands = get_number_of_bands(file_path)) %>%
     # NOTE: Only allowed bricks of one year of monthly data.
     dplyr::filter(n_bands == 12) %>%
-    dplyr::mutate(time_line = purrr::map2(start_date, n_bands, 
+    dplyr::mutate(time_line = purrr::map2(start_date, n_bands,
 											function(x, y){
                                                 seq(from = x, by = "month", length.out = y)
 											}),
@@ -54,9 +54,9 @@ brick_tb <- brick_path %>%
     ensurer::ensure_that(nrow(.) > 0, err_desc = "No bricks found!")
 
 # Read the shp, drop the geometry, fix the column names, and save as CSV.
-shp <- shp_path  %>%
+shp <- shp_path %>%
     ensurer::ensure_that(file.exists(.), err_desc = "File not found!") %>%
-	sf::st_read(quiet = TRUE, stringsAsFactors = FALSE) %>%
+	sf::read_sf() %>%
     sf::st_transform(crs = 4326)
 coords <- shp %>%
 	sf::st_coordinates() %>%
@@ -73,7 +73,7 @@ shp %>%
                   time_series = NA,
                   cube = NA,
                   id = 1:dplyr::n()) %>%
-    dplyr::select(c("id", "longitude", "latitude", "start_date", 
+    dplyr::select(c("id", "longitude", "latitude", "start_date",
                              "end_date", "label", "cube", "time_series")) %>%
     utils::write.csv(file = csv_path, quote = FALSE, row.names = FALSE)
 
@@ -87,19 +87,18 @@ raster_cube <- sits::sits_cube( service = "BRICK",
                                 #geom = NULL,
                                 from = dplyr::first(time_line),
                                 to = dplyr::last(time_line),
-                                timeline = time_line, 
-                                bands    = brick_tb$band, 
+                                timeline = time_line,
+                                bands    = brick_tb$band,
                                 files    = brick_tb$file_path)
 
 samples_file <- "/home/alber/Documents/ghProjects/sits.prodes/inst/examples/west_of_bahia/data/samples_tb.rds"
-if(file.exists(samples_file)) {
-    samples_tb <- readRDS(samples_file)
-} else {
-    samples_tb <- sits::sits_get_data(raster_cube, file = csv_path) %>%
+if(!file.exists(samples_file)) {
+    sits::sits_get_data(raster_cube, file = csv_path) %>%
         sits::sits_prune() %>%
         ensurer::ensure_that(nrow(.) > 1, err_desc = "No valid samples found!") %>%
         saveRDS(file = samples_file)
 }
+samples_tb <- readRDS(samples_file)
 
 # NOTE: SVM erorrs in original sits
 #ml_model <- sits::sits_train(samples_tb)
