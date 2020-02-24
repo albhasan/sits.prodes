@@ -39,6 +39,27 @@ asses_accuracy_simple <- function(error_matrix){
 }
 
 
+#' @title Compute the F1 score.
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description Compute the F1 score from a confusion matrix.
+#'
+#' @param confusion_matrix A matrix given in sample counts. Columns represent the reference data and rows the results of the classification.
+#' @return                 A tibble with precision, recall and f1 score.
+f1_score <- function(confusion_matrix){
+        # cm <- matrix(c(24, 2,  1, 3, 30,  4, 0,  5, 31), byrow = TRUE, ncol = 3)
+        # f1_score(cm)
+        # precision recall    f1
+        # <dbl>  <dbl> <dbl>
+        # 1     0.889  0.889 0.889
+        # 2     0.811  0.811 0.811
+        # 3     0.861  0.861 0.861
+        precision <- diag(confusion_matrix)/colSums(confusion_matrix)
+    recall    <- diag(confusion_matrix)/rowSums(confusion_matrix)
+        f1_score <- 2 * precision * recall/(precision + recall)
+        return(tibble::tibble(precision, recall, f1_score))
+}
+
+
 #' @title Asses accuracy and estimate area according to Olofsson
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description Compute the accuracy normalized by the area. Note that, these computations don't work on clustered sampling because the equations are different.
