@@ -4,8 +4,14 @@
 \alias{validate_sampling}
 \title{Validate a coverage}
 \usage{
-validate_sampling(cov_res, cov_ref, lab_res, lab_ref, n_samples = 10000,
-  cores = 1)
+validate_sampling(
+  cov_res,
+  cov_ref,
+  lab_res,
+  lab_ref,
+  n_samples = 10000,
+  cores = 1
+)
 }
 \arguments{
 \item{cov_res}{A coverage.}

@@ -4,10 +4,21 @@
 \alias{get_timeseries}
 \title{Get time series of sample points from SITS' bricks.}
 \usage{
-get_timeseries(cpath, path_bricks, brick_prefix, class_bands,
-  scale_factor = NULL, missing_values = NULL, minimum_values = NULL,
-  maximum_values = NULL, suffix = "", max_time_diff = 30,
-  cov_name = "SITS coverage", time_len = 23, time_by = 16)
+get_timeseries(
+  cpath,
+  path_bricks,
+  brick_prefix,
+  class_bands,
+  scale_factor = NULL,
+  missing_values = NULL,
+  minimum_values = NULL,
+  maximum_values = NULL,
+  suffix = "",
+  max_time_diff = 30,
+  cov_name = "SITS coverage",
+  time_len = 23,
+  time_by = 16
+)
 }
 \arguments{
 \item{cpath}{A length-one character. Path to a CSV file.}

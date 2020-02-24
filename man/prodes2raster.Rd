@@ -4,8 +4,14 @@
 \alias{prodes2raster}
 \title{Match PRODES to raster.}
 \usage{
-prodes2raster(file_pd, file_rt, raster_path = tempfile(pattern =
-  "prodes2raster", fileext = ".tif"), tile, year_pd, prodes_lbl)
+prodes2raster(
+  file_pd,
+  file_rt,
+  raster_path = tempfile(pattern = "prodes2raster", fileext = ".tif"),
+  tile,
+  year_pd,
+  prodes_lbl
+)
 }
 \arguments{
 \item{file_pd}{A length-one character. Path to a PRODES map (a

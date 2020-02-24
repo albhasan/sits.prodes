@@ -4,8 +4,14 @@
 \alias{prodes_rasterize}
 \title{Rasterize PRODES.}
 \usage{
-prodes_rasterize(ref_path, pyear, cov_res, level_key_pt, level_key,
-  class_name_filter = "FLORESTA")
+prodes_rasterize(
+  ref_path,
+  pyear,
+  cov_res,
+  level_key_pt,
+  level_key,
+  class_name_filter = "FLORESTA"
+)
 }
 \arguments{
 \item{ref_path}{A length-one character. Path to a PRODES shp}

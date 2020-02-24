@@ -4,9 +4,18 @@
 \alias{sim_sits_tibble}
 \title{Simulate a sits_tibble made of random observations}
 \usage{
-sim_sits_tibble(n_samples, label = "label_A", lon_mean = -65,
-  lon_sd = 1, lat_mean = -5, lat_sd = 1, date_start = "2000/01/01",
-  date_end = "2000/12/31", obs_freq = 23, n_vi = 1)
+sim_sits_tibble(
+  n_samples,
+  label = "label_A",
+  lon_mean = -65,
+  lon_sd = 1,
+  lat_mean = -5,
+  lat_sd = 1,
+  date_start = "2000/01/01",
+  date_end = "2000/12/31",
+  obs_freq = 23,
+  n_vi = 1
+)
 }
 \arguments{
 \item{n_samples}{A length-one numeric. The number of samples per label.}

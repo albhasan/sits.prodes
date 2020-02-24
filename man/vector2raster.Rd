@@ -4,8 +4,12 @@
 \alias{vector2raster}
 \title{Rasterize vectors}
 \usage{
-vector2raster(vector_sf, raster_r, vector_field,
-  raster_path = tempfile(pattern = "vector2raster", fileext = ".tif"))
+vector2raster(
+  vector_sf,
+  raster_r,
+  vector_field,
+  raster_path = tempfile(pattern = "vector2raster", fileext = ".tif")
+)
 }
 \arguments{
 \item{vector_sf}{A sf object.}

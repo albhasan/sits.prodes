@@ -4,9 +4,14 @@
 \alias{identify_missing_bricks}
 \title{Identify bricks missing in directory.}
 \usage{
-identify_missing_bricks(in_dir, expected_scenes, expected_years,
+identify_missing_bricks(
+  in_dir,
+  expected_scenes,
+  expected_years,
   expected_bands,
-  brick_file_pattern = "^LC8SR-(MASKCLOUD|MOD13Q1-MYD13Q1|MOD13Q1-STARFM|RAW|SIMPLE)_[0-9]{6}_[0-9]{4}-[0-9]{2}-[0-9]{2}_[a-z0-9]{+}_STACK_BRICK.tif$")
+ 
+    brick_file_pattern = "^LC8SR-(MASKCLOUD|MOD13Q1-MYD13Q1|MOD13Q1-STARFM|RAW|SIMPLE)_[0-9]{6}_[0-9]{4}-[0-9]{2}-[0-9]{2}_[a-z0-9]{+}_STACK_BRICK.tif$"
+)
 }
 \arguments{
 \item{in_dir}{A length-one character. A path to a directory of brick files.}

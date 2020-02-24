@@ -4,8 +4,15 @@
 \alias{simulate_ts}
 \title{Simulate a time series of a Vegetation Index (VI). Alber Sanchez}
 \usage{
-simulate_ts(t_vector, m = 0.5, amplitude = 0.15, freq = 16/365,
-  phase_shift = 0, noise_mean = 0, noise_sd = 0.2)
+simulate_ts(
+  t_vector,
+  m = 0.5,
+  amplitude = 0.15,
+  freq = 16/365,
+  phase_shift = 0,
+  noise_mean = 0,
+  noise_sd = 0.2
+)
 }
 \arguments{
 \item{t_vector}{Numeric. A vector of time indexes.}
