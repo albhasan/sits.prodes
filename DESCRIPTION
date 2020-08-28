@@ -14,7 +14,7 @@ Imports:
  dplyr,
  dtw,
  ensurer,
- gdalUtils,
+ gdalUtilities,
  magrittr,
  methods,
  proxy,

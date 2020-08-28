@@ -582,6 +582,12 @@ for (my_algorithm in unique(dplyr::pull(pa_acc_tb, algorithm))) {
   }
 }
 
+
+View(pa_acc_tb)
+View(tidyr::drop_na(pa_acc_tb))
+
+
+
 rm(acc_tb, acc_pr, acc_ur, pa_acc_tb)
 
 ```

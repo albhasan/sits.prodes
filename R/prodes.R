@@ -1,4 +1,3 @@
-
 #' @title Match PRODES to raster.
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description Rasterize a PRODES vector to match a reference raster resolution.
@@ -21,8 +20,9 @@
 #' @export
 prodes2raster <- function(file_pd, file_rt,
                           raster_path = tempfile(pattern = "prodes2raster",
-                                                 fileext = ".tif"), tile,
-                          year_pd, prodes_lbl){
+                                                 fileext = ".tif"),
+                          tile, year_pd, prodes_lbl){
+
   id_pd <- label_pd_pt <- NULL
 
   if (!missing(tile))
@@ -181,12 +181,11 @@ prodes_rasterize <- function(ref_path, pyear, cov_res, level_key_pt,
     sf::st_write(tmp_vector, dsn = tmp_vector_path,
                  delete_dsn = TRUE, quiet = TRUE, delete_layer = TRUE)
   )
-  cov_ref <- gdalUtils::gdal_rasterize(src_datasource = tmp_vector_path,
-                                       dst_filename = tmp_raster_path,
-                                       a = "lab_ref",
-                                       l = stringr::str_replace(basename(tmp_vector_path), ".shp", ""),
-                                       output_Raster = TRUE) %>%
-    .[[1]] # Cast to raster layer
+  cov_ref <- gdalUtilities::gdal_rasterize(src_datasource = tmp_vector_path,
+                                           dst_filename = tmp_raster_path,
+                                           a = "lab_ref",
+                                           l = stringr::str_replace(basename(tmp_vector_path), ".shp", "")) %>%
+      raster::raster()
 
   # clean tmp files
   if (file.exists(tmp_vector_path))

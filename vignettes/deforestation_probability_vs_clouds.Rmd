@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 
 ```{r setup, echo=FALSE}
 
-suppressMessages(library(sits.prodes))
+#suppressMessages(library(sits.prodes))
 
 base_dir <- "/home/alber/Documents/data/experiments/prodes_reproduction"
 experiments <- paste0("rep_prodes_", 40) # c(40:42, 50:52))
@@ -37,17 +37,6 @@ alg_names <- c(dl = "Deep Learning", rf = "Random Forest",
                svm = "Support Vector Machine")
 
 data("prodes_labels", package = "sits.prodes")
-
-
-#---- TODO ----
-# remove:
-library(devtools)
-setwd("/home/alber/Documents/ghProjects/sits.prodes")
-devtools::load_all()
-
-```
-
-
 
 ### Cloud quantity
 
@@ -99,8 +88,9 @@ cloud_map_tb <- base_dir %>%
   dplyr::arrange(tile, prodes_year) %>%
   dplyr::filter(tile %in% selected_tiles, prodes_year %in% selected_pyears) %>% 
   ensurer::ensure_that(nrow(.) > 0, err_desc = "Quantile maps not found.") %>% 
-  dplyr::left_join(prodes_mask_tb, by = "tile") %>%  
-  dplyr::mutate(cloud_map = purrr::map2(file_path, sf, mask_raster)) %>% 
+  dplyr::left_join(prodes_mask_tb, by = "tile") %>%
+  #dplyr::mutate(cloud_map = purrr::map2(file_path, sf, sits.prodes::mask_raster)) %>% 
+  dplyr::mutate(cloud_map = purrr::map2(.$file_path, .$sf, function(file_path, sf){return (2)})) %>% 
   dplyr::select(-file_path)
 
 prob_map_tb <- base_dir %>% 
@@ -129,7 +119,7 @@ prob_map_tb <- base_dir %>%
   dplyr::filter(tile %in% tiles) %>% 
   dplyr::inner_join(cloud_map_tb, by = c("tile", "prodes_year")) %>% 
   # NOTE: Band 1 is the probability of deforestation
-  dplyr::mutate(prob_map = purrr::map2(in_file, sf, mask_raster, band = 1)) %>% 
+  dplyr::mutate(prob_map = purrr::map2(in_file, sf, sits.prodes::mask_raster, band = 1)) %>% 
   dplyr::select(-c(in_file, sf))
 
 ```
@@ -183,14 +173,14 @@ for (my_experiment          in unique(prob_map_tb$experiment)) {
           
           prob_raster <- prob_raster@file@name %>% 
             ensurer::ensure_that(file.exists(.)) %>% 
-            mask_raster(mask = deforestation_mask) %>% 
+            sits.prodes::mask_raster(mask = deforestation_mask) %>% 
             # NOTE: Group probabilities into bins.
             raster::calc(fun = function(x){
               ceiling(x/1000)
             }, filename = tempfile(pattern = "rounded_", fileext = ".tif"))
           cloud_raster <- raster_row$cloud_map[[1]]@file@name %>% 
             ensurer::ensure_that(file.exists(.)) %>% 
-            mask_raster(mask = deforestation_mask) %>% 
+            sits.prodes::mask_raster(mask = deforestation_mask) %>% 
             raster::projectRaster(to = prob_raster, method = "ngb", 
                                   filename = tempfile(pattern = "cloud_proj_", 
                                                       fileext = ".tif"))

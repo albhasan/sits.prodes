@@ -183,6 +183,27 @@ identify_missing_bricks <- function(in_dir, expected_scenes, expected_years,
 }
 
 
+#' @title Check if gdalinfo is able to open the raster file.
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description Check if gdalinfo is able to open the raster file.
+#'
+#' @param file_path  A character. Path to a raster file.
+#' @return           A logical.
+is_raster_valid <- function(file_path){
+  if (length(file_path) == 1) {
+    res <- TRUE
+    tool <- "gdalinfo"
+    if (any(stringr::str_detect(system(paste(tool, file_path), intern = TRUE),
+                                "error|Error|ERROR|failure|Failure|FAILURE")))
+      res <- FALSE
+    return(res)
+  } else if (length(file_path) > 1) {
+    return(vapply(file_path, is_raster_valid, logical(1)))
+  }
+  return(FALSE)
+}
+
+
 #' @title Mask a raster.
 #' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
 #' @description Mask a raster using either a vector or another raster.
@@ -193,6 +214,8 @@ identify_missing_bricks <- function(in_dir, expected_scenes, expected_years,
 #' @param resampling A character. A resamplig method.
 #' @return           A raster object.
 mask_raster <- function(file_path, mask, band = 1, resampling = "ngb"){
+    # TODO: Re-write using gdalcmdline::gdal_calc
+    warning("This method uses the slow raster package!")
   if (is.null(mask) || (is.atomic(mask) && is.na(mask)))
     return(NA)
   r <- file_path %>%
@@ -256,15 +279,10 @@ splitAt <- function(x, pos){
 #' @param raster_r     A raster object. This raster is the reference for coordinate sytem, spatial resolution, and dimensions.
 #' @param vector_field A length-one character. The name of an integer column in vector_sf.
 #' @param raster_path  A length-one character. An optional file path to store the resulting raster.
-#' @return             A raster layer.
+#' @return             A length-one character. A path to a raster.
 #' @export
 vector2raster <- function(vector_sf, raster_r, vector_field,
-                          raster_path = tempfile(pattern = "vector2raster", fileext = ".tif")){
-    #vector_sf = sf::st_read("/home/alber/Documents/data/experiments/prodes_reproduction/data/vector/prodes/prodes_tiled", "PDigital2017_AMZ_pol_225_063") %>% dplyr::mutate(label_id = 1:n())
-    #raster_r = raster::raster("/home/alber/Documents/data/experiments/prodes_reproduction/data/raster/mapbiomas/amazonia/reclas2prodes/Classification_2013_22563_prodes.tif")
-    #vector_field = "label_id"
-    #no_data = -9999
-    #raster_path = tempfile(pattern = "vector2raster", fileext = ".tif")
+                          raster_path = tempfile(pattern = "vector2raster_", fileext = ".tif")){
 
     stopifnot(lapply(vector_sf, class)[[vector_field]] == "integer")
 
@@ -281,11 +299,73 @@ vector2raster <- function(vector_sf, raster_r, vector_field,
                          quiet = TRUE,
                          delete_layer = TRUE)
     )
-    gdalUtils::gdal_rasterize(src_datasource = tmp_vector_path,
-                              dst_filename = raster_path,
-                              a = vector_field,
-                              l = tools::file_path_sans_ext(basename(tmp_vector_path)),
-                              output_Raster = TRUE) %>%
-        .[[1]] %>% # Cast to raster layer, why? Because fuck you R! That's why
+    gdalUtilities::gdal_rasterize(src_datasource = tmp_vector_path,
+                                  dst_filename = raster_path,
+                                  a = vector_field,
+                                  l = tools::file_path_sans_ext(basename(tmp_vector_path))) %>%
         return()
 }
+
+
+#' @title Build a mask from DETER.
+#' PRODES's SHP into a TIF.
+#' @author Alber Sanchez, \email{alber.ipia@@inpe.br}
+#' @description Build a raster mask from a DETER shapefile.
+#'
+#' @param file_path_deter  A path to a DETER shapefile.
+#' @param file_path_res    A path to the results of a classification.
+#' @param pyear            A PRODES year.
+#' @param out_file         Optional. Path to an output file.
+#' @return                 A path to a raster file.
+#' @export
+deter2mask <- function(file_path_deter, file_path_res, pyear,
+                       out_file = tempfile(pattern = "deter2mask_",
+                                           fileext = ".tif")){
+
+    stopifnot(all(vapply(c(file_path_deter, file_path_res), file.exists,
+                         logical(1))))
+
+    # NOTE: The given SHP and RASTER must overlap.
+    # NOTE: The scene in the DETER SHP is CBERS.
+    vector_sf <- file_path_deter %>%
+        sf::read_sf() %>%
+        # "CICATRIZ_DE_QUEIMADA", "CS_DESORDENADO", "DEGRADACAO",
+        # "DESMATAMENTO_CR", "DESMATAMENTO_VEG", "MINERACAO"
+        dplyr::filter(CLASSNAME %in% c("DEGRADACAO", "CICATRIZ_DE_QUEIMADA"),
+                      VIEW_DATE < as.Date(paste0(pyear, "-07-31"))) %>%
+        # NOTE: The selected polygons are meant to be masked out.
+        dplyr::mutate(mask_value = as.integer(TRUE)) %>%
+        dplyr::select(mask_value)
+
+    if (nrow(vector_sf) < 1){
+        warning(sprintf("No DETER data found! %s %s", file_path_deter, pyear))
+        return(NA)
+    }
+
+    raster::writeRaster(raster::setValues(raster::raster(file_path_res), NA),
+                        filename = out_file,
+                        overwrite = TRUE,
+                        options = c("BIGTIFF=YES"))
+
+    tmp_vector_path <- tempfile(pattern = "deter2mask_", fileext = ".shp")
+
+    suppressWarnings(
+        vector_sf %>%
+            sf::st_transform(crs = raster::projection(raster::raster(file_path_res),
+                                                      asText = TRUE)) %>%
+            sf::st_write(dsn = tmp_vector_path,
+                         delete_dsn = TRUE,
+                         quiet = TRUE,
+                         delete_layer = TRUE)
+    )
+
+    gdalUtilities::gdal_rasterize(src_datasource = tmp_vector_path,
+                                  dst_filename = out_file,
+                                  i = TRUE,
+                                  burn = 0,
+                                  a = "mask_value",
+                                  l = tools::file_path_sans_ext(basename(tmp_vector_path))) %>%
+        invert_mask() %>%
+        return()
+}
+

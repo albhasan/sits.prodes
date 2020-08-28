@@ -44,21 +44,6 @@ base_path <- "/home/alber/Documents/data/experiments/prodes_reproduction" %>%
 data(prodes_labels, package = "sits.prodes")
 print(sprintf("Starting to process %s using the labels at %s ", in_dir, label_file))
 
-# Check if gdalinfo is able to open the raster file.
-is_raster_valid <- function(file_path){
-  if (length(file_path) == 1) {
-    res <- TRUE
-    tool <- "gdalinfo"
-    if (any(stringr::str_detect(system(paste(tool, file_path), intern = TRUE),
-                                "error|Error|ERROR|failure|Failure|FAILURE")))
-      res <- FALSE
-    return(res)
-  } else if (length(file_path) > 1) {
-    return(vapply(file_path, is_raster_valid, logical(1)))
-  }
-  return(FALSE)
-}
-
 # key for encoding PRODES's SHP into a TIF
 prodes_labels_ls <- prodes_labels %>%
   dplyr::pull(label_pd) %>%

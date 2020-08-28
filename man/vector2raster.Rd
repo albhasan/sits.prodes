@@ -8,7 +8,7 @@ vector2raster(
   vector_sf,
   raster_r,
   vector_field,
-  raster_path = tempfile(pattern = "vector2raster", fileext = ".tif")
+  raster_path = tempfile(pattern = "vector2raster_", fileext = ".tif")
 )
 }
 \arguments{
@@ -21,7 +21,7 @@ vector2raster(
 \item{raster_path}{A length-one character. An optional file path to store the resulting raster.}
 }
 \value{
-A raster layer.
+A length-one character. A path to a raster.
 }
 \description{
 Rasterize a sf object to match the given raster
